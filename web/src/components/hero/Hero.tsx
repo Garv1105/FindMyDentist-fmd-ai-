@@ -77,12 +77,11 @@ function CinematicHero() {
   // C/D/E — mascot. y is % of its own height: 106% = hidden below the horizon line.
   const [m0, m1] = PHASES.mascotOut;
   const [b0, b1] = PHASES.mascotBack;
-  const mp = MASCOT_KEYS;
-  const mascotY = useTransform(p, mp, ["106%", "106%", "-25%", "-21%", "-21%", "-23%", "-23%", "-21%", "106%", "106%"]);
-  const rotY = useTransform(p, mp, [-38, -38, 0, 0, 0, 0, 0, 0, -38, -38]);
-  const rotX = useTransform(p, mp, [12, 12, 0, 0, 0, 0, 0, 0, 12, 12]);
-  const mScale = useTransform(p, mp, [0.9, 0.9, 1, 1, 1, 0.94, 0.94, 1, 0.9, 0.9]);
-  const mOpacity = useTransform(p, mp, MASCOT_OPACITY);
+  const mascotY = useTransform(p, MASCOT_KEYS, ["106%", "106%", "-25%", "-21%", "-21%", "-23%", "-23%", "-21%", "106%", "106%"]);
+  const rotY = useTransform(p, MASCOT_KEYS, [-38, -38, 0, 0, 0, 0, 0, 0, -38, -38]);
+  const rotX = useTransform(p, MASCOT_KEYS, [12, 12, 0, 0, 0, 0, 0, 0, 12, 12]);
+  const mScale = useTransform(p, MASCOT_KEYS, [0.9, 0.9, 1, 1, 1, 0.94, 0.94, 1, 0.9, 0.9]);
+  const mOpacity = useTransform(p, MASCOT_KEYS, MASCOT_OPACITY);
   const mascotGlow = useTransform(p, [REVEAL, PHASES.rise, m0, m1, b0, b1, PHASES.descend], [0, 1, 1, 0, 0, 1, 0]);
 
   // D — assistant stage (never overlaps the mascot: mascot is 0 between m1 and b0)
@@ -124,7 +123,6 @@ function CinematicHero() {
                 alt=""
                 fill
                 sizes="380px"
-                priority
                 className="hero-mascot-img object-contain"
               />
             </div>

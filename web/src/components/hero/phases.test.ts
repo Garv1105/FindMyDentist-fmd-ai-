@@ -1,4 +1,4 @@
-// Run: npm test — asserts the hero timeline invariants from the brief.
+// Hero timeline invariants from the brief (run with npm test).
 import assert from "node:assert/strict";
 import { MASCOT_KEYS, MASCOT_OPACITY, PHASES, REVEAL, at } from "./phases.ts";
 

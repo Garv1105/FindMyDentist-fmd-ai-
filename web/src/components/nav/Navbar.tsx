@@ -1,31 +1,35 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { Bell, ChevronDown, Menu, MapPin, Search, UserRound, X } from "lucide-react";
+import { ChevronDown, Menu, Search, UserRound, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useMe } from "@/lib/me";
 import ThemeSwitcher from "./ThemeSwitcher";
 
 const LINKS = [
-  { label: "Find Dentists", href: "#dentists" },
-  { label: "Treatments", href: "#treatments" },
-  { label: "AI Assistant", href: "#assistant" },
-  { label: "For Clinics", href: "#clinics" },
-  { label: "For Students", href: "#students" },
+  { label: "Find Dentists", href: "/#dentists" },
+  { label: "Treatments", href: "/#treatments" },
+  { label: "AI Assistant", href: "/#assistant" },
+  { label: "For Clinics", href: "/clinic" },
+  { label: "For Students", href: "/#students" },
 ];
 const MORE = [
-  { label: "Explore", href: "#explore" },
-  { label: "Dental Records", href: "#records" },
-  { label: "Concierge", href: "#concierge" },
-  { label: "Jobs", href: "#footer" },
+  { label: "Explore", href: "/explore" },
+  { label: "My Appointments", href: "/appointments" },
+  { label: "Dental Records", href: "/records" },
+  { label: "Concierge", href: "/#concierge" },
+  { label: "Jobs", href: "/jobs" },
+  { label: "Help", href: "/help" },
 ];
 
 export function Logo() {
   return (
-    <a href="#top" className="flex items-center gap-3" aria-label="FindMyDentist home">
+    <Link href="/" className="flex items-center gap-3" aria-label="FindMyDentist home">
       <span className="headline-silver text-[24px] font-semibold leading-none tracking-[-0.06em]">FMD</span>
       <span className="hidden h-4 w-px bg-line-strong sm:block" />
       <span className="hidden text-[15px] font-light tracking-[-0.01em] text-ink-2 sm:block">FindMyDentist</span>
-    </a>
+    </Link>
   );
 }
 
@@ -33,6 +37,8 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobile, setMobile] = useState(false);
   const [more, setMore] = useState(false);
+  const me = useMe();
+  const account = me ? { href: "/account", label: me.name.split(" ")[0] } : { href: "/signin", label: "Sign in" };
 
   useEffect(() => {
     const on = () => setScrolled(window.scrollY > 24);
@@ -94,29 +100,20 @@ export default function Navbar() {
           </ul>
 
           <div className="ml-auto flex shrink-0 items-center gap-1 xl:ml-0">
-            <a href="#search" aria-label="Search" className="hidden size-9 place-items-center rounded-full text-ink-2 transition-colors hover:text-ink sm:grid">
+            <Link href="/#search" aria-label="Search" className="hidden size-9 place-items-center rounded-full text-ink-2 transition-colors hover:text-ink sm:grid">
               <Search className="size-[18px]" strokeWidth={1.5} />
-            </a>
-            <button className="mx-1 hidden items-center gap-2 rounded-full border border-line px-3.5 py-2 text-[13px] text-ink-2 transition-colors hover:border-line-strong hover:text-ink md:flex">
-              <MapPin className="size-3.5" strokeWidth={1.5} />
-              Bengaluru
-              <ChevronDown className="size-3.5 text-ink-4" strokeWidth={1.5} />
-            </button>
+            </Link>
             <ThemeSwitcher />
-            <button aria-label="Notifications" className="relative hidden size-9 place-items-center rounded-full text-ink-2 transition-colors hover:text-ink sm:grid">
-              <Bell className="size-[18px]" strokeWidth={1.5} />
-              <span className="absolute right-2 top-2 size-1.5 rounded-full bg-accent shadow-[0_0_8px_var(--accent-glow)]" />
-            </button>
-            <a
-              href="#signin"
-              aria-label="Account — sign in"
+            <Link
+              href={account.href}
+              aria-label={me ? "Your account" : "Sign in"}
               className="ml-1 hidden items-center gap-2 whitespace-nowrap rounded-full border border-line py-1 pl-1 pr-3.5 text-[13px] text-ink-2 transition-colors hover:border-line-strong hover:text-ink sm:flex"
             >
               <span className="icon-tile size-7 !rounded-full">
                 <UserRound className="size-3.5" strokeWidth={1.5} />
               </span>
-              Sign in
-            </a>
+              {account.label}
+            </Link>
             <button
               aria-label="Open menu"
               onClick={() => setMobile(true)}
@@ -161,9 +158,9 @@ export default function Navbar() {
               ))}
             </ul>
             <div className="px-6 pt-8">
-              <a href="#signin" onClick={() => setMobile(false)} className="btn-primary h-12 w-full text-sm">
-                Sign in
-              </a>
+              <Link href={account.href} onClick={() => setMobile(false)} className="btn-primary h-12 w-full text-sm">
+                {me ? "Your account" : "Sign in"}
+              </Link>
             </div>
           </motion.div>
         )}
