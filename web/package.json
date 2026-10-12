@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --no-warnings src/components/hero/phases.check.ts"
+    "test": "node --experimental-strip-types --no-warnings --test \"src/**/*.test.ts\""
   },
   "dependencies": {
     "lucide-react": "^1.53.0",
@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
-    "@types/node": "^20",
+    "@types/node": "^22.20.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

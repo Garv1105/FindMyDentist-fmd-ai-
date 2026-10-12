@@ -1,5 +1,6 @@
 import { Clock3, FileText, History, Image as ImageIcon, KeyRound, Lock, Pill, ScanLine, Share2, ClipboardList } from "lucide-react";
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { Container, Reveal } from "../ui";
 
 /* Abstract thumbnails — no real patient data is ever depicted. */
@@ -110,7 +111,7 @@ export default function Records() {
                 <span className="text-ink-3">in one private vault.</span>
               </h2>
               <p className="mt-6 max-w-md text-[15px] leading-relaxed text-ink-3">
-                X-rays, reports, photos, treatment plans and prescriptions — organised, encrypted, and ready when your next dentist needs them.
+                X-rays, reports, photos, treatment plans and prescriptions — organised, private to you, and ready when your next dentist needs them.
               </p>
             </Reveal>
             <ul className="mt-9 space-y-4">
@@ -123,6 +124,9 @@ export default function Records() {
                 </Reveal>
               ))}
             </ul>
+            <Link href="/records" className="btn-primary mt-9 h-11 px-6 text-[13.5px]">
+              Open your records
+            </Link>
           </div>
         </div>
       </Container>
