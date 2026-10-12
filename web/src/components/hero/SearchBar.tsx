@@ -2,7 +2,7 @@
 
 import { ArrowRight, ChevronDown, MapPin, MoreHorizontal, Search } from "lucide-react";
 import { useState } from "react";
-import { CITIES, SPECIALTIES } from "@/data/demo";
+import { CITIES, SPECIALTIES } from "@/lib/catalog";
 import { useDiscovery } from "../discovery";
 
 export default function SearchBar() {

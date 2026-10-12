@@ -1,6 +1,9 @@
+"use client";
+
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import { TREATMENTS } from "@/data/demo";
+import { openAssistant } from "../hero/Assistant";
 import { Container, Reveal, SectionHeader } from "../ui";
 
 export default function Treatments() {
@@ -10,13 +13,16 @@ export default function Treatments() {
         <SectionHeader
           eyebrow="Understand"
           title="Popular treatments"
-          description="What happens, how long it takes and what to ask — explained in plain language before you ever sit in the chair."
-          action={{ label: "All treatments", href: "#treatments" }}
+          description="What happens, how long it takes and what to ask, explained in plain language by FMD AI before you ever sit in the chair."
         />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {TREATMENTS.map((t, i) => (
             <Reveal key={t.title} delay={i * 0.07}>
-              <a href="#treatments" className="glass glass-interactive group flex h-full items-center gap-4 rounded-[22px] p-2.5 pr-4">
+              <button
+                onClick={() => openAssistant(`Tell me about ${t.title.toLowerCase()}`)}
+                aria-label={`Ask FMD AI about ${t.title}`}
+                className="glass glass-interactive group flex h-full w-full items-center gap-4 rounded-[22px] p-2.5 pr-4 text-left"
+              >
                 <div className="relative h-[84px] w-[92px] shrink-0 overflow-hidden rounded-[16px] border border-line">
                   <Image
                     src={t.img}
@@ -32,7 +38,7 @@ export default function Treatments() {
                   <p className="mt-2 truncate text-[10.5px] uppercase tracking-[0.14em] text-ink-4">{t.meta}</p>
                 </div>
                 <ArrowRight className="arrow-nudge size-4 shrink-0 text-ink-3 group-hover:text-ink" strokeWidth={1.5} />
-              </a>
+              </button>
             </Reveal>
           ))}
         </div>
