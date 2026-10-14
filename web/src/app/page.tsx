@@ -14,13 +14,23 @@ import QuickActions from "@/components/sections/QuickActions";
 import Records from "@/components/sections/Records";
 import Treatments from "@/components/sections/Treatments";
 import Trust from "@/components/sections/Trust";
+import HeroSection from "@/components/HeroSection";
+import SearchPanel from "@/components/SearchPanel";
 
 export default function Home() {
   return (
     <DiscoveryProvider>
       <Navbar />
       <main>
-        <Hero />
+        {/*
+          Scroll-driven frame hero.
+          showHeader=false because you already have your own Navbar at the top.
+        */}
+        <HeroSection showHeader={false} />
+
+        {/* Keep your existing Hero if you want both; comment out if replacing */}
+        {/* <Hero /> */}
+        <SearchPanel /> 
         <QuickActions />
         <Treatments />
         <Explore />
