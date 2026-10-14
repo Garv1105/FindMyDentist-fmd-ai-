@@ -50,7 +50,7 @@ export default function AiValue() {
             <div className="relative">
               <div
                 aria-hidden
-                className="absolute -inset-y-10 -inset-x-4 -z-10 opacity-70 blur-3xl sm:-inset-x-10"
+                className="absolute -inset-y-10 -inset-x-4 -z-10 opacity-70 blur-3xl sm:-inset-x-6 lg:-inset-x-10"
                 style={{ background: "radial-gradient(50% 50% at 60% 40%, rgb(var(--accent-rgb) / 0.12), transparent 70%)" }}
               />
               <div className="glass rounded-[30px] p-5 sm:p-7">

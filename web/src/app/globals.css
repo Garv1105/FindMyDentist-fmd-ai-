@@ -8,7 +8,7 @@
 
 :root,
 [data-theme="obsidian-silver"] {
-  --earth-filter: saturate(0.16) brightness(1.08) contrast(1.06);
+  --earth-filter: saturate(0.92) brightness(1.02) contrast(1.02);
   color-scheme: dark;
   --background: #050505;
   --background-secondary: #08090b;
@@ -494,20 +494,23 @@ html.theme-anim *::after {
 }
 }
 
-/* ---------- Concierge: signature surface, lit by the active theme ---------- */
+/* ---------- Concierge: premium warm amber-to-indigo gradient surface ---------- */
 .concierge-card {
   position: relative;
   isolation: isolate;
   background:
-    radial-gradient(120% 80% at 50% -10%, rgb(var(--horizon-rgb) / 0.09), transparent 60%),
-    linear-gradient(180deg, rgb(var(--accent-rgb) / 0.04), transparent 40%),
+    radial-gradient(110% 70% at 30% 0%,   rgba(180, 80, 20, 0.22),  transparent 55%),
+    radial-gradient(80%  60% at 75% 10%,  rgba(140, 55, 10, 0.14),  transparent 50%),
+    radial-gradient(100% 80% at 10% 100%, rgba(60, 20, 100, 0.18),  transparent 60%),
+    radial-gradient(70%  50% at 90% 90%,  rgba(40, 15, 80, 0.12),   transparent 55%),
+    linear-gradient(160deg, rgba(100, 35, 8, 0.18) 0%, rgba(30, 12, 55, 0.12) 50%, transparent 100%),
     var(--surface);
   box-shadow:
-    inset 0 1px 0 var(--inner-hi),
-    0 40px 120px -50px var(--accent-glow),
-    0 30px 80px -40px var(--shadow);
+    inset 0 1px 0 rgba(255, 175, 90, 0.10),
+    0 40px 120px -50px rgba(180, 80, 20, 0.28),
+    0 30px 80px  -40px rgba(0, 0, 0, 0.60);
 }
-/* luminous hairline border: brightest at the top centre, like the hero horizon */
+/* luminous hairline border: warm amber glow at top, fading to subtle edge */
 .concierge-card::before {
   content: "";
   position: absolute;
@@ -515,8 +518,9 @@ html.theme-anim *::after {
   border-radius: inherit;
   padding: 1px;
   background:
-    radial-gradient(60% 120% at 50% 0%, rgb(var(--horizon-rgb) / 0.75), transparent 70%),
-    linear-gradient(180deg, var(--edge-hi), var(--edge-lo) 45%, var(--border-strong));
+    radial-gradient(65% 130% at 40% 0%, rgba(255, 160, 70, 0.65), transparent 65%),
+    radial-gradient(40% 80%  at 85% 5%, rgba(220, 110, 40, 0.30), transparent 60%),
+    linear-gradient(180deg, rgba(255, 145, 55, 0.22), rgba(255, 120, 40, 0.06) 40%, rgba(255, 255, 255, 0.05));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -524,67 +528,51 @@ html.theme-anim *::after {
   z-index: 1;
 }
 .concierge-glow {
-  background: radial-gradient(closest-side, rgb(var(--horizon-rgb) / 0.16), rgb(var(--accent-rgb) / 0.06) 55%, transparent);
-  mix-blend-mode: var(--blend-glow);
+  background: radial-gradient(closest-side, rgba(210, 95, 30, 0.22), rgba(160, 55, 10, 0.10) 50%, transparent);
+  mix-blend-mode: screen;
 }
 
 /* ---------- Cinematic hero ----------
-   Geometry mirrors Hero.tsx: the Earth band is var(--ew) wide at 1280:172, rim apex 27px below its top. */
+   Geometry mirrors Hero.tsx: the Earth band is var(--ew) wide at 4320:1440, rim apex at 573px; stage vars come from Hero.tsx. */
 .hero-sky {
   background:
-    radial-gradient(60% 50% at 50% 100%, rgb(var(--horizon-rgb) / 0.09), transparent 70%),
+    radial-gradient(60% 50% at 50% 72%, rgb(var(--horizon-rgb) / 0.09), transparent 70%),
     radial-gradient(40% 35% at 50% 0%, rgb(var(--accent-rgb) / 0.035), transparent 70%);
 }
 .hero-earth {
   object-fit: cover;
   filter: var(--earth-filter);
-  -webkit-mask: linear-gradient(180deg, transparent 0, #000 9%);
-  mask: linear-gradient(180deg, transparent 0, #000 9%);
+  -webkit-mask: linear-gradient(180deg, transparent 0, #000 14%);
+  mask: linear-gradient(180deg, transparent 0, #000 14%);
 }
 .hero-core {
   width: calc(var(--ew) * 0.46);
   height: calc(var(--ew) * 0.15);
   background:
-    radial-gradient(50% 9% at 50% 50%, rgb(var(--horizon-rgb) / 0.95), transparent 100%),
-    radial-gradient(closest-side, rgb(var(--horizon-rgb) / 0.55), rgb(var(--horizon-rgb) / 0.14) 40%, transparent 75%);
-  mix-blend-mode: var(--blend-glow);
-}
-.hero-glint {
-  width: calc(var(--ew) * 0.05);
-  height: 9px;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgb(var(--horizon-rgb) / 1), rgb(var(--horizon-rgb) / 0.35) 45%, transparent);
+    radial-gradient(50% 9% at 50% 50%, rgb(var(--horizon-rgb) / 0.5), transparent 100%),
+    radial-gradient(closest-side, rgb(var(--horizon-rgb) / 0.3), rgb(var(--horizon-rgb) / 0.08) 40%, transparent 75%);
   mix-blend-mode: var(--blend-glow);
 }
 .hero-mascot-clip {
-  --mh: clamp(190px, 40svh, 380px);
-  bottom: calc(var(--ew) * 0.1117); /* = rim apex, so the body is hidden behind the planet */
-  width: calc(var(--mh) * 1.7);
-  height: calc(var(--mh) * 1.65);
-  overflow: hidden;
+  --mh: min(clamp(190px, 40svh, 380px), calc(var(--stage) * 0.48)); /* settled top = 73% − 1.4 × 48% of the stage > 0: never reaches the nav */
+  /* same box as the Earth band; Hero.tsx clips it to the measured rim with clip-path */
+  width: var(--ew);
   perspective: 1100px;
 }
 .hero-rimfront {
-  bottom: calc(var(--ew) * 0.1117);
+  bottom: var(--apex-up); /* horizon apex height, from stageVars in Hero.tsx */
   width: clamp(320px, 34vw, 640px);
   height: 16px;
   border-radius: 50%;
   background: radial-gradient(closest-side, rgb(var(--horizon-rgb) / 0.95), rgb(var(--horizon-rgb) / 0.45) 45%, transparent);
   mix-blend-mode: var(--blend-glow);
 }
-.hero-mascot-halo {
-  background: radial-gradient(closest-side, rgb(var(--horizon-rgb) / 0.16), transparent 72%);
-  mix-blend-mode: var(--blend-glow);
-}
-.hero-mascot-img {
-  filter: drop-shadow(0 0 22px rgb(var(--horizon-rgb) / 0.22));
-}
-.hero-float {
-  animation: hero-float 7s ease-in-out infinite;
-}
-@keyframes hero-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+.hero-ai-stage {
+  -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent);
+  mask-image: linear-gradient(180deg, #000 55%, transparent);
+  background:
+    radial-gradient(70% 55% at 50% 100%, rgb(var(--accent-rgb) / 0.10), transparent 70%),
+    linear-gradient(180deg, #050816 0%, #0a1230 100%);
 }
 
 @keyframes pulse-travel {

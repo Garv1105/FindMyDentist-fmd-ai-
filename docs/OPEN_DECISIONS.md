@@ -6,7 +6,7 @@ Annex L requires a decision log with owner, date and impact. The PRD (§21, Anne
 |---|---|---|---|---|---|
 | OD-01 | Release sequencing / first-release scope | §20, N | Founders | Milestone order in `IMPLEMENTATION_ROADMAP.md` (sequence only, no scope removed) | Scope sign-off |
 | OD-02 | Professional ₹550/yr per dentist or per clinic; Main clinic profile ↔ Clinic OS tenant link | §14 | Product | Per dentist; Clinic OS owns clinic profile | Membership, CLN-01 |
-| OD-03 | Concierge fees, service areas, response expectations, hours, cancellation, liability | §5, §21 | Ops + legal | Service area and response text come from config; UI says "a coordinator will contact you", with **no time promise and no 24/7 claim** | CON-01, CON-10 |
+| OD-03 | FMD Edge fees, service areas, response expectations, hours, cancellation, liability | §5, §21 | Ops + legal | Service area and response text come from config; UI says "a coordinator will contact you", with **no time promise and no 24/7 claim** | CON-01, CON-10 |
 | OD-04 | Booking fees, payment collection, merchant of record, settlement, refunds | §4.5, §6.5, §21 | Founders + legal | No online payment; booking is a **request the clinic confirms**; fee shown as "clinic's indicative fee" | MAIN-28, PLT-10, CLN-27 |
 | OD-05 | Scholar quotas, reset period, ₹350 upgrade period and benefit, grace, professional access | §8.1, §21 | Product | Quotas as config values shown in a usage meter; upgrade shown as "pending"; no professional access | SCH-02…05 |
 | OD-06 | Clinic AI fair-use limits and default autonomy matrix | §7.4, §21 | Product + clinical advisor | PRD §7.4 matrix with **every external or financial action set to "requires approval"** | CAI-19, CAI-29 |

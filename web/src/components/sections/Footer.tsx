@@ -4,7 +4,7 @@ import { Container } from "../ui";
 
 // Only destinations that exist. Clinic OS, Scholar and legal pages are added when they ship.
 const COLS = [
-  { title: "Patients", links: [["Find dentists", "/#dentists"], ["FMD AI", "/#assistant"], ["My appointments", "/appointments"], ["Dental records", "/records"], ["Concierge", "/#concierge"]] },
+  { title: "Patients", links: [["Find dentists", "/#dentists"], ["FMD AI", "/#assistant"], ["My appointments", "/appointments"], ["Dental records", "/records"], ["FMD Edge", "/#concierge"]] },
   { title: "Professionals", links: [["Create a dentist account", "/signin"], ["Explore", "/explore"], ["Jobs", "/jobs"]] },
   { title: "Support", links: [["Help centre", "/help"], ["Contact support", "/help"], ["Your account", "/account"]] },
 ];

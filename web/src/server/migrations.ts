@@ -764,4 +764,7 @@ export const MIGRATIONS: string[] = [
     at INTEGER NOT NULL
   );
   `,
+  /* 13 — product renamed: FMD Concierge → FMD Edge (user-facing text only; table and route names unchanged) */ `
+  UPDATE plans SET features = REPLACE(features, 'Concierge requests', 'FMD Edge requests') WHERE features LIKE '%Concierge requests%';
+  `,
 ];

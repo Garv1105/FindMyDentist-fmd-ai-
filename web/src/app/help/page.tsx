@@ -13,7 +13,7 @@ const AREAS: [string, string][] = [
   ["booking", "Appointments & booking"],
   ["records", "Dental records"],
   ["assistant", "FMD AI"],
-  ["concierge", "Concierge"],
+  ["concierge", "FMD Edge"],
   ["membership", "Membership & payments"],
   ["content", "Explore & content"],
   ["other", "Something else"],

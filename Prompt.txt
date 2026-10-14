@@ -1,0 +1,265 @@
+# FMD Hero — Performance Diagnosis, Cinematic Scroll Correction and Continuous Page Experience
+
+**Model:** Claude Opus  
+**Effort:** Medium  
+**Objective:** Diagnose the existing hero, correct the scroll choreography, make the expanding light follow the Earth's curved horizon, and create a seamless visual transition into the rest of the FMD homepage.
+
+## CRITICAL INSTRUCTION
+
+Inspect the existing implementation before editing anything. Reuse the current framework, components, animation library and design assets where appropriate.
+
+Do not rewrite the homepage from scratch, change the established hero copy unnecessarily, or introduce a new scroll library without a demonstrated need.
+
+The hero should remain premium and recognizable. The goal is to correct its animation behaviour and improve the continuity of the overall page, not replace the existing design direction.
+
+---
+
+## PHASE 1 — Establish a reliable performance baseline
+
+Inspect the current implementation, including:
+
+- `Hero.tsx`
+- `phases.ts`
+- `globals.css`
+- `phases.test.ts`
+- Relevant Earth and mascot assets
+- Existing browser automation and screenshot tooling
+
+Confirm the current pinning behaviour, scroll-progress mapping, animation phases, mascot clipping, AI visibility, image dimensions and any reduced-motion support.
+
+### Profile the real experience
+
+The previous headless Edge test used SwiftShader software rendering and reported frames capped around 30 FPS. Those results do not establish the performance of the site on my actual GPU.
+
+Therefore:
+
+1. Determine whether an existing browser automation setup can profile a headed, hardware-accelerated browser on the development machine.
+2. Check whether the browser is actually using hardware acceleration. Do not assume that a headed browser automatically has GPU acceleration enabled.
+3. Record the environment, device-pixel ratio, browser, GPU/rendering backend and test method.
+4. If actual GPU profiling cannot be performed from the available setup, state that limitation and provide exact instructions for me to capture a Chrome/Edge DevTools Performance trace.
+
+Do not invent profiling results, claim a rendering bottleneck without evidence or label an optimization successful merely because the code looks more efficient.
+
+**Important:** Do not delay the confirmed visual fixes while investigating speculative performance problems. Complete the diagnosis first, then fix the established timing and asset issues.
+
+---
+
+## PHASE 2 — Implement the correct hero choreography
+
+The current hero has an unwanted blank interval after the headline disappears and before the mascot becomes visible. The mascot also appears to float above the Earth instead of convincingly emerging from the horizon.
+
+Replace the current timing with a coordinated, scroll-linked sequence.
+
+### State 1: Initial hero
+
+- Preserve the current headline, copy, navigation and established visual composition.
+- Keep the Earth horizon visible.
+- The mascot should initially be hidden behind or below the horizon.
+- The central light should be focused and relatively restrained.
+
+### State 2: Headline fade and light expansion
+
+As scrolling begins:
+
+- Fade the headline out smoothly.
+- Gradually intensify the central horizon light.
+- Begin the mascot reveal shortly after the headline starts disappearing.
+- Do not leave a long interval in which neither the headline nor mascot is visible and nothing meaningful is happening.
+
+The Earth, light and mascot must behave as one composed scene.
+
+### State 3: Mascot emergence
+
+This is the most important animation correction.
+
+- Begin with the mascot extremely small and partially occluded by the horizon.
+- Make it rise naturally from the light source.
+- Increase its size progressively as it emerges, with a smooth scale curve.
+- Rotate the character in genuine three-dimensional perspective if the current assets support it.
+- Bring it into a stable, front-facing meditating pose.
+- Coordinate the vertical position, scale, rotation, opacity and horizon clipping so that the character appears to emerge from behind the Earth rather than simply move upwards.
+- Avoid sudden scale jumps, abrupt entrances and visually empty pauses.
+
+The scale and position progression should feel smooth and intentional. The character must not appear to jump, float unnaturally or reveal itself all at once.
+
+If the current mascot is only a flat WebP, do not claim that CSS rotation creates genuine 3D rotation. Use the current asset as an interim fallback if necessary, and explicitly identify the requirements for a genuine 3D model or pre-rendered animation sequence.
+
+### State 4: Settled mascot pose
+
+Once the mascot reaches its final position:
+
+- Hold the intended pose briefly.
+- Keep the lighting controlled and the composition stable.
+- Do not introduce unnecessary bouncing or continuous movement.
+- Keep the mascot and subsequent AI chat interface as separate stages.
+
+### State 5: Mascot exits
+
+On the next scroll phase:
+
+- Fade the mascot out smoothly.
+- Allow it to recede below the horizon slightly if that helps the transition.
+- Do not make it roll, spin away or repeat the entrance animation.
+- Ensure it disappears exactly once and does not remain visible behind the following interface.
+
+### State 6: AI Chat introduction
+
+After the mascot exits:
+
+- Reveal the AI chat interface as the next focal stage.
+- Do not display the large mascot next to the chat panel.
+- Make the transition feel deliberate and continuous.
+- Give the chat enough time and screen space to communicate its purpose.
+
+### State 7: Release into the homepage
+
+Once the AI chat stage completes:
+
+- End the pinned cinematic sequence.
+- Resume normal document scrolling.
+- Ensure the next homepage section appears naturally without another unwanted blank region.
+- Do not create an unnecessarily long pinned experience.
+
+---
+
+## PHASE 3 — Correct the horizon light geometry
+
+The current expanding light moves horizontally and vertically but does not follow the visible curve of the Earth.
+
+This must be fixed.
+
+The desired movement is an expanding, symmetrical C-shaped or curved horizon arc, centred around the bright point where the mascot emerges.
+
+### Requirements
+
+- Inspect the actual Earth asset and determine the position of its visible horizon at different responsive sizes.
+- Construct a responsive SVG path, or another suitable method, that follows the visible curvature of the Earth.
+- The light should begin near the central horizon point.
+- As scrolling progresses, the illuminated path should extend symmetrically towards the left and right along the curved horizon.
+- The path must remain aligned with the Earth edge across desktop, tablet and mobile layouts.
+- The glow should expand along the arc rather than move as a straight horizontal or vertical strip.
+- Use a restrained core highlight and a softer secondary glow. Avoid excessive neon, large blur filters or a thick glowing line.
+- Ensure that the emerging mascot is layered and clipped correctly relative to the same horizon.
+
+A custom SVG path with a scroll-linked stroke reveal, directional masking or two symmetrical path segments is an acceptable implementation. Choose the method that best fits the existing stack and renders reliably.
+
+Do not guess the path coordinates from one desktop screenshot and leave it misaligned on mobile.
+
+The result should look like the horizon light itself is awakening and spreading across the Earth's surface.
+
+---
+
+## PHASE 4 — Establish responsive animation phases
+
+Inspect `phases.ts` and the current scroll-progress model before choosing the new boundaries.
+
+Create an intentional allocation for:
+
+1. Headline exit and initial light awakening.
+2. Mascot emergence and growth.
+3. Final pose and brief hold.
+4. Mascot fade and retreat.
+5. AI chat reveal.
+6. Release into normal scrolling.
+
+The phase percentages must be selected through visual testing. Do not blindly preserve the current 16% headline endpoint and 33% mascot reveal.
+
+Use one coordinated scroll-progress source for the pinned scene. Keep the scroll-linked animation responsive to both forward and reverse scrolling.
+
+Avoid competing scroll libraries, multiple duplicate animation timelines, raw event listeners that unnecessarily update broad React state, or long catch-up smoothing that makes the animation lag behind the visitor's input.
+
+Retain the existing test that prevents the mascot from overlapping the AI assistant. Update tests only when the implementation's intended state model genuinely requires it; do not weaken the test to make the build pass.
+
+---
+
+## PHASE 5 — Improve performance based on evidence
+
+After the visual corrections, compare the implementation against the baseline.
+
+Investigate the existing layout-triggering animation properties, including the glints animated through `left`/`top` and the mascot's vertical position. Where appropriate, replace layout-triggering movement with compositor-friendly transforms such as `translate3d`.
+
+Inspect the current animated mask and blend effects, but do not remove them automatically. Only simplify effects if measurement shows that doing so improves performance without damaging visual quality.
+
+Prefer `transform` and `opacity` for movement and fades where practical. Avoid expensive continuous full-screen filters and unnecessary layers.
+
+Aim for smooth 60 FPS animation on supported hardware, while measuring the actual result rather than claiming success without a valid test environment.
+
+Preserve an accessible reduced-motion experience: visitors who request reduced motion must still see a complete hero and reach the AI chat and following content without being forced through the full cinematic sequence.
+
+---
+
+## PHASE 6 — Make the homepage feel like one continuous visual experience
+
+The homepage contains independent functional sections, but they should feel like parts of the same carefully composed visual journey.
+
+Improve continuity across the page without replacing its existing content or flattening all sections into one giant image.
+
+### Visual direction
+
+- Deep black and navy as the foundation.
+- Rich but restrained sapphire and smoky-blue gradients.
+- Subtle silver-white lighting and controlled reflections.
+- Soft transitions between adjacent section backgrounds.
+- Selective atmospheric gradients or SVG contours that visually carry through section boundaries.
+- Consistent spacing, typography, surface treatment and lighting.
+- Purposeful product imagery and mascot poses where they communicate the section's role.
+
+The Earth remains a signature visual for the hero and the appropriate closing vision/Coming Soon section. Do not repeat a detailed Earth background through every middle section.
+
+### Avoid
+
+- Plain black sections separated by harsh borders and unrelated background colours.
+- Mountain or rocky landscapes repeated across unrelated sections.
+- Excessive neon, heavy particle effects and bright outlines on every card.
+- Overly translucent, unrealistic glass panels.
+- Identical layouts repeated through every section.
+- Scroll animations that obscure information or make the page feel slow.
+
+The sections should visually merge through the gradient, lighting, contour and spacing system while remaining structurally independent and easy to navigate.
+
+Do not compromise text readability or interactive accessibility for decorative effects.
+
+---
+
+## PHASE 7 — Validate the actual result
+
+Inspect and test at meaningful scroll positions, including:
+
+- Initial hero.
+- Headline disappearing.
+- Light expanding along the C-shaped Earth arc.
+- Early mascot emergence.
+- Midway through mascot growth and rotation.
+- Final mascot pose.
+- Mascot fading out.
+- AI chat becoming visible.
+- Release into the next section.
+- Reverse scrolling through the sequence.
+- Desktop, tablet and mobile layouts.
+- Reduced-motion mode.
+
+Check for blank states, incorrect clipping, abrupt scale changes, horizontal overflow, layout shifts, animation conflicts and broken interactions.
+
+Use browser screenshots and performance recordings when the available tooling supports them.
+
+Run the project's relevant tests, linting, type checking and production build.
+
+### Deliverables
+
+When finished, report:
+
+1. What caused the visual blank interval.
+2. What timing and horizon-geometry changes were made.
+3. Before/after screenshots of the critical animation states.
+4. Performance findings, including any limits of the test environment.
+5. The source assets that still limit image quality.
+6. Files changed and checks completed.
+7. Any remaining requirements for genuine 3D mascot rotation.
+
+Do not mark the work complete just because the implementation compiles. The actual browser experience must be inspected.
+
+## Definition of done
+
+The visitor sees the headline, begins scrolling, watches the horizon light expand along the Earth's curve, sees the mascot emerge small and grow smoothly into its final pose, watches it fade away without rolling out, then sees the AI chat interface appear before normal homepage scrolling resumes.
+
+There must be no long empty animation interval, no unintended mascot/chat overlap, no misleading performance claims and no unnecessary disruption to the established FMD design.

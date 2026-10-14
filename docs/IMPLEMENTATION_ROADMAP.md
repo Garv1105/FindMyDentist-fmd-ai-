@@ -31,7 +31,7 @@ Each slice ends with: migrations, a service with authorization, API, UI states (
 | Slice | Contents | Key requirement IDs |
 |---|---|---|
 | 2.1 Platform foundation | DB and migrations, sessions, email/phone OTP via dev console adapter, account types, consents, audit log, role checks, sign-in UI | MAIN-01…06, PLT-01…03, SEC-02…04, ROL-* |
-| 2.2 Concierge end to end | Server enquiry with reference, consent record, coordinator queue with full state machine (incl. Cancelled), notes, contact attempts, overdue flag, reassignment, theme-aware premium section | CON-01…14 |
+| 2.2 FMD Edge end to end | Server enquiry with reference, consent record, coordinator queue with full state machine (incl. Cancelled), notes, contact attempts, overdue flag, reassignment, theme-aware premium section | CON-01…14 |
 | 2.3 Discovery and profiles | Providers, clinics and services in the DB (seeded demo, labelled); search and filters server-side; pagination; verified vs sponsored; claim-profile request | MAIN-21…26, PLT-04…06 |
 | 2.4 Booking | Slots, booking requests with explicit confirmation, idempotency key, conflict and duplicate handling, status history, cancel/reschedule, "needs clinic confirmation" | MAIN-27…32 |
 | 2.5 Records | Private storage adapter, validated uploads, signed expiring links, organisation, sharing grants and revocation, access log, export, deletion request | MAIN-33…37, PLT-07, PLT-09 |

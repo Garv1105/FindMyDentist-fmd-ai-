@@ -14,20 +14,43 @@ import { ArrowUp, Mic, ShieldCheck, Sparkles } from "lucide-react";
 import { useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { Container } from "../ui";
 import { openAssistant } from "./Assistant";
-import { MASCOT_KEYS, MASCOT_OPACITY, PHASES, REVEAL } from "./phases";
+import { MASCOT_KEYS, MASCOT_OPACITY, PHASES } from "./phases";
+import { RIM, RIM_APEX, RIM_H, RIM_W, rimPath, rimYAt } from "./rim";
 import SearchBar from "./SearchBar";
 
 /**
  * Cinematic hero: one scroll timeline (0 → 1) drives every layer, so the sequence
  * scrubs identically in both directions. No timers, no per-frame React state.
  *
- * Earth geometry comes from the supplied reference (public/img/hero/earth.webp, 1280×172 crop):
- * the rim is a circle arc, apex 27px below the crop top, y = 27 + 0.0002·dx² (image px).
+ * Earth geometry is measured from public/img/hero/earth-4320.webp (see ./rim.ts). The horizon light and the
+ * mascot's clip both live in that image's own coordinate space, so they stay on the planet's edge at any size.
  */
-const IMG_W = 1280;
-const IMG_H = 172;
-const APEX = 27;
-const CURVE = 0.0002;
+const IMG_W = RIM_W;
+const IMG_H = RIM_H;
+const APEX = RIM_APEX[1];
+const MID = RIM_APEX[0];
+
+/** Region above the limb, as a clip-path in % of the Earth band: the mascot is only visible above the planet. */
+const pct = (v: number, t: number) => `${((v / t) * 100).toFixed(2)}%`;
+const MASCOT_CLIP = `polygon(-20% -500%, 120% -500%, 120% ${pct(RIM[RIM.length - 1][1], IMG_H)}, ${[...RIM]
+  .reverse()
+  .map(([x, y]) => `${pct(x, IMG_W)} ${pct(y, IMG_H)}`)
+  .join(", ")}, -20% ${pct(RIM[0][1], IMG_H)})`;
+
+/**
+ * Stage coordinates. The nav is fixed (68px) and overlays the top of the pinned hero, so the animation lives in the
+ * "stage" below it. The horizon apex sits at 27% of the stage height above the bottom; the band is as wide as
+ * needed to cover the viewport and is pushed down (--eb < 0) so only the lower 27% of the stage shows planet.
+ */
+const NAV = 68;
+const APEX_UP = (IMG_H - APEX) / IMG_W; // apex height above the band's bottom edge, in band widths
+const stageVars = (height: string) =>
+  ({
+    "--stage": `calc(${height} - ${NAV}px)`,
+    "--ew": "max(100vw, calc(var(--stage) * 1.345))",
+    "--apex-up": "calc(var(--stage) * 0.27)",
+    "--eb": `calc(var(--apex-up) - var(--ew) * ${APEX_UP.toFixed(4)})`,
+  }) as CSSProperties;
 
 const noop = () => () => {};
 function useReducedMotionSafe() {
@@ -63,35 +86,39 @@ function CinematicHero() {
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress: p } = useScroll({ target: ref, offset: ["start start", "end end"] });
 
-  // A — headline and centre light
+  const [a0, a1] = PHASES.ai;
+  const [c0, c1] = PHASES.core;
+
+  // A — headline and centre light; both dim once the assistant takes over
   const titleOpacity = useTransform(p, PHASES.title, [1, 0]);
   const titleY = useTransform(p, PHASES.title, [0, -70]);
-  const cueOpacity = useTransform(p, [0, 0.03], [1, 0]);
-  const sky = useTransform(p, PHASES.core, [1, 0.45]);
-  const core = useTransform(p, [0, PHASES.core[1], PHASES.spread[1]], [0.55, 1, 0.9]);
-  const coreScale = useTransform(p, [0, PHASES.core[1]], [0.8, 1.15]);
+  const sky = useTransform(p, [c0, c1, a0, a1], [1, 0.45, 0.45, 0.02]);
+  const earthFade = useTransform(p, [a0, a1], [1, 0.06]);
+  const stageNavy = useTransform(p, [a0, a1], [0, 1]);
+  const core = useTransform(p, [0, c1, PHASES.spread[1], a0, a1], [0.55, 1, 0.9, 0.9, 0.05]);
+  const coreScale = useTransform(p, [0, c1], [0.8, 1.15]);
 
-  // A→B — light travels; 0.06 = the focused starting span, 1 = full rim
-  const spread = useTransform(p, PHASES.spread, [0.06, 1]);
+  // A→C — light travels along the rim; 0.06 = the focused starting span, 1 = full rim
+  const spread = useTransform(p, PHASES.spread, [0.12, 1]);
 
-  // C/D/E — mascot. y is % of its own height: 106% = hidden below the horizon line.
-  const [m0, m1] = PHASES.mascotOut;
-  const [b0, b1] = PHASES.mascotBack;
-  const mascotY = useTransform(p, MASCOT_KEYS, ["106%", "106%", "-25%", "-21%", "-21%", "-23%", "-23%", "-21%", "106%", "106%"]);
-  const rotY = useTransform(p, MASCOT_KEYS, [-38, -38, 0, 0, 0, 0, 0, 0, -38, -38]);
-  const rotX = useTransform(p, MASCOT_KEYS, [12, 12, 0, 0, 0, 0, 0, 0, 12, 12]);
-  const mScale = useTransform(p, MASCOT_KEYS, [0.9, 0.9, 1, 1, 1, 0.94, 0.94, 1, 0.9, 0.9]);
+  // C/D/E — mascot. y is % of its own height, measured up from the rim apex: positive = below the horizon.
+  // Settled at -40% of --mh (≈17% of the stage height above the horizon); --mh is capped in globals.css so the
+  // head stays below the nav at every viewport height.
+  // It starts tiny and mostly behind the limb, rises out of the light while growing, then settles; it exits once.
+  const mascotY = useTransform(p, MASCOT_KEYS, ["14%", "14%", "4%", "-12%", "-28%", "-40%", "-40%", "-34%", "-34%"]);
+  const mScale = useTransform(p, MASCOT_KEYS, [0.16, 0.16, 0.34, 0.62, 0.88, 1, 1, 0.94, 0.94]);
+  // flat sprite: this is a perspective tilt, not true 3D rotation
+  const rotY = useTransform(p, MASCOT_KEYS, [-40, -40, -30, -16, -5, 0, 0, 0, 0]);
+  const rotX = useTransform(p, MASCOT_KEYS, [14, 14, 10, 5, 1, 0, 0, 0, 0]);
   const mOpacity = useTransform(p, MASCOT_KEYS, MASCOT_OPACITY);
-  const mascotGlow = useTransform(p, [REVEAL, PHASES.rise, m0, m1, b0, b1, PHASES.descend], [0, 1, 1, 0, 0, 1, 0]);
 
-  // D — assistant stage (never overlaps the mascot: mascot is 0 between m1 and b0)
-  const [a0, a1, a2, a3] = PHASES.ai;
-  const aiOpacity = useTransform(p, [a0, a1, a2, a3], [0, 1, 1, 0]);
-  const aiY = useTransform(p, [a0, a1, a2, a3], [40, 0, 0, -30]);
+  // F — the assistant fades in and stays until the pin releases, so the page flows straight into the next section
+  const aiOpacity = useTransform(p, [a0, a1], [0, 1]);
+  const aiY = useTransform(p, [a0, a1], [40, 0]);
   const [aiActive, setAiActive] = useState(false);
   useMotionValueEvent(p, "change", (v) => {
-    const on = v > a0 + 0.02 && v < a3 - 0.01;
-    if (on !== aiActive) setAiActive(on); // flips only at the two thresholds
+    const on = v > a0 + 0.02;
+    if (on !== aiActive) setAiActive(on); // flips only at one threshold
   });
 
   return (
@@ -99,35 +126,31 @@ function CinematicHero() {
       id="top"
       ref={ref}
       aria-label="FindMyDentist introduction"
-      className="relative h-[340vh] md:h-[520vh]"
+      className="relative h-[250vh] md:h-[310vh]"
     >
       <div
         className="sticky top-0 h-svh overflow-hidden"
-        style={{ "--ew": "max(100vw, 1100px)" } as CSSProperties}
+        style={stageVars("100svh")}
       >
         {/* faint atmosphere above the planet; dims as the light gathers */}
         <motion.div aria-hidden style={{ opacity: sky }} className="hero-sky pointer-events-none absolute inset-0" />
 
-        <Earth spread={spread} core={core} coreScale={coreScale} />
+        {/* chat stage: restrained navy that the Earth crossfades into */}
+        <motion.div aria-hidden style={{ opacity: stageNavy }} className="hero-ai-stage pointer-events-none absolute inset-0" />
 
-        {/* the mascot rises from behind the horizon: the clip box ends exactly on the rim apex */}
-        <div aria-hidden className="hero-mascot-clip pointer-events-none absolute left-1/2 -translate-x-1/2">
+        <Earth spread={spread} core={core} coreScale={coreScale} fade={earthFade} />
+
+        {/* the mascot rises from behind the limb: clipped to the measured rim, so it emerges from the planet's edge */}
+        <MascotStage>
           <motion.div
             style={{ y: mascotY, rotateY: rotY, rotateX: rotX, scale: mScale, opacity: mOpacity }}
-            className="absolute inset-x-0 bottom-0 mx-auto h-[var(--mh)] w-[calc(var(--mh)*0.9375)] origin-bottom will-change-transform"
+            className="absolute inset-x-0 bottom-0 mx-auto h-[var(--mh)] w-[var(--mh)] origin-bottom will-change-transform"
           >
-            <motion.div style={{ opacity: mascotGlow }} className="hero-mascot-halo absolute inset-[-20%]" />
-            <div className="hero-float relative size-full">
-              <Image
-                src="/img/hero/mascot.webp"
-                alt=""
-                fill
-                sizes="380px"
-                className="hero-mascot-img object-contain"
-              />
+            <div className="relative size-full">
+              <Image src="/img/hero/mascot.webp" alt="" fill sizes="380px" className="object-contain" />
             </div>
           </motion.div>
-        </div>
+        </MascotStage>
 
         {/* thin rim glow in front of the mascot, so it emerges from the light rather than a hard edge */}
         <motion.div aria-hidden style={{ opacity: core }} className="hero-rimfront pointer-events-none absolute left-1/2 -translate-x-1/2 translate-y-1/2" />
@@ -135,10 +158,10 @@ function CinematicHero() {
         {/* A — headline */}
         <motion.div
           style={{ opacity: titleOpacity, y: titleY }}
-          className="absolute inset-x-0 top-[17svh] z-10 px-4 text-center sm:top-[19svh]"
+          className="absolute inset-x-0 top-[calc(68px+var(--stage)*0.1)] z-10 px-4 text-center"
         >
           <p className="eyebrow">AI-Powered Dental Care</p>
-          <h1 className="mx-auto mt-5 max-w-[900px] text-[clamp(44px,7vw,104px)] font-extralight leading-[0.98] tracking-[-0.045em]">
+          <h1 className="mx-auto mt-5 max-w-[900px] text-[clamp(40px,min(7vw,10.5svh),104px)] font-extralight leading-[0.98] tracking-[-0.045em]">
             <span className="headline-silver">Better Oral Health</span>
             <br />
             <span className="headline-silver">Starts </span>
@@ -146,22 +169,17 @@ function CinematicHero() {
               Here.
             </span>
           </h1>
+          <p aria-hidden className="mt-7 text-[11px] uppercase tracking-[0.4em] text-ink-4">
+            Scroll
+          </p>
         </motion.div>
-
-        <motion.p
-          aria-hidden
-          style={{ opacity: cueOpacity }}
-          className="absolute inset-x-0 bottom-[calc(var(--ew)*0.134+20px)] z-10 text-center text-[11px] uppercase tracking-[0.4em] text-ink-4"
-        >
-          Scroll
-        </motion.p>
 
         {/* D — the assistant, its own state */}
         <motion.div
           style={{ opacity: aiOpacity, y: aiY }}
           inert={!aiActive}
           aria-hidden={!aiActive}
-          className="absolute inset-x-0 top-[12svh] z-20 px-4 sm:top-[14svh]"
+          className="absolute inset-x-0 top-[calc(68px+var(--stage)*0.03)] z-20 px-4"
         >
           <HeroAssistantStage />
         </motion.div>
@@ -172,53 +190,96 @@ function CinematicHero() {
 
 /* ------------------------------------------------------------------------- */
 
+/** The Earth band's own box (aspect = source image) with the mascot's limb-shaped clip. */
+function MascotStage({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      aria-hidden
+      className="hero-mascot-clip pointer-events-none absolute left-1/2 -translate-x-1/2"
+      style={{ aspectRatio: `${IMG_W} / ${IMG_H}`, clipPath: MASCOT_CLIP, bottom: "var(--eb)" }}
+    >
+      {/* anchor at the apex: children's bottom edge sits exactly on the brightest point of the rim */}
+      <div className="absolute inset-x-0" style={{ bottom: `${(1 - APEX / IMG_H) * 100}%`, height: 0 }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function Earth({
   spread,
   core,
   coreScale,
+  fade,
 }: {
   spread: MotionValue<number>;
   core: MotionValue<number>;
   coreScale: MotionValue<number>;
+  fade?: MotionValue<number>;
 }) {
-  // lit span (% of band width either side of centre) → soft-edged horizontal mask
-  const lo = useTransform(spread, (v) => 50 - v * 50 - 6);
-  const lo2 = useTransform(spread, (v) => 50 - v * 50 + 2);
-  const hi2 = useTransform(spread, (v) => 50 + v * 50 - 2);
-  const hi = useTransform(spread, (v) => 50 + v * 50 + 6);
+  // lit span (% of band width either side of centre) → soft-edged horizontal mask; it reveals the lit planet
+  // and the SVG limb together, so the light spreads outward from the emergence point along the curve
+  const lo = useTransform(spread, (v) => 50 - v * 50 - 18);
+  const lo2 = useTransform(spread, (v) => 50 - v * 50 + 4);
+  const hi2 = useTransform(spread, (v) => 50 + v * 50 - 4);
+  const hi = useTransform(spread, (v) => 50 + v * 50 + 18);
   const mask = useMotionTemplate`linear-gradient(90deg, transparent ${lo}%, #000 ${lo2}%, #000 ${hi2}%, transparent ${hi}%)`;
-  // travelling glints ride the measured rim curve
-  const side = useTransform(spread, (v) => `${50 - v * 50}%`);
-  const top = useTransform(spread, (v) => `${rimY(v)}%`);
+  // the travelling glints sit on the measured rim (SVG user units = source-image px)
+  const reach = useTransform(spread, (v) => v * (IMG_W / 2));
+  const rx = useTransform(reach, (r) => MID + r);
+  const lx = useTransform(reach, (r) => MID - r);
+  const ry = useTransform(rx, (x) => rimYAt(x));
+  const ly = useTransform(lx, (x) => rimYAt(x));
   const glint = useTransform(spread, [0.1, 0.16, 0.97, 1], [0, 1, 1, 0]);
 
   return (
-    <div
+    <motion.div
       aria-hidden
-      className="pointer-events-none absolute bottom-0 left-1/2 w-[var(--ew)] -translate-x-1/2"
-      style={{ aspectRatio: `${IMG_W} / ${IMG_H}` }}
+      className="pointer-events-none absolute left-1/2 w-[var(--ew)] -translate-x-1/2"
+      style={{ aspectRatio: `${IMG_W} / ${IMG_H}`, opacity: fade, bottom: "var(--eb)" }}
     >
       {/* unlit planet */}
-      <Image src="/img/hero/earth.webp" alt="" fill sizes="(max-width: 1100px) 1100px, 100vw" priority className="hero-earth opacity-[0.38]" />
-      {/* lit planet, revealed outward from the centre */}
+      <Image src="/img/hero/earth-4320.webp" alt="" fill quality={92} sizes="max(100vw, 135vh)" priority className="hero-earth opacity-[0.38]" />
+      {/* lit planet + horizon light, revealed outward from the centre */}
       <motion.div className="absolute inset-0" style={{ WebkitMaskImage: mask, maskImage: mask }}>
-        <Image src="/img/hero/earth.webp" alt="" fill sizes="(max-width: 1100px) 1100px, 100vw" loading="eager" className="hero-earth" />
+        <Image src="/img/hero/earth-4320.webp" alt="" fill quality={92} sizes="max(100vw, 135vh)" loading="eager" className="hero-earth" />
+        <motion.svg
+          viewBox={`0 0 ${IMG_W} ${IMG_H}`}
+          className="absolute inset-0 size-full"
+          style={{ opacity: core }}
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          {/* two symmetric segments from the emergence point outward; soft halo first, restrained core last */}
+          {[rimPath(MID, 0), rimPath(MID, IMG_W)].map((d, i) => (
+            <g key={i}>
+              <path d={d} style={{ stroke: "rgb(var(--horizon-rgb) / 0.05)" }} strokeWidth={22} />
+              <path d={d} style={{ stroke: "rgb(var(--horizon-rgb) / 0.12)" }} strokeWidth={10} />
+              <path d={d} style={{ stroke: "rgb(var(--horizon-rgb) / 0.85)" }} strokeWidth={2.2} />
+            </g>
+          ))}
+        </motion.svg>
       </motion.div>
       {/* centre light source, attached to the apex */}
       <motion.div
         style={{ opacity: core, scale: coreScale, top: `${(APEX / IMG_H) * 100}%` }}
         className="hero-core absolute left-1/2 -translate-x-1/2 -translate-y-1/2"
       />
-      <motion.span style={{ left: side, top, opacity: glint }} className="hero-glint absolute -translate-x-1/2 -translate-y-1/2" />
-      <motion.span style={{ right: side, top, opacity: glint }} className="hero-glint absolute translate-x-1/2 -translate-y-1/2" />
-    </div>
+      {/* travelling glints: SVG transforms in source px, so no layout work per frame */}
+      <svg viewBox={`0 0 ${IMG_W} ${IMG_H}`} className="absolute inset-0 size-full" fill="none">
+        <defs>
+          <radialGradient id="rim-glint">
+            <stop offset="0" stopColor="rgb(244 247 252)" stopOpacity="1" />
+            <stop offset="0.45" stopColor="rgb(244 247 252)" stopOpacity="0.35" />
+            <stop offset="1" stopColor="rgb(244 247 252)" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <motion.ellipse rx={64} ry={9} fill="url(#rim-glint)" style={{ x: lx, y: ly, opacity: glint }} />
+        <motion.ellipse rx={64} ry={9} fill="url(#rim-glint)" style={{ x: rx, y: ry, opacity: glint }} />
+      </svg>
+    </motion.div>
   );
-}
-
-/** Rim height (% of band height) at a spread fraction 0..1 from the centre. */
-function rimY(f: number) {
-  const dx = f * (IMG_W / 2);
-  return ((APEX + CURVE * dx * dx) / IMG_H) * 100;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -274,15 +335,18 @@ function HeroAssistantStage() {
   };
 
   return (
-    <div className="mx-auto flex max-w-[680px] flex-col items-center text-center">
+    <div className="relative mx-auto flex max-w-[680px] flex-col items-center text-center">
       <span className="icon-tile size-12">
         <Sparkles className="size-5" strokeWidth={1.3} />
       </span>
-      <p className="eyebrow mt-6">FMD AI</p>
-      <h2 className="mt-4 text-[clamp(28px,4.2vw,48px)] font-extralight leading-[1.08] tracking-[-0.035em] text-ink">
+      <p className="eyebrow mt-6" style={{ textShadow: "0 1px 12px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.6)" }}>FMD AI</p>
+      <h2
+        className="mt-4 text-[clamp(28px,4.2vw,48px)] font-extralight leading-[1.08] tracking-[-0.035em] text-ink"
+        style={{ textShadow: "0 2px 20px rgba(0,0,0,0.95), 0 0 60px rgba(0,0,0,0.7)" }}
+      >
         Hi, I&apos;m FMD AI.
         <br />
-        <span className="text-ink-3">How can I help with your dental care?</span>
+        <span className="text-ink-2">How can I help with your dental care?</span>
       </h2>
 
       <form
@@ -290,7 +354,7 @@ function HeroAssistantStage() {
           e.preventDefault();
           send(text);
         }}
-        className="glass mt-8 flex w-full items-center gap-2 rounded-full p-1.5 pl-5 focus-within:shadow-[inset_0_1px_0_var(--inner-hi),0_0_0_1px_rgb(var(--accent-rgb)/0.18),0_0_60px_-10px_var(--accent-glow)]"
+        className="glass mt-8 flex w-full items-center gap-2 rounded-full border border-line-strong p-1.5 pl-5 shadow-[inset_0_1px_0_var(--inner-hi),0_8px_32px_-8px_rgba(0,0,0,0.55)] focus-within:border-[rgba(255,255,255,0.22)] focus-within:shadow-[inset_0_1px_0_var(--inner-hi),0_0_0_1px_rgb(var(--accent-rgb)/0.18),0_0_60px_-10px_var(--accent-glow)]"
       >
         <label htmlFor="hero-ai" className="sr-only">
           Ask FMD AI
@@ -301,7 +365,7 @@ function HeroAssistantStage() {
           onChange={(e) => setText(e.target.value)}
           placeholder="Describe a symptom or ask a question…"
           autoComplete="off"
-          className="h-11 min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink-4 sm:h-12"
+          className="h-11 min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink-3 sm:h-12"
         />
         {voice && (
           <button
@@ -310,7 +374,7 @@ function HeroAssistantStage() {
             aria-pressed={listening}
             aria-label={listening ? "Stop voice input" : "Speak your question"}
             className={`grid size-11 shrink-0 place-items-center rounded-full border transition-colors sm:size-12 ${
-              listening ? "border-line-strong bg-[var(--accent-soft)] text-ink" : "border-transparent text-ink-3 hover:text-ink"
+              listening ? "border-line-strong bg-[var(--accent-soft)] text-ink" : "border-transparent text-ink-2 hover:text-ink"
             }`}
           >
             <Mic className="size-[18px]" strokeWidth={1.5} />
@@ -324,13 +388,21 @@ function HeroAssistantStage() {
 
       <div className="mt-5 flex flex-wrap justify-center gap-2">
         {PROMPTS.map((q) => (
-          <button key={q} type="button" onClick={() => send(q)} className="glass glass-interactive rounded-full px-4 py-2 text-[13px] text-ink-2">
+          <button
+            key={q}
+            type="button"
+            onClick={() => send(q)}
+            className="glass glass-interactive rounded-full border border-line-strong px-4 py-2 text-[13px] text-ink shadow-[0_4px_16px_-4px_rgba(0,0,0,0.5)] transition-colors hover:text-ink"
+          >
             {q}
           </button>
         ))}
       </div>
 
-      <p className="mt-6 flex max-w-[520px] items-start gap-2 text-left text-[12px] leading-snug text-ink-4">
+      <p
+        className="mt-6 flex max-w-[520px] items-start gap-2 text-left text-[12.5px] leading-snug text-ink-3"
+        style={{ textShadow: "0 1px 10px rgba(0,0,0,0.9)" }}
+      >
         <ShieldCheck className="mt-px size-3.5 shrink-0" strokeWidth={1.5} />
         Guidance, not diagnosis. FMD AI explains and suggests; it never books, contacts clinics or pays on your behalf.
       </p>
@@ -345,19 +417,18 @@ function StaticHero() {
   const full = useMotionValue(1);
   return (
     <section id="top" aria-label="FindMyDentist introduction" className="relative">
-      <div className="relative h-svh min-h-[620px] overflow-hidden" style={{ "--ew": "max(100vw, 1100px)" } as CSSProperties}>
+      <div className="relative h-svh min-h-[620px] overflow-hidden" style={stageVars("max(100svh, 620px)")}>
         <div aria-hidden className="hero-sky absolute inset-0 opacity-60" />
         <Earth spread={full} core={full} coreScale={full} />
-        <div aria-hidden className="hero-mascot-clip pointer-events-none absolute left-1/2 -translate-x-1/2">
-          <div className="absolute inset-x-0 bottom-0 mx-auto h-[var(--mh)] w-[calc(var(--mh)*0.9375)] -translate-y-[21%]">
-            <div className="hero-mascot-halo absolute inset-[-20%]" />
-            <Image src="/img/hero/mascot.webp" alt="" fill sizes="380px" priority className="hero-mascot-img object-contain" />
+        <MascotStage>
+          <div className="absolute inset-x-0 bottom-0 mx-auto [--mh:clamp(150px,26svh,260px)] h-[var(--mh)] w-[var(--mh)] -translate-y-[8%]">
+            <Image src="/img/hero/mascot.webp" alt="" fill sizes="380px" priority className="object-contain" />
           </div>
-        </div>
+        </MascotStage>
         <div aria-hidden className="hero-rimfront absolute left-1/2 -translate-x-1/2 translate-y-1/2" />
-        <div className="absolute inset-x-0 top-[12svh] z-10 px-4 text-center">
+        <div className="absolute inset-x-0 top-[calc(68px+var(--stage)*0.06)] z-10 px-4 text-center">
           <p className="eyebrow">AI-Powered Dental Care</p>
-          <h1 className="mx-auto mt-4 text-[clamp(40px,6vw,84px)] font-extralight leading-[0.98] tracking-[-0.045em]">
+          <h1 className="mx-auto mt-4 text-[clamp(34px,min(6vw,8.5svh),84px)] font-extralight leading-[0.98] tracking-[-0.045em]">
             <span className="headline-silver">Better Oral Health</span>
             <br />
             <span className="headline-silver">Starts </span>

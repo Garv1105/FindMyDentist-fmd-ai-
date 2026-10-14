@@ -187,7 +187,7 @@ export default function Dentists() {
               ))}
             </ul>
             <a href="#concierge" className="btn-ghost mt-6 h-10 px-5 text-[13px]">
-              Ask FMD Concierge
+              Ask FMD Edge
             </a>
           </div>
         )}

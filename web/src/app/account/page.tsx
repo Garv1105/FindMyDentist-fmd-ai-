@@ -211,11 +211,11 @@ function MyConcierge() {
       .catch((e) => setErr(e.message));
   }, []);
   return (
-    <Card title="Your Concierge requests" desc="Status updates from the FMD coordination team.">
+    <Card title="Your FMD Edge requests" desc="Status updates from the FMD coordination team.">
       {err && <Notice kind="error">{err}</Notice>}
       {items?.length === 0 && (
         <p className="text-[13px] text-ink-4">
-          No requests yet. <Link href="/#concierge" className="underline underline-offset-4">Request Concierge assistance</Link>
+          No requests yet. <Link href="/#concierge" className="underline underline-offset-4">Request FMD Edge assistance</Link>
         </p>
       )}
       <ul className="space-y-3">

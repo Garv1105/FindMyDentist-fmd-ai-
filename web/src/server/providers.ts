@@ -183,7 +183,7 @@ function suggest(f: { city?: string; specialty?: string; service?: string; langu
   const out: string[] = [];
   if (f.language) out.push(`Try any language instead of ${f.language}.`);
   if (f.specialty) out.push(`Try a General Dentist, who can refer you to a ${f.specialty} if needed.`);
-  if (f.city) out.push(`FMD may not have listed providers in ${f.city} yet. FMD Concierge can help coordinate.`);
+  if (f.city) out.push(`FMD may not have listed providers in ${f.city} yet. FMD Edge can help coordinate.`);
   if (f.q) out.push("Check the spelling, or search by treatment (for example \"Root Canal\").");
   return out;
 }

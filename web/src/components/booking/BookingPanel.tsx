@@ -168,7 +168,7 @@ export function BookingPanel({ profile }: { profile: ProviderProfile }) {
             Times from the clinic&apos;s schedule{avail.scheduleSource === "demo" ? " (demo schedule)" : ""}. Shown in IST.
           </p>
           {days.length === 0 ? (
-            <p className="mt-4 rounded-[14px] border border-dashed border-line-strong p-3.5 text-[12.5px] text-ink-3">No open times in the next two weeks. Try FMD Concierge for help.</p>
+            <p className="mt-4 rounded-[14px] border border-dashed border-line-strong p-3.5 text-[12.5px] text-ink-3">No open times in the next two weeks. Try FMD Edge for help.</p>
           ) : (
             <>
               <div role="tablist" aria-label="Day" className="no-scrollbar mt-4 flex gap-2 overflow-x-auto">
