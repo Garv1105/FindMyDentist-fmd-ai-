@@ -8,7 +8,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const TOTAL_FRAMES = 150;
 const FRAME_PATH = (idx: number) => `/frames/frame_${String(idx).padStart(4, "0")}.png`;
 
-const FRAME_SCALE = 0.6;
+/** Max share of the viewport (width and height) the frame sequence may fill. */
+const FRAME_SCALE = 0.45;
 const RISE_PHASE = 0.25;
 
 const FLOAT_AMPLITUDE = 8;
@@ -18,7 +19,12 @@ const FLOAT_RESUME_DELAY = 220;
 const DIALOGUE_TRIGGER_FRAME = 95;
 const DIALOGUE_TEXT = "let me take over";
 
-const EARTH_AWAKEN_START = 6;
+/**
+ * The mat appears when the section has been scrolled into at least this
+ * fraction of its scrollable height, and disappears when progress falls
+ * back below this threshold (i.e. user scrolled back to the very top).
+ */
+const MAT_SHOW_THRESHOLD = 0.02;
 
 export interface HeroSectionProps {
   scrollHeightVh?: number;
@@ -39,7 +45,6 @@ export default function HeroSection({
 }: HeroSectionProps) {
   const containerRef = useRef<HTMLElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const earthWrapperRef = useRef<HTMLDivElement | null>(null);
 
   const imagesRef = useRef<(HTMLImageElement | null)[]>([]);
   const loadedSetRef = useRef<Set<number>>(new Set());
@@ -51,6 +56,7 @@ export default function HeroSection({
   const [matVisible, setMatVisible] = useState<boolean>(false);
   const [dialogueVisible, setDialogueVisible] = useState<boolean>(false);
   const [typedText, setTypedText] = useState<string>("");
+  const [headingOpacity, setHeadingOpacity] = useState<number>(1);
 
   const animFrameIdRef = useRef<number | null>(null);
   const floatAnimIdRef = useRef<number | null>(null);
@@ -153,25 +159,6 @@ export default function HeroSection({
 
     ctx.drawImage(img, nx, ny, drawW, drawH);
   }, []);
-
-  // ---------------------------------------------------------------------------
-  // Earth reveal → CSS vars
-  // ---------------------------------------------------------------------------
-  useEffect(() => {
-    const range = TOTAL_FRAMES - EARTH_AWAKEN_START;
-    const raw = (currentFrame - EARTH_AWAKEN_START) / range;
-    const reveal = Math.max(0, Math.min(1, raw));
-
-    const el = earthWrapperRef.current;
-    if (!el) return;
-
-    el.style.setProperty("--reveal", String(reveal));
-    el.style.setProperty("--sat", String(reveal));
-    el.style.setProperty("--bri", String(0.3 + reveal * 0.7));
-    const glow = reveal <= 0 ? 0 : Math.sin(reveal * Math.PI) * 0.9;
-    el.style.setProperty("--glow", String(glow));
-    el.style.setProperty("--glow-size", String(15 + reveal * 90));
-  }, [currentFrame]);
 
   // ---------------------------------------------------------------------------
   // Resize
@@ -310,7 +297,6 @@ export default function HeroSection({
     const onScroll = () => {
       if (!hasScrolledRef.current) {
         hasScrolledRef.current = true;
-        setMatVisible(true);
       }
 
       isScrollingRef.current = true;
@@ -326,6 +312,16 @@ export default function HeroSection({
         requestAnimationFrame(() => {
           ticking = false;
           const progress = getSectionProgress();
+
+          if (progress > MAT_SHOW_THRESHOLD) {
+            if (!matVisible) setMatVisible(true);
+          } else {
+            if (matVisible) setMatVisible(false);
+          }
+
+          const HERO_HEADING_FADE_END = 0.15;
+          const headingT = Math.min(1, Math.max(0, progress / HERO_HEADING_FADE_END));
+          setHeadingOpacity(1 - headingT);
 
           const riseProgress = Math.min(1, progress / RISE_PHASE);
           const newY = riseProgress;
@@ -356,7 +352,7 @@ export default function HeroSection({
       window.removeEventListener("scroll", onScroll);
       if (scrollEndTimerRef.current) clearTimeout(scrollEndTimerRef.current);
     };
-  }, [drawFrame, isPlaying, getSectionProgress]);
+  }, [drawFrame, isPlaying, getSectionProgress, matVisible]);
 
   // ---------------------------------------------------------------------------
   // Autoplay
@@ -403,7 +399,6 @@ export default function HeroSection({
         e.preventDefault();
         if (!hasScrolledRef.current) {
           hasScrolledRef.current = true;
-          setMatVisible(true);
         }
         setIsPlaying((p) => !p);
         return;
@@ -411,7 +406,6 @@ export default function HeroSection({
 
       if (!hasScrolledRef.current) {
         hasScrolledRef.current = true;
-        setMatVisible(true);
       }
 
       if (e.key === "ArrowDown" || e.key === "ArrowRight") {
@@ -465,6 +459,8 @@ export default function HeroSection({
 
   const progressPercent = Math.round(((currentFrame - 1) / (TOTAL_FRAMES - 1)) * 100);
 
+  const headingInteractive = headingOpacity > 0.5;
+
   return (
     <section
       ref={containerRef}
@@ -472,12 +468,6 @@ export default function HeroSection({
       style={{ height: `${scrollHeightVh}vh` }}
       data-in-view={inView ? "true" : "false"}
     >
-      {/* 
-        Sticky viewport wrapper — this is the "screen" that stays pinned to
-        the top of the viewport while the section is being scrolled through.
-        Once the section's bottom reaches the viewport bottom, this wrapper
-        scrolls up and off with the section naturally.
-      */}
       <div className="sticky top-0 h-screen w-full overflow-hidden">
         {/* Frame canvas */}
         <canvas
@@ -493,16 +483,57 @@ export default function HeroSection({
           className="absolute inset-0 z-1 pointer-events-none bg-[radial-gradient(circle_at_50%_40%,transparent_45%,rgba(0,0,0,0.85)_90%)]"
         />
 
-        {/* Earth + mat — anchored to the bottom of the sticky viewport */}
+        {/* HERO HEADING */}
         <div
-          ref={earthWrapperRef}
+          className={`pointer-events-none absolute inset-x-0 top-[8%] z-20 flex flex-col items-center px-6 text-center transition-opacity duration-300 ${
+            headingInteractive ? "" : "pointer-events-none"
+          }`}
+          style={{
+            opacity: headingOpacity,
+            transform: `translateY(${(1 - headingOpacity) * -16}px)`,
+          }}
+          aria-hidden={!headingInteractive}
+        >
+          <div className="mb-6 inline-flex items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.03] px-3.5 py-1.5 backdrop-blur-md">
+            <span className="inline-block size-1.5 rounded-full bg-[#8CBFFF] shadow-[0_0_12px_rgba(140,191,255,0.9)]" />
+            <span className="text-[10.5px] font-mono uppercase tracking-[0.32em] text-[#8CBFFF]/85">
+              FindMyDentist
+            </span>
+          </div>
+
+          <h1 className="max-w-4xl text-[34px] font-extralight leading-[1.05] tracking-[-0.035em] text-white sm:text-[56px] md:text-[68px]">
+            <span className="block">Better care.</span>
+            <span className="block">Smarter clinics.</span>
+            <span
+              className="block bg-gradient-to-r from-[#8CBFFF] via-[#F4F7FF] to-[#8CBFFF] bg-clip-text text-transparent"
+              style={{ textShadow: "0 0 60px rgba(140,191,255,0.35)" }}
+            >
+              Brighter smiles.
+            </span>
+          </h1>
+
+          <p className="mt-7 max-w-xl text-[13.5px] leading-relaxed text-white/55 sm:text-[15px]">
+            One platform for patients and dental professionals — clearer
+            answers, vetted clinics, and better outcomes.
+          </p>
+
+          <div className="mt-10 flex items-center gap-2 text-[10.5px] font-mono uppercase tracking-[0.28em] text-white/35">
+            <span className="block h-px w-8 bg-white/25" />
+            <span>Scroll to begin</span>
+            <span className="block h-px w-8 bg-white/25" />
+          </div>
+        </div>
+
+        {/* Earth + mat */}
+        <div
           aria-hidden
           className="pointer-events-none absolute bottom-0 left-1/2 z-10 w-[max(100vw,1200px)] -translate-x-1/2"
           style={{
             aspectRatio: "1280 / 172",
-            ["--reveal" as string]: 0,
-            ["--sat" as string]: 0,
-            ["--bri" as string]: 0.3,
+            // Static, fully-lit earth — no scroll-driven brightening or glow burst
+            ["--reveal" as string]: 1,
+            ["--sat" as string]: 1,
+            ["--bri" as string]: 1,
             ["--glow" as string]: 0,
             ["--glow-size" as string]: 15,
           }}
@@ -528,7 +559,7 @@ export default function HeroSection({
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black to-transparent" />
           </div>
 
-          <div
+          {/* <div
             className={`pointer-events-none absolute left-1/2 earth-mat-wrapper ${
               matVisible ? "mat-visible" : ""
             }`}
@@ -541,33 +572,45 @@ export default function HeroSection({
               priority
               className="earth-mat object-contain"
             />
-          </div>
+          </div> */}
         </div>
-
-        {/* Dialogue — anchored to the top of the sticky viewport */}
+        {/* ------------------------------------------------------------------
+            DIALOGUE — thinking cloud with typewriter text on top
+        ------------------------------------------------------------------ */}
         <div
-          className={`hero-chrome pointer-events-none absolute top-[12%] left-1/2 transition-all duration-700 ease-out ${
+        className={`hero-chrome pointer-events-none absolute top-[8%] left-[35%] transition-all duration-700 ease-out ${
             dialogueVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
-          }`}
-          style={{ zIndex: 25, transform: "translateX(-50%)" }}
-          aria-live="polite"
+        }`}
+        style={{ zIndex: 25, transform: "translateX(-50%)" }}
+        aria-live="polite"
         >
-          <div className="relative max-w-md">
-            <div className="relative rounded-2xl border border-white/20 bg-gradient-to-br from-white/[0.12] to-white/[0.04] px-6 py-4 backdrop-blur-xl shadow-[0_0_40px_-10px_rgba(120,200,255,0.5)]">
-              <p className="text-lg sm:text-2xl font-light italic text-white/95 leading-snug">
+        <div className="relative w-[320px] sm:w-[280px]">
+            {/* Thinking cloud background */}
+            <Image
+            src="/thinking-cloud-image-png.webp"
+            alt=""
+            width={280}
+            height={175}
+            priority
+            className="select-none object-contain"
+            style={{ width: "100%", height: "auto" }}
+            draggable={false}
+            />
+
+            {/* Typewriter text — positioned inside the cloud's body */}
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-[8%] pb-[26%] pr-[22%]">
+            <p className="text-center text-[15px] font-light italic leading-snug text-[#0B1428] sm:text-[18px]">
                 &ldquo;{typedText}
                 <span
-                  className="ml-0.5 inline-block w-[2px] animate-pulse bg-cyan-300 align-middle"
-                  style={{ height: "1em" }}
+                className="ml-0.5 inline-block h-[1em] w-[2px] animate-pulse bg-[#0B1428]/70 align-middle"
                 />
                 &rdquo;
-              </p>
+            </p>
             </div>
-            <div className="absolute left-1/2 -bottom-2 h-4 w-4 -translate-x-1/2 rotate-45 border-b border-r border-white/20 bg-white/[0.08] backdrop-blur-xl" />
-          </div>
+        </div>
         </div>
 
-        {/* Optional header — anchored to the top of the sticky viewport */}
+        {/* Optional header */}
         {showHeader && (
           <header className="hero-chrome absolute top-0 inset-x-0 z-30 flex items-center justify-between px-4 py-4 sm:px-8 backdrop-blur-md bg-black/40 border-b border-white/[0.08]">
             <Link
@@ -623,7 +666,7 @@ export default function HeroSection({
           </header>
         )}
 
-        {/* Scrubber — anchored to the bottom of the sticky viewport */}
+        {/* Scrubber */}
         <div className="hero-chrome absolute bottom-12 inset-x-0 z-30 pointer-events-none flex justify-center px-4">
           <div className="pointer-events-auto flex items-center gap-3 rounded-full border border-white/15 bg-black/70 px-4 py-2 backdrop-blur-xl shadow-2xl">
             <span className="text-[11px] font-mono text-white/60 uppercase tracking-wider">
@@ -639,7 +682,6 @@ export default function HeroSection({
                 setIsPlaying(false);
                 if (!hasScrolledRef.current) {
                   hasScrolledRef.current = true;
-                  setMatVisible(true);
                 }
                 targetFrameRef.current = val;
                 setCurrentFrame(val);
@@ -655,7 +697,7 @@ export default function HeroSection({
           </div>
         </div>
 
-        {/* Buffer badge — anchored to the bottom-right of the sticky viewport */}
+        {/* Buffer badge */}
         <div className="hero-chrome absolute bottom-4 right-4 z-30 pointer-events-none hidden md:block">
           <div className="rounded-full border border-white/10 bg-black/60 px-3 py-1 text-[10px] font-mono text-white/40 backdrop-blur-md">
             {loadedCount === TOTAL_FRAMES
@@ -664,7 +706,6 @@ export default function HeroSection({
           </div>
         </div>
 
-        {/* Local styles */}
         <style jsx>{`
           .earth-img-layer {
             filter: saturate(var(--sat)) brightness(var(--bri));
