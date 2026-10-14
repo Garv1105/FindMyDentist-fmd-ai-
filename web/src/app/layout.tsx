@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#04050a",
+  themeColor: "#000000",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -27,7 +27,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: noFlashScript }} />
       </head>
-      <body className="min-h-dvh">{children}</body>
+      <body className="fmd-glass isolate min-h-dvh">
+        {/* Site-wide dark backdrop: faint colour orbs for the glass panels to refract */}
+        <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,#000000_0%,#01030a_45%,#030818_100%)]" />
+          <div className="glass-orb absolute -left-[8%] top-[10%] size-[480px] rounded-full bg-[#2f6bff] opacity-[0.11] blur-[120px]" />
+          <div className="glass-orb absolute -right-[6%] top-[40%] size-[420px] rounded-full bg-[#7c4dff] opacity-[0.09] blur-[120px] [animation-delay:-6s]" />
+          <div className="glass-orb absolute bottom-[-10%] left-[30%] size-[400px] rounded-full bg-[#22c3ff] opacity-[0.07] blur-[110px] [animation-delay:-12s]" />
+        </div>
+        {children}
+      </body>
     </html>
   );
 }
