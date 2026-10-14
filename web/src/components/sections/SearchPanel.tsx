@@ -1,6 +1,18 @@
 "use client";
 
-import { Sparkles, X, Mic, ArrowUp, ShieldCheck } from "lucide-react";
+import {
+  Sparkles,
+  X,
+  Mic,
+  ArrowUp,
+  ShieldCheck,
+  ChevronRight,
+  MapPin,
+  Snowflake,
+  Smile,
+  CalendarCheck,
+  type LucideIcon,
+} from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -52,11 +64,11 @@ const SAMPLE_QUESTIONS: SampleQA[] = [
   },
 ];
 
-const QUICK_CHIPS: { id: string; label: string }[] = [
-  { id: "find-dentist", label: "Find a dentist near me" },
-  { id: "cold-drinks", label: "My tooth hurts with cold drinks" },
-  { id: "braces", label: "Braces or aligners?" },
-  { id: "appointment", label: "Prepare for my appointment" },
+const QUICK_CHIPS: { id: string; label: string; icon: LucideIcon }[] = [
+  { id: "find-dentist", label: "Find a dentist near me", icon: MapPin },
+  { id: "cold-drinks", label: "My tooth hurts with cold drinks", icon: Snowflake },
+  { id: "braces", label: "Braces or aligners?", icon: Smile },
+  { id: "appointment", label: "Prepare for my appointment", icon: CalendarCheck },
 ];
 
 // Video timing constants
@@ -64,7 +76,7 @@ const VIDEO_DURATION_MS = 10000;
 /** Start streaming the answer this many ms into the video. */
 const ANSWER_START_MS = 7000;
 /** Box side length in px — used by both the box and the video image sizing. */
-const BOX_SIZE = 120;
+const BOX_SIZE = 92;
 
 // ---------------------------------------------------------------------------
 // Component
@@ -294,14 +306,14 @@ export default function SearchPanel() {
   }, [query, playVideoThenStream, cancelStream, clearVideoTimers]);
 
   const handleChipClick = useCallback(
-    (label: string) => {
+    (id: string, label: string) => {
       const chipToQuestion: Record<string, string> = {
         "find-dentist": "check-up",
         "cold-drinks": "root canal",
         braces: "whitening",
         appointment: "cost",
       };
-      const mapped = chipToQuestion[label] ?? label;
+      const mapped = chipToQuestion[id] ?? label;
       setQuery(label);
       setSubmittedQuery(mapped);
       const first = SAMPLE_QUESTIONS.find(
@@ -342,10 +354,14 @@ export default function SearchPanel() {
   const showFrame = showVideoLayer;
 
   return (
-    <section className="relative isolate overflow-hidden bg-canvas py-24 text-ink sm:py-32">
-      {/* Atmospheric background */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute left-1/2 top-[35%] h-[900px] w-[1400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgb(var(--accent-rgb)/0.10)_0%,rgb(var(--accent-rgb)/0.04)_40%,transparent_75%)]" />
+    <section className="relative isolate overflow-hidden pb-24 pt-20 text-ink sm:pb-32 sm:pt-24">
+      {/* Sits on the page's fixed navy backdrop; the planet arc fades out at the
+          bottom so there's no seam into the next section */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 [mask-image:linear-gradient(to_bottom,#000_calc(100%-120px),transparent)]">
+        {/* Pure black at the top (continues the black hero above), easing into the navy backdrop */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,#000_0%,#000_22%,rgb(0_0_0/0.85)_42%,rgb(0_0_0/0.45)_68%,transparent_100%)]" />
+        {/* Horizon arc */}
+        <div className="absolute -bottom-[520px] left-1/2 h-[700px] w-[1800px] -translate-x-1/2 rounded-[50%] bg-[radial-gradient(ellipse_at_top,#0b1a3f_0%,#040a1c_70%)] shadow-[0_-2px_0_rgb(160_200_255/0.55),0_-30px_120px_rgb(var(--accent-rgb)/0.55)]" />
         <StarField />
       </div>
 
@@ -360,16 +376,15 @@ export default function SearchPanel() {
             }`}
             aria-hidden={hideGreeting}
           >
-            <div className="mx-auto mb-7 flex size-14 items-center justify-center rounded-2xl border border-line bg-[var(--surface-glass)] shadow-[0_10px_40px_-15px_var(--accent-glow)] backdrop-blur-xl">
-              <Sparkles className="size-6 text-ink-2" strokeWidth={1.5} />
+            <div className="liquid-glass mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl [box-shadow:var(--glass-shadow),0_0_50px_-8px_rgb(var(--accent-rgb)/0.7)]">
+              <Sparkles className="size-6 text-ink" strokeWidth={1.5} />
             </div>
 
-            <div className="eyebrow mb-6">FMD AI</div>
+            <div className="eyebrow mb-4">FMD AI</div>
 
             <h1 className="text-[32px] font-extralight leading-[1.05] tracking-[-0.035em] text-ink sm:text-[52px]">
               Hi, I&apos;m FMD AI.
-              <br />
-              <span className="text-ink-3">
+              <span className="block text-balance bg-gradient-to-r from-[#8fb8ff] to-[#3d7bff] bg-clip-text text-transparent">
                 How can I help with your dental care?
               </span>
             </h1>
@@ -391,14 +406,14 @@ export default function SearchPanel() {
                 Here&apos;s what we found
               </h2>
               <p className="mt-2 text-xs text-ink-4">
-                For &ldquo;{submittedQuery}&rdquo;
+                For &ldquo;{query}&rdquo;
               </p>
             </div>
 
             {filtered.length === 0 && (
-              <div className="rounded-2xl border border-line bg-[var(--surface-glass)] px-6 py-10 text-center backdrop-blur-xl">
+              <div className="liquid-glass rounded-3xl px-6 py-10 text-center">
                 <p className="text-sm text-ink-3">
-                  No direct match for &ldquo;{submittedQuery}&rdquo;. Try one of
+                  No direct match for &ldquo;{query}&rdquo;. Try one of
                   the suggestions below, or rephrase.
                 </p>
               </div>
@@ -415,10 +430,10 @@ export default function SearchPanel() {
                 return (
                   <div
                     key={item.id}
-                    className={`group overflow-hidden rounded-2xl border backdrop-blur-xl transition-all duration-300 ${
+                    className={`liquid-glass group overflow-hidden rounded-3xl transition-all duration-300 ${
                       isOpen
-                        ? "border-line-strong bg-[var(--surface-elevated)] shadow-[0_10px_40px_-15px_var(--shadow)]"
-                        : "border-line bg-[var(--surface-glass)] hover:border-line-strong hover:bg-[var(--glass-tint)]"
+                        ? "liquid-glass-active [box-shadow:var(--glass-shadow),0_0_70px_-20px_rgb(var(--accent-rgb)/0.75)]"
+                        : "hover:-translate-y-0.5"
                     }`}
                     style={{
                       animation: `resultIn 600ms cubic-bezier(0.16,1,0.3,1) ${
@@ -488,88 +503,114 @@ export default function SearchPanel() {
           </div>
         </div>
 
-        {/* -------------------- SEARCH BAR + VIDEO -------------------- */}
-        <div className="relative mx-auto mt-12 max-w-2xl">
+        {/* -------------------- GLASS CONSOLE -------------------- */}
+        <div className="relative mx-auto mt-10 max-w-2xl">
+          {/* Colour behind the console so the frosted glass has something to refract */}
           <div
             aria-hidden
-            className="pointer-events-none absolute -inset-x-6 -inset-y-4 rounded-[999px] bg-[radial-gradient(ellipse_at_center,rgb(var(--accent-rgb)/0.18),transparent_70%)] blur-2xl"
-          />
+            className="pointer-events-none absolute -inset-x-16 -inset-y-10 -z-10"
+          >
+            <div className="absolute left-[10%] top-[10%] h-3/4 w-1/2 rounded-full bg-[#2f6bff] opacity-40 blur-[90px]" />
+            <div className="absolute right-[8%] bottom-[5%] h-2/3 w-2/5 rounded-full bg-[#7c4dff] opacity-30 blur-[90px]" />
+          </div>
 
-          <div className="flex items-center gap-4">
-            {/*
-              Media box.
-              - Idle (mascot):   no frame, no background. The transparent PNG
-                                 floats directly on the section background.
-              - Playing / Done:  gets the curved glass tray frame back, and
-                                 shows the video (playing or paused on the
-                                 last frame).
-            */}
-            <div
-              className={`media-box relative shrink-0 transition-all duration-500 ${
-                showFrame ? "media-box-framed" : "media-box-bare"
-              } ${videoDone ? "video-float" : ""}`}
-              style={{ width: BOX_SIZE, height: BOX_SIZE }}
-              aria-hidden
-            >
-              {/* Curved glass background — only mounted when framed */}
-              {showFrame && <div className="media-box-bg absolute inset-0" />}
-
-              {/* Content layer — inset from the tray when framed, or flush
-                  when bare (so the mascot uses the full box). */}
+          <div className="liquid-glass rounded-[32px] p-3 sm:p-4">
+            {/* Header: mascot / video + prompt */}
+            <div className="flex items-center gap-4 px-2 pb-4 pt-1">
+              {/*
+                Media box.
+                - Idle (mascot):   no frame — the transparent PNG floats on the glass.
+                - Playing / Done:  curved glass tray frame, showing the video
+                                   (playing or paused on the last frame).
+              */}
               <div
-                className={`absolute overflow-hidden transition-all duration-500 ${
-                  showFrame ? "inset-[6px] media-box-inner" : "inset-0"
-                }`}
+                className={`media-box relative shrink-0 transition-all duration-500 ${
+                  showFrame ? "media-box-framed" : "media-box-bare"
+                } ${videoDone ? "video-float" : ""}`}
+                style={{ width: BOX_SIZE, height: BOX_SIZE }}
+                aria-hidden
               >
-                <video
-                  ref={videoRef}
-                  src="/chat.mp4"
-                  playsInline
-                  muted
-                  preload="metadata"
-                  onEnded={handleVideoEnded}
-                  className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${
-                    showVideoLayer ? "opacity-100" : "opacity-0"
+                {showFrame && <div className="media-box-bg absolute inset-0" />}
+
+                <div
+                  className={`absolute overflow-hidden transition-all duration-500 ${
+                    showFrame ? "inset-[5px] media-box-inner" : "inset-0"
                   }`}
-                />
-
-                {/* Idle — mascot.png, no frame, no backdrop */}
-                {videoIdle && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Image
-                      src="/mascot.png"
-                      alt=""
-                      fill
-                      priority
-                      sizes={`${BOX_SIZE}px`}
-                      className="object-contain transition-opacity duration-500"
-                    />
-                  </div>
-                )}
-
-                {/* Inner highlight ring — only when framed */}
-                {showFrame && (
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 rounded-[calc(1.5rem-6px)] ring-1 ring-inset ring-[var(--edge-hi)]"
+                >
+                  <video
+                    ref={videoRef}
+                    src="/chat.mp4"
+                    playsInline
+                    muted
+                    preload="metadata"
+                    onEnded={handleVideoEnded}
+                    className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${
+                      showVideoLayer ? "opacity-100" : "opacity-0"
+                    }`}
                   />
-                )}
+
+                  {videoIdle && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Image
+                        src="/mascot.png"
+                        alt=""
+                        fill
+                        priority
+                        sizes={`${BOX_SIZE}px`}
+                        className="object-contain drop-shadow-[0_10px_25px_rgba(77,141,255,0.45)]"
+                      />
+                    </div>
+                  )}
+
+                  {showFrame && (
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0 rounded-[calc(1.5rem-6px)] ring-1 ring-inset ring-[var(--edge-hi)]"
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.28em] text-ink-3">
+                  <span className="relative flex size-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/70" />
+                    <span className="relative inline-flex size-1.5 rounded-full bg-emerald-400" />
+                  </span>
+                  FMD AI · Online
+                </div>
+                <p className="mt-1.5 text-[17px] font-light leading-snug text-ink sm:text-[19px]">
+                  Ask me anything about your dental health…
+                </p>
               </div>
             </div>
 
-            {/* Search bar */}
+            {/* Suggestions — glass list rows */}
+            <div className="overflow-hidden rounded-[22px] border border-white/10 bg-white/[0.03]">
+              {QUICK_CHIPS.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => handleChipClick(id, label)}
+                  className="group flex w-full items-center gap-3.5 border-b border-white/[0.07] px-4 py-2.5 text-left text-[14px] text-ink-2 transition-colors last:border-b-0 hover:bg-white/[0.07] hover:text-ink"
+                >
+                  <span className="liquid-glass grid size-8 shrink-0 place-items-center rounded-xl text-ink">
+                    <Icon className="size-4" strokeWidth={1.75} />
+                  </span>
+                  <span className="flex-1">{label}</span>
+                  <ChevronRight className="size-4 shrink-0 text-ink-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:text-ink" />
+                </button>
+              ))}
+            </div>
+
+            {/* Input */}
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 handleSubmit();
               }}
-              className="group relative flex flex-1 items-center gap-2 rounded-full border border-line bg-[var(--surface-glass)] p-1.5 pl-5 shadow-[0_20px_60px_-20px_var(--shadow),inset_0_1px_0_var(--inner-hi)] backdrop-blur-2xl transition-colors focus-within:border-line-strong"
+              className="mt-3 flex items-center gap-2 rounded-full border border-white/12 bg-black/25 p-1.5 pl-5 shadow-[inset_0_1px_2px_rgba(0,0,0,0.35)] transition-[border-color,box-shadow] focus-within:border-[rgb(var(--accent-rgb)/0.6)] focus-within:shadow-[inset_0_1px_2px_rgba(0,0,0,0.35),0_0_0_4px_rgb(var(--accent-rgb)/0.18)]"
             >
-              <span
-                aria-hidden
-                className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-[var(--edge-hi)] to-transparent"
-              />
-
               <input
                 ref={inputRef}
                 type="text"
@@ -579,7 +620,7 @@ export default function SearchPanel() {
                   setSubmittedQuery("");
                 }}
                 placeholder="Describe a symptom or ask a question..."
-                className="min-w-0 flex-1 bg-transparent py-3 text-[15px] text-ink placeholder:text-ink-4 focus:outline-none"
+                className="min-w-0 flex-1 bg-transparent py-2.5 text-[15px] text-ink placeholder:text-ink-4 focus:outline-none"
                 aria-label="Ask FMD AI a dental question"
               />
 
@@ -598,7 +639,7 @@ export default function SearchPanel() {
                 type="button"
                 onClick={handleMicClick}
                 aria-label="Voice input"
-                className={`relative flex size-9 shrink-0 items-center justify-center rounded-full text-ink-3 transition-colors hover:text-ink ${
+                className={`relative flex size-9 shrink-0 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-white/10 hover:text-ink ${
                   listening ? "text-ink" : ""
                 }`}
               >
@@ -611,7 +652,7 @@ export default function SearchPanel() {
               <button
                 type="submit"
                 aria-label="Send"
-                className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--button-primary)] text-[var(--button-primary-fg)] transition-all hover:shadow-[0_0_30px_-5px_var(--accent-glow)] active:scale-95 disabled:opacity-40 sm:size-11"
+                className="flex size-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#6fa4ff] to-[#2f6bff] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_8px_24px_-6px_rgba(77,141,255,0.85)] transition-all hover:brightness-110 active:scale-95 disabled:from-white/15 disabled:to-white/10 disabled:text-ink-4 disabled:shadow-none"
                 disabled={!query.trim()}
               >
                 <ArrowUp className="size-4" strokeWidth={2.25} />
@@ -619,20 +660,7 @@ export default function SearchPanel() {
             </form>
           </div>
 
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
-            {QUICK_CHIPS.map((chip) => (
-              <button
-                key={chip.id}
-                type="button"
-                onClick={() => handleChipClick(chip.id)}
-                className="rounded-full border border-line bg-[var(--surface-glass)] px-4 py-2 text-[12.5px] font-normal text-ink-2 backdrop-blur-md transition-all hover:border-line-strong hover:bg-[var(--glass-tint)] hover:text-ink"
-              >
-                {chip.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="mx-auto mt-8 flex max-w-xl items-start justify-center gap-2 text-center">
+          <div className="mx-auto mt-6 flex max-w-xl items-start justify-center gap-2 text-center">
             <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-ink-4" />
             <p className="text-[11px] leading-relaxed text-ink-4">
               Guidance, not diagnosis. FMD AI explains and suggests; it never
@@ -683,8 +711,8 @@ export default function SearchPanel() {
 
         /* Bare (mascot idle) — no frame, no shadow, no background */
         :global(.media-box-bare) {
-          border-radius: 0;
-          overflow: visible;
+          border-radius: 1.25rem;
+          overflow: hidden;
           box-shadow: none;
         }
 

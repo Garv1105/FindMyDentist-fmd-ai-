@@ -14,8 +14,8 @@ import QuickActions from "@/components/sections/QuickActions";
 import Records from "@/components/sections/Records";
 import Treatments from "@/components/sections/Treatments";
 import Trust from "@/components/sections/Trust";
-import HeroSection from "@/components/HeroSection";
-import SearchPanel from "@/components/SearchPanel";
+import HeroSection from "@/components/sections/HeroSection";
+import SearchPanel from "@/components/sections/SearchPanel";
 
 export default function Home() {
   return (
