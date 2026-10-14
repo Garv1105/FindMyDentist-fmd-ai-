@@ -27,7 +27,7 @@ export default function Trust() {
         <SectionHeader center eyebrow="Trust" title="Built for care that deserves trust" />
 
         <Reveal>
-          <dl className="grid grid-cols-2 border-y border-line lg:grid-cols-4">
+          <dl className="grid grid-cols-2 rounded-[28px] border border-white/[0.07] bg-[radial-gradient(60%_120%_at_50%_0%,rgba(40,102,234,0.10),transparent_70%)] lg:grid-cols-4">
             {STATS.map((s, i) => (
               <div key={s.label} className={`border-line px-4 py-10 text-center ${i % 2 ? "border-l" : ""} ${i === 2 ? "max-lg:border-t lg:border-l" : ""} ${i === 3 ? "max-lg:border-t" : ""}`}>
                 <dt className="sr-only">{s.label}</dt>
@@ -41,10 +41,10 @@ export default function Trust() {
           <p className="mt-3 text-center text-[11px] text-ink-4">Prototype figures shown for design review.</p>
         </Reveal>
 
-        <div className="mt-14 grid gap-3 md:grid-cols-3">
+        <div className="mt-14 grid overflow-hidden rounded-[28px] border border-white/[0.07] bg-white/[0.02] max-md:divide-y md:grid-cols-3 md:divide-x divide-white/[0.07]">
           {PILLARS.map(({ icon: Icon, title, body }, i) => (
             <Reveal key={title} delay={i * 0.07}>
-              <div className="h-full rounded-[24px] border border-line p-6">
+              <div className="h-full p-7">
                 <Icon className="size-5 text-ink-2" strokeWidth={1.3} />
                 <h3 className="mt-5 text-[15.5px] text-ink">{title}</h3>
                 <p className="mt-1.5 text-[13.5px] leading-relaxed text-ink-3">{body}</p>

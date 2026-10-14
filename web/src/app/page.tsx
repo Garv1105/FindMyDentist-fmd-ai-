@@ -3,10 +3,12 @@ import { AssistantPanel } from "@/components/hero/Assistant";
 import Hero from "@/components/hero/Hero";
 import Navbar from "@/components/nav/Navbar";
 import AiValue from "@/components/sections/AiValue";
+import ComingSoon from "@/components/sections/ComingSoon";
 import Concierge from "@/components/sections/Concierge";
 import Dentists from "@/components/sections/Dentists";
 import Explore from "@/components/sections/Explore";
 import Footer from "@/components/sections/Footer";
+import LowerWorld from "@/components/sections/LowerWorld";
 import Journey from "@/components/sections/Journey";
 import QuickActions from "@/components/sections/QuickActions";
 import Records from "@/components/sections/Records";
@@ -20,14 +22,17 @@ export default function Home() {
       <main>
         <Hero />
         <QuickActions />
-        <Dentists />
         <Treatments />
-        <AiValue />
-        <Journey />
-        <Records />
         <Explore />
-        <Concierge />
-        <Trust />
+        <AiValue />
+        <LowerWorld>
+          <Journey />
+          <Records />
+          <Concierge />
+          <Dentists />
+          <Trust />
+        </LowerWorld>
+        <ComingSoon />
       </main>
       <Footer />
       <AssistantPanel />

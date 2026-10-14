@@ -38,7 +38,7 @@ export default function Concierge() {
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((s) => ({ ...s, [k]: v }));
 
   useEffect(() => {
-    api<Config>("/api/concierge/config").then(setCfg).catch(() => setErr("Concierge is temporarily unavailable. Please try again shortly."));
+    api<Config>("/api/concierge/config").then(setCfg).catch(() => setErr("FMD Edge is temporarily unavailable. Please try again shortly."));
   }, []);
 
   const name = f.name ?? me?.name ?? "";
@@ -61,15 +61,16 @@ export default function Concierge() {
     <section id="concierge" className="scroll-mt-24 pt-28 sm:pt-40">
       <Container>
         <Reveal y={30}>
-          <div className="concierge-card relative overflow-hidden rounded-[36px] p-6 sm:p-10 lg:p-14">
+          <div className="concierge-card relative overflow-hidden rounded-[36px] p-6 shadow-[0_0_0_1px_rgba(232,205,150,0.16),0_40px_120px_-40px_rgba(232,205,150,0.18)] sm:p-10 lg:p-14">
+            <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_100%_0%,rgba(232,205,150,0.10),transparent_70%),radial-gradient(50%_40%_at_0%_100%,rgba(42,100,232,0.08),transparent_70%)]" />
             <div aria-hidden className="concierge-glow pointer-events-none absolute inset-x-0 -top-48 mx-auto h-96 w-[85%] rounded-[50%] blur-3xl" />
             <div className="relative grid gap-12 lg:grid-cols-[1fr_1fr] lg:gap-16">
               <div>
-                <p className="eyebrow mb-5">FMD Concierge</p>
+                <p className="eyebrow mb-5 !text-[#e8cd96]">FMD Edge</p>
                 <h2 className="text-[32px] font-extralight leading-[1.06] tracking-[-0.035em] sm:text-[50px]">
-                  <span className="headline-silver">Your dental care,</span>
+                  <span className="headline-silver">Your Private Dental</span>
                   <br />
-                  <span className="headline-silver">personally coordinated.</span>
+                  <span className="headline-silver">Concierge Service.</span>
                 </h2>
                 <p className="mt-5 max-w-md text-[15px] leading-relaxed text-ink-3">
                   From finding the right specialist to navigating your next steps, our team helps make your dental-care journey simpler.
@@ -78,7 +79,7 @@ export default function Concierge() {
                   {FLOW.map((s, i) => (
                     <li key={s.title} className="relative flex gap-4 pb-6 last:pb-0">
                       {i < FLOW.length - 1 && <span aria-hidden className="absolute left-[13px] top-8 h-[calc(100%-28px)] w-px bg-line" />}
-                      <span className="grid size-7 shrink-0 place-items-center rounded-full border border-line-strong text-[11px] tabular-nums text-ink-2">{i + 1}</span>
+                      <span className="grid size-7 shrink-0 place-items-center rounded-full border border-[rgba(232,205,150,0.45)] text-[11px] tabular-nums text-[#e8cd96]">{i + 1}</span>
                       <div>
                         <h3 className="text-[14.5px] text-ink">{s.title}</h3>
                         <p className="mt-0.5 text-[13px] leading-relaxed text-ink-4">{s.body}</p>
@@ -138,7 +139,7 @@ export default function Concierge() {
                     </motion.div>
                   ) : (
                     <motion.form key="form" onSubmit={submit} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -8 }} className="space-y-3.5">
-                      <h3 className="text-[16px] text-ink">Request Concierge assistance</h3>
+                      <h3 className="text-[16px] text-ink">Request FMD Edge assistance</h3>
                       <label className="block">
                         <span className="mb-1.5 block text-[12px] text-ink-3">What do you need help with?</span>
                         <select required value={f.need} onChange={(e) => set("need", e.target.value)} className={field}>
@@ -208,7 +209,7 @@ export default function Concierge() {
                       <label className="flex items-start gap-3 text-[12.5px] leading-relaxed text-ink-2">
                         <input type="checkbox" checked={f.consent} onChange={(e) => set("consent", e.target.checked)} className="mt-1 accent-[var(--accent)]" />
                         <span>
-                          I agree that the FMD Concierge team may contact me about this request using the method above. My details are used only to coordinate
+                          I agree that the FMD Edge team may contact me about this request using the method above. My details are used only to coordinate
                           this request and are shared with a clinic only after I agree.
                         </span>
                       </label>
@@ -222,7 +223,7 @@ export default function Concierge() {
                         </p>
                       )}
                       <button disabled={busy || !cfg || !f.consent} className="btn-primary group h-12 w-full text-[14px] disabled:opacity-50">
-                        {busy ? "Sending…" : "Request Concierge assistance"} <ArrowRight className="arrow-nudge size-4" strokeWidth={1.75} />
+                        {busy ? "Sending…" : "Request FMD Edge assistance"} <ArrowRight className="arrow-nudge size-4" strokeWidth={1.75} />
                       </button>
                     </motion.form>
                   )}

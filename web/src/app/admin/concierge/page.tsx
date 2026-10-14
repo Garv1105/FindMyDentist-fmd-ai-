@@ -56,7 +56,7 @@ export default function ConciergeQueuePage() {
   return (
     <Page>
       <p className="eyebrow">FMD Operations</p>
-      <h1 className="mt-4 text-[34px] font-extralight tracking-[-0.03em] text-ink">Concierge queue</h1>
+      <h1 className="mt-4 text-[34px] font-extralight tracking-[-0.03em] text-ink">FMD Edge queue</h1>
       <div className="mt-8">
         {me === undefined && <p className="text-ink-3">Loading…</p>}
         {me === null && (

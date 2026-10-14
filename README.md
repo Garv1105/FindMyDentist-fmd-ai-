@@ -2,7 +2,7 @@
 
 A dentistry-only platform connecting patients, dentists, clinics, dental students and dental companies through AI-guided discovery, booking, records, content, clinic operations and care coordination. The product definition is the **Master PDR** (`FMD_Master_PDR_Expanded_Revised.pdf`, sections 1–21 plus annex A–N).
 
-> **Status: pre-release.** Milestones 0–3 are built and tested (Main, Concierge, Clinic OS, Clinic AI manager). Scholar, the Admin/Accountant portals and the annex features are not built yet. Everything runs on **demo data and clearly labelled development stand-ins** for outside services (SMS, AI models, payments, storage). Nothing here is a compliance certification; see [What is not live](#what-is-not-live).
+> **Status: pre-release.** Milestones 0–3 are built and tested (Main, FMD Edge, Clinic OS, Clinic AI manager). Scholar, the Admin/Accountant portals and the annex features are not built yet. Everything runs on **demo data and clearly labelled development stand-ins** for outside services (SMS, AI models, payments, storage). Nothing here is a compliance certification; see [What is not live](#what-is-not-live).
 
 Stack: Next.js 16 (App Router, Cache Components) · React 19 · TypeScript · Tailwind CSS 4 · Motion · Lucide · Node's built-in SQLite for development.
 
@@ -53,7 +53,7 @@ Assets: `public/img/hero/earth.webp` and `mascot.webp` were cut from `Refrenece 
 | Area | Routes | Notes |
 |---|---|---|
 | Accounts | `/signin`, `/account` | Purpose-separated consents, device/session management, deletion request |
-| Concierge | Homepage section, `/admin/concierge` | Human-coordinated enquiries; 9-status state machine; no promised fees, areas or response times |
+| FMD Edge (formerly Concierge) | Homepage section, `/admin/concierge` | Human-coordinated enquiries; 9-status state machine; no promised fees, areas or response times |
 | Discovery | Homepage, `/dentists/[id]` | Server-side filters; verified vs sponsored kept visually and algorithmically separate; no invented ratings |
 | Booking | `/dentists/[id]#book`, `/appointments` | Explicit confirmation, idempotent, DB-enforced no double-booking, reschedule/cancel, status history |
 | Records | `/records` | Content-sniffed uploads, signed expiring links bound to the viewer, per-dentist time-limited sharing, access history, export, delete |
@@ -108,7 +108,7 @@ All colour is CSS variables on `[data-theme]` in `globals.css`; components only 
 | `FMD_DB` | SQLite file (default `web/.data/fmd.db`); tests use `:memory:` |
 | `FMD_SIGNING_SECRET` | Signs record/attachment links (dev generates one under `.data/`) |
 | `FMD_SEED_DEMO=0` | Skip demo seeding in development |
-| `FMD_CONCIERGE_AREAS`, `FMD_CONCIERGE_FIRST_CONTACT_HOURS` | Concierge service areas and the internal follow-up target |
+| `FMD_CONCIERGE_AREAS`, `FMD_CONCIERGE_FIRST_CONTACT_HOURS` | FMD Edge service areas and the internal follow-up target |
 | `FMD_RECORDS_QUOTA_MB`, `FMD_MEMBERSHIP_GRACE_DAYS` | Storage quota and membership grace period (provisional) |
 
 Never commit `.env*` or `web/.data/` (both are git-ignored).

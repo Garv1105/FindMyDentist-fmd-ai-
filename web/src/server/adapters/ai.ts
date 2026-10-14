@@ -85,7 +85,7 @@ const devProvider: AiProvider = {
       return {
         text:
           "Fees vary by clinic and by what an examination finds, so any figure before a check-up is only an estimate. Ask the clinic for an itemised estimate. For insurance, your policy document and insurer decide what's covered. I can explain terms, but I can't confirm coverage.",
-        actions: [{ type: "navigate", label: "Ask FMD Concierge", target: "concierge" }],
+        actions: [{ type: "navigate", label: "Ask FMD Edge", target: "concierge" }],
       };
     return {
       text: "Tell me what you're noticing: where it hurts, for how long, and what makes it better or worse. I'll explain what it might relate to in plain language and help you find the right kind of dentist.",

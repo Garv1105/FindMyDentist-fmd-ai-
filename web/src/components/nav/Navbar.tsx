@@ -18,7 +18,7 @@ const MORE = [
   { label: "Explore", href: "/explore" },
   { label: "My Appointments", href: "/appointments" },
   { label: "Dental Records", href: "/records" },
-  { label: "Concierge", href: "/#concierge" },
+  { label: "FMD Edge", href: "/#concierge" },
   { label: "Jobs", href: "/jobs" },
   { label: "Help", href: "/help" },
 ];
