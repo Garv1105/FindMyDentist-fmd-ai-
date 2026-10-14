@@ -26,7 +26,7 @@ export const THEMES: Theme[] = [
   { id: "white-royal", name: "White + Royal Blue", mood: "Modern medical technology", dark: false, swatch: ["#ffffff", "#1e4fd6"] },
 ];
 
-export const DEFAULT_THEME: ThemeId = "obsidian-silver";
+export const DEFAULT_THEME: ThemeId = "obsidian-royal";
 export const SYSTEM = "system";
 export const STORAGE_KEY = "fmd-theme";
 
