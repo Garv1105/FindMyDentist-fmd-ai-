@@ -6,6 +6,23 @@ A dentistry-only platform connecting patients, dentists, clinics, dental student
 
 Stack: Next.js 16 (App Router, Cache Components) · React 19 · TypeScript · Tailwind CSS 4 · Motion · Lucide · Node's built-in SQLite for development.
 
+## Preview
+
+<p align="center">
+  <img src="web/public/img/hero/earth-4320.webp" alt="Hero: Earth rim light" width="48%">
+  <img src="web/public/img/hero/mascot.webp" alt="FMD mascot" width="22%">
+  <img src="web/public/img/coming-soon-night.webp" alt="Closing 'Coming soon' scene" width="48%">
+</p>
+<p align="center">
+  <img src="web/public/img/dr-1.png" alt="Dentist profile" width="18%">
+  <img src="web/public/img/dr-2.png" alt="Dentist profile" width="18%">
+  <img src="web/public/img/tx-implants.png" alt="Implants" width="18%">
+  <img src="web/public/img/tx-aligners.png" alt="Aligners" width="18%">
+  <img src="web/public/img/tx-whitening.png" alt="Whitening" width="18%">
+</p>
+
+*Hero, mascot, closing scene, demo dentists and treatment artwork from the homepage. All people shown are fictitious demo data.*
+
 ## Quick start
 
 Requires **Node 22+** (uses `node:sqlite` and native TypeScript type-stripping for tests).
@@ -43,10 +60,12 @@ Internal roles (`fmd_ops`, `super_admin`, `accountant`) can only come from envir
 
 ## What is built
 
-### Homepage: cinematic hero (Milestone 1)
+### Homepage: cinematic hero and landing sections (Milestone 1)
 Pinned, scroll-scrubbed sequence driven by one timeline (`components/hero/phases.ts`): headline → light spreading along the Earth's rim → the meditating mascot rising from behind the horizon with a 3D turn → the FMD AI conversation as its own stage → mascot descends and the page continues. Fully reversible; simplified on mobile; a still composition under `prefers-reduced-motion`. `npm test` asserts the timeline invariants (mascot starts at 75–80% illumination; AI stage and mascot never overlap).
 
-Assets: `public/img/hero/earth.webp` and `mascot.webp` were cut from `Refrenece Image Mascot and Hero.jpeg`. A higher-resolution mascot master would improve edge quality (OD-H1).
+Below the hero the homepage continues through treatments, dentists, the care journey, records, trust and FMD Edge on one midnight-navy backdrop (`LowerWorld.tsx`), and closes with a **Coming soon** night-horizon scene (`ComingSoon.tsx`) with an early-access email field. There is no waitlist backend yet, so a valid submit honestly shows "not saved".
+
+Assets: `public/img/hero/earth-4320.webp` and `mascot.webp` were cut from `Refrenece Image Mascot and Hero.jpeg`. A higher-resolution mascot master would improve edge quality (OD-H1).
 
 ### FMD Main (Milestone 2)
 
@@ -123,6 +142,7 @@ Never commit `.env*` or `web/.data/` (both are git-ignored).
 | Production hosting, PostgreSQL, encrypted object storage | Local SQLite and files | OD-20 |
 | Legal, clinical and tax review | Draft privacy notice and terms; clinical wording unreviewed | OD-22 |
 | Reels/short video | Text posts and polls only | media pipeline |
+| Early-access waitlist | Homepage form validates only; nothing is stored | - |
 
 All demo dentists, clinics, patients and posts are fictitious and flagged `demo` in the UI. See `docs/OPEN_DECISIONS.md` for all 23+ decisions and provisional defaults.
 
