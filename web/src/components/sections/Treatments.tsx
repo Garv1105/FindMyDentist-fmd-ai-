@@ -2,9 +2,15 @@
 
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
-import { TREATMENTS } from "@/data/demo";
 import { openAssistant } from "../hero/Assistant";
 import { Container, Reveal, SectionHeader } from "../ui";
+
+const TREATMENTS = [
+  { title: "Teeth Cleaning", blurb: "Keep your smile healthy", img: "/img/tx-cleaning.png", meta: "30–45 min" },
+  { title: "Braces & Aligners", blurb: "Straighten your smile", img: "/img/tx-aligners.png", meta: "6–24 months" },
+  { title: "Dental Implants", blurb: "Replace missing teeth", img: "/img/tx-implants.png", meta: "Staged treatment" },
+  { title: "Teeth Whitening", blurb: "Brighter, confident smile", img: "/img/tx-whitening.png", meta: "1–2 visits" },
+];
 
 export default function Treatments() {
   return (

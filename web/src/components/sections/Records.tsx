@@ -71,6 +71,11 @@ export default function Records() {
       <Container>
         <div className="grid items-center gap-12 lg:grid-cols-[1.1fr_1fr] lg:gap-20">
           <Reveal y={30} className="order-2 lg:order-1">
+            <div className="relative">
+              {/* stacked layers behind the vault give it depth */}
+              <div aria-hidden className="absolute inset-x-6 -bottom-4 top-6 -z-10 rounded-[30px] border border-white/[0.06] bg-[#0b1030]/60" />
+              <div aria-hidden className="absolute inset-x-12 -bottom-8 top-12 -z-20 rounded-[30px] border border-white/[0.04] bg-[#0b1030]/40" />
+              <div aria-hidden className="absolute -inset-x-3 -inset-y-10 -z-30 bg-[radial-gradient(50%_50%_at_50%_50%,rgba(36,96,230,0.16),transparent_70%)] sm:-inset-x-6 lg:-inset-x-10" />
             <div className="glass rounded-[30px] p-4 sm:p-6">
               <div className="mb-4 flex items-center justify-between px-1">
                 <p className="flex items-center gap-2 text-[13px] text-ink">
@@ -99,6 +104,7 @@ export default function Records() {
                 </p>
                 <p className="text-[11px] text-ink-4">Expires in 7 days · Revoke</p>
               </div>
+            </div>
             </div>
           </Reveal>
 
