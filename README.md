@@ -13,13 +13,6 @@ Stack: Next.js 16 (App Router, Cache Components) · React 19 · TypeScript · Ta
   <img src="web/public/img/hero/mascot.webp" alt="FMD mascot" width="22%">
   <img src="web/public/img/coming-soon-night.webp" alt="Closing 'Coming soon' scene" width="48%">
 </p>
-<p align="center">
-  <img src="web/public/img/dr-1.png" alt="Dentist profile" width="18%">
-  <img src="web/public/img/dr-2.png" alt="Dentist profile" width="18%">
-  <img src="web/public/img/tx-implants.png" alt="Implants" width="18%">
-  <img src="web/public/img/tx-aligners.png" alt="Aligners" width="18%">
-  <img src="web/public/img/tx-whitening.png" alt="Whitening" width="18%">
-</p>
 
 *Hero, mascot, closing scene, demo dentists and treatment artwork from the homepage. All people shown are fictitious demo data.*
 
