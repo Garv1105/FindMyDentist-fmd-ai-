@@ -24,7 +24,7 @@
   --text-primary: #f5f5f5;
   --text-secondary: #d9dde2;
   --text-muted: #a5abb3;
-  --text-faint: #6b7179;
+  --text-faint: #80868f;
   --headline-from: #ffffff;
   --headline-to: #9ea5ae;
   --headline-accent: #ffffff;
@@ -60,7 +60,7 @@
   --text-primary: #f7f4f1;
   --text-secondary: #ddd6cf;
   --text-muted: #aca298;
-  --text-faint: #75695e;
+  --text-faint: #8b7f72;
   --headline-from: #ffffff;
   --headline-to: #b3a597;
   --headline-accent: #ffa557;
@@ -96,7 +96,7 @@
   --text-primary: #f3f5fa;
   --text-secondary: #d5dbe7;
   --text-muted: #9ea7b9;
-  --text-faint: #636c80;
+  --text-faint: #7b8599;
   --headline-from: #ffffff;
   --headline-to: #98a4bf;
   --headline-accent: #8fb0ff;
@@ -132,7 +132,7 @@
   --text-primary: #f3efe7;
   --text-secondary: #dad3c5;
   --text-muted: #a9a191;
-  --text-faint: #726b5d;
+  --text-faint: #888071;
   --headline-from: #fbf7ef;
   --headline-to: #a99f8b;
   --headline-accent: #e8d2a2;
@@ -168,7 +168,7 @@
   --text-primary: #17181a;
   --text-secondary: #3b3e43;
   --text-muted: #6c7076;
-  --text-faint: #9a9ea4;
+  --text-faint: #70757c;
   --headline-from: #1a1b1e;
   --headline-to: #6e7278;
   --headline-accent: #000000;
@@ -204,7 +204,7 @@
   --text-primary: #15181d;
   --text-secondary: #363c45;
   --text-muted: #646d78;
-  --text-faint: #929aa4;
+  --text-faint: #6b737e;
   --headline-from: #1b1f25;
   --headline-to: #6a737e;
   --headline-accent: #0e1116;
@@ -240,7 +240,7 @@
   --text-primary: #11151d;
   --text-secondary: #373f4e;
   --text-muted: #667083;
-  --text-faint: #9aa2b1;
+  --text-faint: #6a7283;
   --headline-from: #11151d;
   --headline-to: #5f6979;
   --headline-accent: #1e4fd6;
@@ -471,12 +471,65 @@ html.theme-anim *::after {
   transition: transform 0.45s var(--ease-out-expo);
 }
 
-/* Eyebrow label */
+/* ---------- Typography system ----------
+   One family (Geist, variable, self-hosted by next/font), a few roles. Sizes are fluid between mobile and desktop;
+   weights stay at 300+ so large text keeps stroke clarity on dark backgrounds.
+   Lives in @layer components (opened above), so Tailwind utilities on an element still override a token. */
 .eyebrow {
-  font-size: 11px;
-  letter-spacing: 0.42em;
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.26em;
   text-transform: uppercase;
   color: var(--text-muted);
+}
+.type-h2 {
+  font-size: clamp(28px, 1.5vw + 20px, 44px);
+  font-weight: 330;
+  line-height: 1.1;
+  letter-spacing: -0.028em;
+  text-wrap: balance;
+  color: var(--text-primary);
+}
+/* the few statement headings (AI, Vault, Edge): larger, lighter */
+.type-h2-lg {
+  font-size: clamp(32px, 2.3vw + 20px, 52px);
+  font-weight: 300;
+  line-height: 1.06;
+  letter-spacing: -0.032em;
+  text-wrap: balance;
+}
+.type-lede {
+  font-size: clamp(15.5px, 0.2vw + 14.75px, 17px);
+  line-height: 1.65;
+  color: var(--text-muted);
+  text-wrap: pretty;
+  max-width: 62ch;
+}
+.type-h3 {
+  font-size: 17px;
+  font-weight: 450;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+.type-body {
+  font-size: 14px;
+  line-height: 1.62;
+  color: var(--text-muted);
+  text-wrap: pretty;
+}
+.type-meta {
+  font-size: 12px;
+  font-weight: 450;
+  letter-spacing: 0.01em;
+  color: var(--text-faint);
+}
+.type-label {
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-faint);
 }
 
 .headline-silver {
@@ -530,6 +583,30 @@ html.theme-anim *::after {
 .concierge-glow {
   background: radial-gradient(closest-side, rgba(210, 95, 30, 0.22), rgba(160, 55, 10, 0.10) 50%, transparent);
   mix-blend-mode: screen;
+}
+
+/* ---------- Homepage world: near-black → midnight navy → royal sapphire ----------
+   Used by the sections after the hero (fixed dark palette, same in every theme, like the hero and Coming Soon). */
+:root {
+  --fmd-near-black: #03060c;
+  --fmd-midnight: #060d1b;
+  --fmd-deep: #0a1b35;
+  --fmd-sapphire: #0f2c56;
+  --fmd-royal: #123b70;
+  --fmd-glow: rgba(76, 139, 231, 0.12);
+  --fmd-glow-strong: rgba(76, 139, 231, 0.22);
+  --fmd-border: rgba(142, 179, 229, 0.16);
+  --fmd-border-strong: rgba(142, 179, 229, 0.3);
+  --fmd-silver: rgba(226, 236, 250, 0.1);
+  /* page backgrounds only (cards and borders keep the tokens above): mostly near-black and midnight,
+     sapphire as a quiet source of depth */
+  --bg-near-black: #03060b;
+  --bg-midnight: #050b16;
+  --bg-navy: #081326;
+  --bg-sapphire: #0b1d38;
+  --bg-glow: rgba(66, 120, 195, 0.07);
+  --bg-glow-soft: rgba(110, 145, 190, 0.04);
+  --bg-glow-focus: rgba(66, 120, 195, 0.11); /* behind a focal element, e.g. the mascot */
 }
 
 /* ---------- Cinematic hero ----------
