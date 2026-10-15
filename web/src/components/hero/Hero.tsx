@@ -12,11 +12,9 @@ import {
 } from "motion/react";
 import { ArrowUp, Mic, ShieldCheck, Sparkles } from "lucide-react";
 import { useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
-import { Container } from "../ui";
 import { openAssistant } from "./Assistant";
 import { MASCOT_KEYS, MASCOT_OPACITY, PHASES } from "./phases";
 import { RIM, RIM_APEX, RIM_H, RIM_W, rimPath, rimYAt } from "./rim";
-import SearchBar from "./SearchBar";
 
 /**
  * Cinematic hero: one scroll timeline (0 → 1) drives every layer, so the sequence
@@ -68,16 +66,8 @@ function useReducedMotionSafe() {
 
 export default function Hero() {
   const reduced = useReducedMotionSafe();
-  return (
-    <>
-      {reduced ? <StaticHero /> : <CinematicHero />}
-      <section aria-label="Search dentists" className="relative z-10">
-        <Container className="pb-16 pt-10 sm:pb-20 sm:pt-14">
-          <SearchBar />
-        </Container>
-      </section>
-    </>
-  );
+  // the dentist search (section 02) is its own component now: sections/Search.tsx
+  return reduced ? <StaticHero /> : <CinematicHero />;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -102,10 +92,10 @@ function CinematicHero() {
   const spread = useTransform(p, PHASES.spread, [0.12, 1]);
 
   // C/D/E — mascot. y is % of its own height, measured up from the rim apex: positive = below the horizon.
-  // Settled at -40% of --mh (≈17% of the stage height above the horizon); --mh is capped in globals.css so the
+  // Settled at -22% of --mh (≈9–10% of the stage height above the horizon); --mh is capped in globals.css so the
   // head stays below the nav at every viewport height.
   // It starts tiny and mostly behind the limb, rises out of the light while growing, then settles; it exits once.
-  const mascotY = useTransform(p, MASCOT_KEYS, ["14%", "14%", "4%", "-12%", "-28%", "-40%", "-40%", "-34%", "-34%"]);
+  const mascotY = useTransform(p, MASCOT_KEYS, ["14%", "14%", "4%", "-8%", "-17%", "-22%", "-22%", "-16%", "-16%"]);
   const mScale = useTransform(p, MASCOT_KEYS, [0.16, 0.16, 0.34, 0.62, 0.88, 1, 1, 0.94, 0.94]);
   // flat sprite: this is a perspective tilt, not true 3D rotation
   const rotY = useTransform(p, MASCOT_KEYS, [-40, -40, -30, -16, -5, 0, 0, 0, 0]);
@@ -161,7 +151,7 @@ function CinematicHero() {
           className="absolute inset-x-0 top-[calc(68px+var(--stage)*0.1)] z-10 px-4 text-center"
         >
           <p className="eyebrow">AI-Powered Dental Care</p>
-          <h1 className="mx-auto mt-5 max-w-[900px] text-[clamp(40px,min(7vw,10.5svh),104px)] font-extralight leading-[0.98] tracking-[-0.045em]">
+          <h1 className="mx-auto mt-5 max-w-[900px] text-[clamp(40px,min(7vw,10.5svh),104px)] font-light leading-[0.98] tracking-[-0.045em]">
             <span className="headline-silver">Better Oral Health</span>
             <br />
             <span className="headline-silver">Starts </span>
@@ -169,7 +159,7 @@ function CinematicHero() {
               Here.
             </span>
           </h1>
-          <p aria-hidden className="mt-7 text-[11px] uppercase tracking-[0.4em] text-ink-4">
+          <p aria-hidden className="mt-7 type-label tracking-[0.3em] text-ink-4">
             Scroll
           </p>
         </motion.div>
@@ -341,7 +331,7 @@ function HeroAssistantStage() {
       </span>
       <p className="eyebrow mt-6" style={{ textShadow: "0 1px 12px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.6)" }}>FMD AI</p>
       <h2
-        className="mt-4 text-[clamp(28px,4.2vw,48px)] font-extralight leading-[1.08] tracking-[-0.035em] text-ink"
+        className="mt-4 text-[clamp(28px,4.2vw,48px)] font-light leading-[1.08] tracking-[-0.035em] text-ink"
         style={{ textShadow: "0 2px 20px rgba(0,0,0,0.95), 0 0 60px rgba(0,0,0,0.7)" }}
       >
         Hi, I&apos;m FMD AI.
@@ -428,7 +418,7 @@ function StaticHero() {
         <div aria-hidden className="hero-rimfront absolute left-1/2 -translate-x-1/2 translate-y-1/2" />
         <div className="absolute inset-x-0 top-[calc(68px+var(--stage)*0.06)] z-10 px-4 text-center">
           <p className="eyebrow">AI-Powered Dental Care</p>
-          <h1 className="mx-auto mt-4 text-[clamp(34px,min(6vw,8.5svh),84px)] font-extralight leading-[0.98] tracking-[-0.045em]">
+          <h1 className="mx-auto mt-4 text-[clamp(34px,min(6vw,8.5svh),84px)] font-light leading-[0.98] tracking-[-0.045em]">
             <span className="headline-silver">Better Oral Health</span>
             <br />
             <span className="headline-silver">Starts </span>

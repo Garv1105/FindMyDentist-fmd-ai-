@@ -180,7 +180,7 @@ export default function Dentists() {
 
         {res && res.total === 0 && (
           <div className="glass rounded-[24px] p-10 text-center">
-            <p className="text-[17px] font-light text-ink">No matching dentists in {city} yet</p>
+            <p className="type-h3">No matching dentists in {city} yet</p>
             <ul className="mx-auto mt-3 max-w-md space-y-1 text-[13.5px] text-ink-4">
               {res.suggestions.map((s) => (
                 <li key={s}>{s}</li>
@@ -204,7 +204,7 @@ export default function Dentists() {
           </nav>
         )}
 
-        {cards.some((c) => c.demo) && <p className="mt-5 text-center text-[11px] uppercase tracking-[0.2em] text-ink-4">Demo profiles · not real practitioners</p>}
+        {cards.some((c) => c.demo) && <p className="mt-5 text-center type-label text-ink-4">Demo profiles · not real practitioners</p>}
       </Container>
 
       <ProfileDrawer id={open} onClose={() => setOpen(null)} />
