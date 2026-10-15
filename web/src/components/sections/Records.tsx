@@ -75,7 +75,7 @@ export default function Records() {
               {/* stacked layers behind the vault give it depth */}
               <div aria-hidden className="absolute inset-x-6 -bottom-4 top-6 -z-10 rounded-[30px] border border-white/[0.06] bg-[#0b1030]/60" />
               <div aria-hidden className="absolute inset-x-12 -bottom-8 top-12 -z-20 rounded-[30px] border border-white/[0.04] bg-[#0b1030]/40" />
-              <div aria-hidden className="absolute -inset-x-3 -inset-y-10 -z-30 bg-[radial-gradient(50%_50%_at_50%_50%,rgba(36,96,230,0.16),transparent_70%)] sm:-inset-x-6 lg:-inset-x-10" />
+              <div aria-hidden className="absolute -inset-x-3 -inset-y-10 -z-30 bg-[radial-gradient(50%_50%_at_50%_50%,var(--bg-glow-focus),transparent_70%)] sm:-inset-x-6 lg:-inset-x-10" />
             <div className="glass rounded-[30px] p-4 sm:p-6">
               <div className="mb-4 flex items-center justify-between px-1">
                 <p className="flex items-center gap-2 text-[13px] text-ink">
@@ -111,7 +111,7 @@ export default function Records() {
           <div className="order-1 lg:order-2">
             <Reveal>
               <p className="eyebrow mb-5">Dental records</p>
-              <h2 className="text-[32px] font-extralight leading-[1.05] tracking-[-0.035em] text-ink sm:text-[52px]">
+              <h2 className="type-h2-lg text-ink">
                 Your dental history,
                 <br />
                 <span className="text-ink-3">in one private vault.</span>

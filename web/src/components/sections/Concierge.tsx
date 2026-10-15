@@ -67,7 +67,7 @@ export default function Concierge() {
             <div className="relative grid gap-12 lg:grid-cols-[1fr_1fr] lg:gap-16">
               <div>
                 <p className="eyebrow mb-5 !text-[#e8cd96]">FMD Edge</p>
-                <h2 className="text-[32px] font-extralight leading-[1.06] tracking-[-0.035em] sm:text-[50px]">
+                <h2 className="type-h2-lg">
                   <span className="headline-silver">Your Private Dental</span>
                   <br />
                   <span className="headline-silver">Concierge Service.</span>
@@ -82,7 +82,7 @@ export default function Concierge() {
                       <span className="grid size-7 shrink-0 place-items-center rounded-full border border-[rgba(232,205,150,0.45)] text-[11px] tabular-nums text-[#e8cd96]">{i + 1}</span>
                       <div>
                         <h3 className="text-[14.5px] text-ink">{s.title}</h3>
-                        <p className="mt-0.5 text-[13px] leading-relaxed text-ink-4">{s.body}</p>
+                        <p className="mt-0.5 text-[14px] leading-relaxed text-ink-4">{s.body}</p>
                       </div>
                     </li>
                   ))}
@@ -123,7 +123,7 @@ export default function Concierge() {
                       <p className="mt-2 text-[13px] text-ink-3">
                         Reference <span className="font-mono text-ink">{done.reference}</span>
                       </p>
-                      <p className="mt-4 max-w-[340px] text-[13px] leading-relaxed text-ink-4">
+                      <p className="mt-4 max-w-[340px] text-[14px] leading-relaxed text-ink-4">
                         We&apos;ve received your request. This is not a confirmed appointment, provider or price. An FMD coordinator will contact you to discuss next steps.
                       </p>
                       {me ? (

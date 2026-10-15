@@ -28,7 +28,7 @@ export function Logo() {
     <Link href="/" className="flex items-center gap-3" aria-label="FindMyDentist home">
       <span className="headline-silver text-[24px] font-semibold leading-none tracking-[-0.06em]">FMD</span>
       <span className="hidden h-4 w-px bg-line-strong sm:block" />
-      <span className="hidden text-[15px] font-light tracking-[-0.01em] text-ink-2 sm:block">FindMyDentist</span>
+      <span className="hidden text-[15px] font-normal tracking-[-0.012em] text-ink-2 sm:block">FindMyDentist</span>
     </Link>
   );
 }
