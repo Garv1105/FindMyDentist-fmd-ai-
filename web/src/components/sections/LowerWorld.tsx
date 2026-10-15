@@ -1,33 +1,34 @@
 import type { ReactNode } from "react";
 
 /**
- * One continuous midnight-navy / royal-sapphire atmosphere behind every section after the AI block.
+ * One continuous near-black → midnight-navy → royal-sapphire environment behind sections 03–11.
+ * Continuity comes from the shared base, off-axis light and contours; each section keeps its own composition.
  * Scoped to this wrapper (own stacking context) so nothing leaks into the hero or global tokens.
  * Pure CSS gradients + one inline SVG, no images, no JS.
  */
 export default function LowerWorld({ children }: { children: ReactNode }) {
   return (
-    <div className="relative isolate mt-20 pb-10 sm:mt-28">
+    <div className="relative isolate pb-10">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 overflow-hidden [mask-image:linear-gradient(180deg,transparent,#000_7%,#000_96%,transparent)]"
+        className="pointer-events-none absolute inset-0 -z-10 overflow-hidden [mask-image:linear-gradient(180deg,transparent,#000_3%,#000_97%,transparent)]"
       >
-        {/* base: deep navy that swells toward the middle */}
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(6,9,26,0)_0%,rgba(7,14,34,0.85)_16%,rgba(9,20,48,0.9)_50%,rgba(7,14,34,0.9)_84%,rgba(5,8,22,0.95)_100%)]" />
+        {/* base: near-black and midnight, with two quiet navy swells */}
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,var(--bg-midnight)_0%,var(--bg-navy)_22%,var(--bg-midnight)_40%,var(--bg-near-black)_55%,var(--bg-midnight)_68%,var(--bg-navy)_82%,var(--bg-near-black)_100%)]" />
         {/* soft sapphire light pools, placed off-axis so no section sits in a spotlight */}
         <div
           className="absolute inset-0"
           style={{
             background:
-              "radial-gradient(48% 9% at 88% 6%, rgba(38,98,232,0.16), transparent 70%)," +
-              "radial-gradient(42% 8% at 6% 30%, rgba(30,84,214,0.12), transparent 70%)," +
-              "radial-gradient(46% 9% at 94% 56%, rgba(28,92,226,0.13), transparent 70%)," +
-              "radial-gradient(40% 8% at 8% 84%, rgba(40,104,236,0.12), transparent 70%)",
+              "radial-gradient(48% 9% at 88% 6%, var(--bg-glow), transparent 70%)," +
+              "radial-gradient(42% 8% at 6% 30%, var(--bg-glow-soft), transparent 70%)," +
+              "radial-gradient(46% 9% at 94% 56%, var(--bg-glow), transparent 70%)," +
+              "radial-gradient(40% 8% at 8% 84%, var(--bg-glow-soft), transparent 70%)",
           }}
         />
         {/* fine particles */}
         <div
-          className="absolute inset-0 opacity-60"
+          className="absolute inset-0 opacity-20"
           style={{
             backgroundImage:
               "radial-gradient(circle, rgba(215,225,255,0.55) 0.6px, transparent 1.2px)," +
@@ -42,7 +43,7 @@ export default function LowerWorld({ children }: { children: ReactNode }) {
           <defs>
             <linearGradient id="lw-line" x1="0" x2="1">
               <stop offset="0" stopColor="#6f98ee" stopOpacity="0" />
-              <stop offset="0.5" stopColor="#a9c4f2" stopOpacity="0.22" />
+              <stop offset="0.5" stopColor="#a9c4f2" stopOpacity="0.12" />
               <stop offset="1" stopColor="#6f98ee" stopOpacity="0" />
             </linearGradient>
           </defs>
