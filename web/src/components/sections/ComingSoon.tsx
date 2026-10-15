@@ -41,7 +41,7 @@ export default function ComingSoon() {
           className="pointer-events-none absolute left-1/2 top-4 -z-10 h-[420px] w-[min(900px,100%)] -translate-x-1/2 bg-[radial-gradient(closest-side,rgba(3,5,15,0.9),rgba(3,5,15,0.6)_55%,transparent)]"
         />
         <Reveal>
-          <p className="text-[11.5px] uppercase tracking-[0.42em] text-[#b7c2e0]">Find My Dentist</p>
+          <p className="text-[11.5px] font-medium uppercase tracking-[0.32em] text-[#b7c2e0]">Find My Dentist</p>
           <span aria-hidden className="mx-auto mt-5 block h-px w-14 bg-white/30" />
           <h2
             id={`${id}-h`}
@@ -49,7 +49,7 @@ export default function ComingSoon() {
           >
             Coming Soon
           </h2>
-          <p className="mx-auto mt-6 max-w-[520px] text-[12.5px] uppercase leading-[2] tracking-[0.3em] text-[#c3cce6] sm:text-[13.5px]">
+          <p className="mx-auto mt-6 max-w-[520px] text-[12.5px] font-medium uppercase leading-[2] tracking-[0.22em] text-[#c3cce6] sm:text-[13.5px]">
             A healthier, happier world through better dental care.
           </p>
         </Reveal>

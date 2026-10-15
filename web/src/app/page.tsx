@@ -2,49 +2,42 @@ import { DiscoveryProvider } from "@/components/discovery";
 import { AssistantPanel } from "@/components/hero/Assistant";
 import Hero from "@/components/hero/Hero";
 import Navbar from "@/components/nav/Navbar";
-import AiValue from "@/components/sections/AiValue";
+import AiFeatures from "@/components/sections/AiFeatures";
 import ComingSoon from "@/components/sections/ComingSoon";
 import Concierge from "@/components/sections/Concierge";
 import Dentists from "@/components/sections/Dentists";
 import Explore from "@/components/sections/Explore";
 import Footer from "@/components/sections/Footer";
-import LowerWorld from "@/components/sections/LowerWorld";
 import Journey from "@/components/sections/Journey";
-import QuickActions from "@/components/sections/QuickActions";
+import LowerWorld from "@/components/sections/LowerWorld";
+import Products from "@/components/sections/Products";
 import Records from "@/components/sections/Records";
-import Treatments from "@/components/sections/Treatments";
+import Search from "@/components/sections/Search";
 import Trust from "@/components/sections/Trust";
-import HeroSection from "@/components/HeroSection";
-import SearchPanel from "@/components/SearchPanel";
+import Walkthrough from "@/components/sections/Walkthrough";
 
+// Homepage order (01–13) is fixed by the FMD homepage brief.
 export default function Home() {
   return (
     <DiscoveryProvider>
       <Navbar />
       <main>
-        {/*
-          Scroll-driven frame hero.
-          showHeader=false because you already have your own Navbar at the top.
-        */}
-        <HeroSection showHeader={false} />
-
-        {/* Keep your existing Hero if you want both; comment out if replacing */}
-        {/* <Hero /> */}
-        <SearchPanel /> 
-        <QuickActions />
-        <Treatments />
-        <Explore />
-        <AiValue />
+        <Hero /> {/* 01 */}
+        <Search /> {/* 02 */}
         <LowerWorld>
-          <Journey />
-          <Records />
-          <Concierge />
-          <Dentists />
-          <Trust />
+          <AiFeatures /> {/* 03 */}
+          <Walkthrough /> {/* 04 */}
+          <Explore /> {/* 05 */}
+          <Journey /> {/* 06 */}
+          <Records /> {/* 07 Private Vault */}
+          <Concierge /> {/* 08 FMD Edge */}
+          <Dentists /> {/* 09 */}
+          <Trust /> {/* 10 */}
+          <Products /> {/* 11 */}
         </LowerWorld>
-        <ComingSoon />
+        <ComingSoon /> {/* 12 */}
       </main>
-      <Footer />
+      <Footer /> {/* 13 */}
       <AssistantPanel />
     </DiscoveryProvider>
   );

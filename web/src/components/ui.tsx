@@ -46,10 +46,10 @@ export function SectionHeader({
     <Reveal
       className={`mb-8 flex flex-col gap-3 sm:mb-10 ${center ? "items-center text-center" : "sm:flex-row sm:items-end sm:justify-between"}`}
     >
-      <div className={center ? "max-w-2xl" : "max-w-2xl"}>
-        {eyebrow && <p className="eyebrow mb-4">{eyebrow}</p>}
-        <h2 className="text-[28px] font-light leading-[1.1] tracking-[-0.03em] text-ink sm:text-[40px]">{title}</h2>
-        {description && <p className="mt-4 text-[15px] leading-relaxed text-ink-3 sm:text-base">{description}</p>}
+      <div className="max-w-2xl">
+        {eyebrow && <p className="eyebrow mb-3.5">{eyebrow}</p>}
+        <h2 className="type-h2">{title}</h2>
+        {description && <p className={`type-lede mt-4 ${center ? "mx-auto" : ""}`}>{description}</p>}
       </div>
       {action && (
         <a href={action.href} className="group inline-flex shrink-0 items-center gap-2 text-sm text-ink-2 transition-colors hover:text-ink">
