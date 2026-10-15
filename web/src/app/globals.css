@@ -674,3 +674,116 @@ html.theme-anim *::after {
     transition-duration: 0.001ms !important;
   }
 }
+
+@layer components {
+/* ---------- Liquid glass (iOS-style) — navy theme scope + panel ---------- */
+/* Navy / electric-blue palette. Wrap a page (or section) in .fmd-glass and
+   every token-driven component inside it — including .glass and .icon-tile —
+   switches to the liquid-glass look. */
+.fmd-glass {
+  color-scheme: dark;
+  --background: #000000;
+  --background-secondary: #02050f;
+  --surface: #081230;
+  --headline-from: #ffffff;
+  --headline-to: #a9c2f5;
+  --headline-accent: #6fa4ff;
+  --accent-soft: rgba(77, 141, 255, 0.14);
+  --horizon: #cfe0ff;
+  --horizon-glow: rgba(77, 141, 255, 0.5);
+  --button-secondary: rgba(255, 255, 255, 0.08);
+  --edge-lo: rgba(255, 255, 255, 0.06);
+  --surface-glass: rgba(255, 255, 255, 0.08);
+  --glass-tint: rgba(255, 255, 255, 0.14);
+  --surface-elevated: rgba(255, 255, 255, 0.12);
+  --border: rgba(255, 255, 255, 0.16);
+  --border-strong: rgba(255, 255, 255, 0.3);
+  --edge-hi: rgba(255, 255, 255, 0.55);
+  --inner-hi: rgba(255, 255, 255, 0.35);
+  --text-primary: #ffffff;
+  --text-secondary: #dbe5ff;
+  --text-muted: #a3b4d9;
+  --text-faint: #7c8db5;
+  --accent: #4d8dff;
+  --accent-rgb: 77 141 255;
+  --accent-glow: rgba(77, 141, 255, 0.5);
+  --horizon-rgb: 150 190 255;
+  --shadow: rgba(2, 6, 20, 0.6);
+  --button-primary: #ffffff;
+  --button-primary-fg: #1d4fd8;
+  --star: #dbe6ff;
+  --glass-shadow:
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0.5px rgba(255, 255, 255, 0.12),
+    inset 0 0 24px rgba(255, 255, 255, 0.06),
+    0 24px 60px -24px rgba(2, 6, 20, 0.8);
+}
+
+/* iOS-style liquid glass: frosted, saturated, rim-lit */
+.liquid-glass,
+.fmd-glass .glass,
+.fmd-glass .icon-tile {
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.16) 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0.09) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(30px) saturate(190%);
+  -webkit-backdrop-filter: blur(30px) saturate(190%);
+  box-shadow: var(--glass-shadow);
+}
+/* Specular sheen across the top edge (replaces .glass's masked hairline) */
+.liquid-glass::before,
+.fmd-glass .glass::before,
+.fmd-glass .icon-tile::before {
+  -webkit-mask: none;
+  mask: none;
+  padding: 0;
+  opacity: 1;
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(
+    120% 60% at 30% 0%,
+    rgba(255, 255, 255, 0.22) 0%,
+    transparent 60%
+  );
+  pointer-events: none;
+}
+.liquid-glass:hover,
+.liquid-glass-active,
+.fmd-glass .glass-interactive:hover {
+  border-color: rgba(255, 255, 255, 0.32);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.12) 100%
+  );
+}
+/* Large panels/drawers keep a navy tint under the frost so text stays legible */
+.fmd-glass .glass {
+  background-color: rgba(8, 18, 48, 0.35);
+}
+.fmd-glass .icon-tile {
+  color: var(--text-primary);
+}
+
+.glass-orb {
+  animation: orbDrift 18s ease-in-out infinite;
+}
+@keyframes orbDrift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(40px, -30px) scale(1.08); }
+  66%      { transform: translate(-30px, 25px) scale(0.95); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .glass-orb { animation: none; }
+}
+}
