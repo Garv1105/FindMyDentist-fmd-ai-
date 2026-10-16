@@ -10,6 +10,7 @@ from PIL import Image
 from scipy import ndimage, optimize
 
 front_png, ref_png, out_json = sys.argv[1:4]
+USE_ALL = len(sys.argv) > 4 and sys.argv[4] == "all"  # reference in the same pose as the mesh: fit everything
 RES, SCALE = 768, 1.1
 
 mesh = np.array(Image.open(front_png))[..., 3] > 128
@@ -19,8 +20,8 @@ refsoft = ndimage.gaussian_filter(ref.astype(float), 2)
 v, u = np.nonzero(mesh)
 x = (u + 0.5 - RES / 2) * SCALE / RES
 z = (RES / 2 - v - 0.5) * SCALE / RES
-# arms are posed differently in the PNG: fit on head/torso/legs only
-keep = ~((np.abs(x) > 0.19) & (z < 0.06))
+# arms are posed differently in the A-pose PNG: fit on head/torso/legs only
+keep = np.ones_like(x, bool) if USE_ALL else ~((np.abs(x) > 0.19) & (z < 0.06))
 x, z = x[keep], z[keep]
 
 ys, xs = np.nonzero(ref)

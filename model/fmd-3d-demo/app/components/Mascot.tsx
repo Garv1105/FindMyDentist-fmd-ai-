@@ -19,7 +19,7 @@ type Props = {
 const MODEL_URL = "/mascot.glb";
 const FADE = 0.35;
 
-/** Owns the mixer: cross-fades, gesture -> base fallback, layered blink, head follows the cursor. */
+/** Owns the mixer: cross-fades, gesture -> base fallback, layered blink. */
 class MascotAnimator {
   private mixer: THREE.AnimationMixer;
   private actions = new Map<string, THREE.AnimationAction>();
@@ -28,12 +28,6 @@ class MascotAnimator {
   private base: Clip = "Idle";
   private blink: THREE.AnimationAction | null = null;
   private nextBlink = 2;
-  private head: THREE.Object3D | undefined;
-  private look = new THREE.Vector2();
-  private euler = new THREE.Euler(0, 0, 0, "YXZ");
-  private qParent = new THREE.Quaternion();
-  private qInv = new THREE.Quaternion();
-  private qExtra = new THREE.Quaternion();
 
   constructor(root: THREE.Object3D, clips: THREE.AnimationClip[]) {
     this.mixer = new THREE.AnimationMixer(root);
@@ -46,7 +40,6 @@ class MascotAnimator {
         this.actions.set(clip.name, this.mixer.clipAction(clip));
       }
     }
-    this.head = root.getObjectByName("head");
     this.mixer.addEventListener("finished", (e) => {
       if (e.action === this.gesture) {
         this.gesture = null;
@@ -81,7 +74,7 @@ class MascotAnimator {
     this.gesture = once ? next : null;
   }
 
-  update(dt: number, time: number, pointer: THREE.Vector2) {
+  update(dt: number, time: number) {
     this.mixer.update(dt);
     const eyesClosed = this.current === this.actions.get("Meditate");
 
@@ -90,16 +83,6 @@ class MascotAnimator {
       this.nextBlink = time + 2.5 + Math.random() * 3;
     }
 
-    // head follows the cursor on top of the clip: world rotation R on a bone -> local' = P^-1 R P local
-    const k = eyesClosed ? 0.25 : 1;
-    this.look.lerp(pointer, 0.08);
-    const parent = this.head?.parent;
-    if (this.head && parent) {
-      this.euler.set(-this.look.y * 0.2 * k, this.look.x * 0.45 * k, 0);
-      parent.getWorldQuaternion(this.qParent);
-      this.qExtra.setFromEuler(this.euler).premultiply(this.qInv.copy(this.qParent).invert()).multiply(this.qParent);
-      this.head.quaternion.premultiply(this.qExtra);
-    }
   }
 
   /** Stop everything but stay reusable: React StrictMode unmounts and remounts with the same instance. */
@@ -128,7 +111,7 @@ function Model({ base, gesture }: Props) {
     if (gesture) animator.play(gesture.name);
   }, [animator, gesture]);
 
-  useFrame((state, dt) => animator.update(dt, state.clock.elapsedTime, state.pointer));
+  useFrame((state, dt) => animator.update(dt, state.clock.elapsedTime));
 
   const onOver = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
