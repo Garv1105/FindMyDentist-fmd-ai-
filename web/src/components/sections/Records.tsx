@@ -114,7 +114,7 @@ export default function Records() {
               <h2 className="type-h2-lg text-ink">
                 Your dental history,
                 <br />
-                <span className="text-ink-3">in one private vault.</span>
+                <span className="bg-gradient-to-r from-[#8fb8ff] to-[#3d7bff] bg-clip-text text-transparent">in one private vault.</span>
               </h2>
               <p className="mt-6 max-w-md text-[15px] leading-relaxed text-ink-3">
                 X-rays, reports, photos, treatment plans and prescriptions — organised, private to you, and ready when your next dentist needs them.

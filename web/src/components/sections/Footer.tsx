@@ -26,7 +26,7 @@ const SOCIAL: { label: string; href: string }[] = [];
 
 export default function Footer() {
   return (
-    <footer id="footer" className="relative mt-28 overflow-hidden border-t border-[var(--fmd-border)] bg-[linear-gradient(180deg,#03050f,var(--bg-near-black))] sm:mt-40">
+    <footer id="footer" className="relative mt-28 overflow-hidden border-t border-[var(--fmd-border)] bg-[linear-gradient(180deg,#03070f,#000000)] sm:mt-40">
       {/* the horizon returns, quietly */}
       <div aria-hidden className="pointer-events-none absolute -top-px left-1/2 h-px w-[70%] -translate-x-1/2 bg-[linear-gradient(90deg,transparent,rgb(var(--horizon-rgb)/0.5),transparent)]" />
       <div aria-hidden className="pointer-events-none absolute -top-24 left-1/2 h-48 w-[60%] -translate-x-1/2 rounded-[50%] opacity-60 blur-3xl" style={{ background: "radial-gradient(closest-side, var(--horizon-glow), transparent)" }} />

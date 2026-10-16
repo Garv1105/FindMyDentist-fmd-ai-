@@ -5,7 +5,6 @@ import { ChevronDown, Menu, Search, UserRound, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useMe } from "@/lib/me";
-import ThemeSwitcher from "./ThemeSwitcher";
 
 const LINKS = [
   { label: "Find Dentists", href: "/#dentists" },
@@ -103,7 +102,6 @@ export default function Navbar() {
             <Link href="/#dentists" aria-label="Search dentists" className="hidden size-9 place-items-center rounded-full text-ink-2 transition-colors hover:text-ink sm:grid">
               <Search className="size-[18px]" strokeWidth={1.5} />
             </Link>
-            <ThemeSwitcher />
             <Link
               href={account.href}
               aria-label={me ? "Your account" : "Sign in"}
