@@ -62,7 +62,6 @@ def principled(name, rgb, rough, coat=0.0, coat_rough=0.08):
 
 glove_mat = principled("Glove", (0.94, 0.925, 0.95), 0.3, 0.45)
 coat_mat = bpy.data.materials["Coat"]
-scrubs_mat = bpy.data.materials["Scrubs"]
 
 # ---------------------------------------------------------------- sleeves, cuff bands, gloves
 hand_bones, parts = {}, {}
@@ -72,7 +71,7 @@ for s, M in (("L", ML), ("R", MIRROR @ ML)):
     sleeve, path, path_s, s_el = SL.build_sleeve(f"Sleeve.{s}", S_, E_, W_, f_)
     sleeve.data.materials.append(coat_mat)
     band = SL.build_band(f"Cuff.{s}", W_, f_)
-    band.data.materials.append(scrubs_mat)
+    band.data.materials.append(bpy.data.materials["Scrubs"])  # navy scrubs cuff, as in the meditation art
     glove, bones = H.build_hand(f"Glove.{s}")
     glove.data.transform(M)
     if M.determinant() < 0:

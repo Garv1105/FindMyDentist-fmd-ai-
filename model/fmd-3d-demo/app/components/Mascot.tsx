@@ -11,9 +11,12 @@ export type Clip =
 
 type Props = {
   /** looping clip to rest in (e.g. chosen by scroll position) */
-  base: Clip;
+  base: string;
   /** one-shot gesture; pass a new object to (re)play it */
-  gesture?: { name: Clip; id: number } | null;
+  gesture?: { name: string; id: number } | null;
+  url?: string;
+  /** viewer mode: orbit all the way round and zoom; no hover/click gestures */
+  free?: boolean;
 };
 
 const MODEL_URL = "/mascot.glb";
@@ -25,7 +28,7 @@ class MascotAnimator {
   private actions = new Map<string, THREE.AnimationAction>();
   private current: THREE.AnimationAction | null = null;
   private gesture: THREE.AnimationAction | null = null;
-  private base: Clip = "Idle";
+  private base = "Idle";
   private blink: THREE.AnimationAction | null = null;
   private nextBlink = 2;
 
@@ -52,16 +55,16 @@ class MascotAnimator {
     return this.gesture !== null;
   }
 
-  setBase(name: Clip) {
+  setBase(name: string) {
     this.base = name;
     if (!this.gesture) this.fadeTo(name, false); // a running gesture finishes first
   }
 
-  play(name: Clip) {
+  play(name: string) {
     this.fadeTo(name, true);
   }
 
-  private fadeTo(name: Clip, once: boolean) {
+  private fadeTo(name: string, once: boolean) {
     const next = this.actions.get(name);
     if (!next || (!once && next === this.current)) return;
     next.reset();
@@ -79,7 +82,8 @@ class MascotAnimator {
     const eyesClosed = this.current === this.actions.get("Meditate");
 
     if (this.blink && time > this.nextBlink) {
-      if (!eyesClosed) this.blink.reset().play(); // an additive blink would fight closed eyes
+      // only over a plain loop with open eyes: an additive blink would fight closed or animated eyes
+      if (!eyesClosed && !this.gesture) this.blink.reset().play();
       this.nextBlink = time + 2.5 + Math.random() * 3;
     }
 
@@ -93,8 +97,8 @@ class MascotAnimator {
   }
 }
 
-function Model({ base, gesture }: Props) {
-  const { scene, animations } = useGLTF(MODEL_URL);
+function Model({ base, gesture, url = MODEL_URL, free }: Props) {
+  const { scene, animations } = useGLTF(url);
   const animator = useMemo(() => new MascotAnimator(scene, animations), [scene, animations]);
   const lastHoverWave = useRef(-10);
 
@@ -130,9 +134,11 @@ function Model({ base, gesture }: Props) {
     <>
       <primitive object={scene} dispose={null} />
       {/* invisible hit box: raycasting the ~140k-triangle skinned mesh on every pointer move is slow */}
-      <mesh visible={false} onPointerOver={onOver} onClick={onClick}>
-        <boxGeometry args={[0.8, 1.05, 0.45]} />
-      </mesh>
+      {!free && (
+        <mesh visible={false} onPointerOver={onOver} onClick={onClick}>
+          <boxGeometry args={[0.8, 1.05, 0.45]} />
+        </mesh>
+      )}
     </>
   );
 }
@@ -168,10 +174,12 @@ export default function Mascot(props: Props) {
 
       <OrbitControls
         enablePan={false}
-        enableZoom={false}
+        enableZoom={!!props.free}
+        minDistance={1.2}
+        maxDistance={5}
         target={[0, -0.02, 0]}
-        minPolarAngle={Math.PI / 2 - 0.45}
-        maxPolarAngle={Math.PI / 2 + 0.2}
+        minPolarAngle={props.free ? 0 : Math.PI / 2 - 0.45}
+        maxPolarAngle={props.free ? Math.PI : Math.PI / 2 + 0.2}
       />
     </Canvas>
   );
