@@ -9,6 +9,7 @@ from mathutils import Vector, Quaternion
 
 sys.path.insert(0, os.path.dirname(__file__))
 from posing import *  # noqa
+import medpose  # noqa: E402
 
 OUT_GLB, OUT_BLEND = sys.argv[sys.argv.index("--") + 1:][:2]
 rig = bpy.data.objects["Rig"]
@@ -79,20 +80,7 @@ def point_pose(amount):
 
 
 def meditate_pose(breath=0.0, float_z=0.0):
-    move(rig, "root", (0, 0, -0.17 + float_z))
-    rot(rig, "chest", (Vector((-1, 0, 0)), 1.5 * breath))
-    rot(rig, "head", (Vector((1, 0, 0)), 2 - 1.5 * breath))
-    for s in "LR":
-        sg = side_sign(s)
-        top = s == "L"
-        aim(rig, f"thigh.{s}", (sg * 0.8, -0.55, -0.12))
-        aim(rig, f"shin.{s}", (-sg * 0.92, -0.38 if top else -0.25, 0.06 if top else -0.04))
-        aim(rig, f"foot.{s}", (-sg * 0.35, 0.85, -0.35))  # tucked back under the other knee
-        aim(rig, f"upper_arm.{s}", (sg * 0.5, -0.12, -0.86))
-        aim(rig, f"forearm.{s}", (sg * 0.85, -0.45, 0.08 + 0.03 * breath))
-        aim(rig, f"hand.{s}", (sg * 0.9, -0.3, 0.2 + 0.03 * breath))
-        twist(rig, f"forearm.{s}", -sg * 70)
-    eyes_closed(rig, 1.0)
+    medpose.meditate_pose(rig, breath=breath, float_z=float_z)
 
 
 # ---------------------------------------------------------------- keying with quaternion continuity
@@ -151,7 +139,8 @@ def clip_idle():
             move(rig, "root", (0, 0, 0.004 * math.sin(2 * t)))
             rot(rig, "spine", (Vector((-1, 0, 0)), 1.0 * math.sin(t)))
             rot(rig, "chest", (Vector((-1, 0, 0)), 1.5 * math.sin(t)), (Z, 2 * math.sin(t + 1)))
-            rot(rig, "head", (Y, 3 * math.sin(t + 0.6)), (Z, 4 * math.sin(t * 1 + 2)), (X, 1.5 * math.cos(2 * t)))
+            # calm: a slight breathing nod only, no side-to-side head turning
+            rot(rig, "head", (X, 1.2 * math.cos(2 * t)))
         pose_at(f, p)
     finish(act)
 

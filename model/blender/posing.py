@@ -75,6 +75,27 @@ def turn(rig, bone, axis, deg):
     return _apply_world(rig, bone, Quaternion(Vector(axis).normalized(), math.radians(deg)))
 
 
+def orient(rig, bone, fwd, up, rest_up=(0, 0, 1)):
+    """Point a bone along `fwd` (world) AND roll it so the side that faced `rest_up` at rest now faces `up`."""
+    bpy.context.view_layer.update()
+    pb = rig.pose.bones[bone]
+    rest = pb.bone.matrix_local
+    d0 = (rest.to_3x3() @ Vector((0, 1, 0))).normalized()
+
+    def frame(d, u):
+        d = Vector(d).normalized()
+        u = (Vector(u) - Vector(u).dot(d) * d).normalized()
+        from mathutils import Matrix
+        return Matrix((d, u, d.cross(u))).transposed()
+
+    R = frame(fwd, up) @ frame(d0, rest_up).transposed()
+    M = (R @ rest.to_3x3()).to_4x4()
+    M.translation = pb.matrix.translation
+    pb.matrix = M
+    bpy.context.view_layer.update()
+    return pb
+
+
 def twist(rig, bone, deg):
     """Spin a bone about its own (posed) length axis."""
     bpy.context.view_layer.update()

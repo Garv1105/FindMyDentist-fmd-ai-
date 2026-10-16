@@ -1,0 +1,5 @@
+# Blender / Python by-products
+__pycache__/
+*.blend1
+# preview renders and debug images written by the seated-mascot build (regenerated on every run)
+# mascot/out_sit/*/

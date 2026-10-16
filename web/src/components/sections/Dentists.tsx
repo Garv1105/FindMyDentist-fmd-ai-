@@ -186,9 +186,9 @@ export default function Dentists() {
                 <li key={s}>{s}</li>
               ))}
             </ul>
-            <a href="#concierge" className="btn-ghost mt-6 h-10 px-5 text-[13px]">
+            {/* FMD Edge section hidden: <a href="#concierge" className="btn-ghost mt-6 h-10 px-5 text-[13px]">
               Ask FMD Edge
-            </a>
+            </a> */}
           </div>
         )}
 
