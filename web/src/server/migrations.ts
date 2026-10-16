@@ -767,4 +767,18 @@ export const MIGRATIONS: string[] = [
   /* 13 — product renamed: FMD Concierge → FMD Edge (user-facing text only; table and route names unchanged) */ `
   UPDATE plans SET features = REPLACE(features, 'Concierge requests', 'FMD Edge requests') WHERE features LIKE '%Concierge requests%';
   `,
+  /* 14 — homepage leads: Clinic OS demo / early access and the product-updates waitlist */ `
+  CREATE TABLE leads (
+    id TEXT PRIMARY KEY,
+    kind TEXT NOT NULL CHECK (kind IN ('clinic_demo','clinic_early_access','waitlist')),
+    name TEXT NOT NULL DEFAULT '',
+    clinic_name TEXT NOT NULL DEFAULT '',
+    city TEXT NOT NULL DEFAULT '',
+    phone TEXT NOT NULL DEFAULT '',
+    email TEXT NOT NULL,
+    consent_version TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX leads_email ON leads(email, kind, created_at);
+  `,
 ];

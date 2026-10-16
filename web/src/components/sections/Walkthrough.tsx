@@ -61,7 +61,7 @@ const STEPS: Step[] = [
   },
 ];
 
-/** Section 04: what FMD is, as one interactive path from question to follow-up. */
+/** FMD Main, the patient experience: one interactive path from question to follow-up. */
 export default function Walkthrough() {
   const [active, setActive] = useState(0);
   const step = STEPS[active];
@@ -76,7 +76,7 @@ export default function Walkthrough() {
       <Container>
         <SectionHeader
           center
-          eyebrow="What is FMD"
+          eyebrow="Dental care, connected"
           title="From a question to the right care"
           description="One place to understand a concern, explore treatment and find a dentist. Pick a step to see how it works."
         />
