@@ -1,20 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
+import type { MotionValue } from "motion/react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Environment, Lightformer, useGLTF } from "@react-three/drei";
-import type { MotionValue } from "motion/react";
 import * as THREE from "three";
 
 /**
  * The seated hero mascot (built by model/blender/sit/build_sit.sh, meshopt-compressed). Clips:
- *   loops     Meditate, Idle, Talk
+ *   loops     Fly (superman rise), Meditate, Idle, Talk
  *   one-shots Wake, Wave, PointLeft, PointRight, Present, LookAround, Nod, Smile, Happy
  *             (each starts and ends in the Idle pose, so they chain)
  *   layer     Blink (eyes/lids only; played additively)
  * Point/Present directions are from the viewer: PointRight points to the viewer's right.
  */
-const MODEL_URL = "/mascot-sitting.glb";
+// bump ?v= whenever the GLB is rebuilt, or browsers keep the cached old model
+const MODEL_URL = "/mascot-sitting.glb?v=7";
 const FADE = 0.45;
 const AMBIENT = ["LookAround", "Smile", "Nod"];
 
@@ -24,7 +25,7 @@ class MascotAnimator {
   private current: THREE.AnimationAction | null = null;
   private gesture: THREE.AnimationAction | null = null;
   private queue: string[] = [];
-  private base = "Meditate";
+  private base = "Fly";
   private blink: THREE.AnimationAction | null = null;
   private nextBlink = 2;
   private nextAmbient = Infinity;
@@ -48,16 +49,12 @@ class MascotAnimator {
     });
   }
 
-  /** Looping clip to rest in. Going back to Meditate interrupts whatever is playing. */
+  /** Looping clip to rest in; interrupts whatever is playing. */
   setBase(name: string) {
     this.base = name;
-    if (name === "Meditate") {
-      this.queue = [];
-      this.fadeTo(name, false);
-      this.nextAmbient = Infinity;
-    } else if (!this.gesture) {
-      this.fadeTo(name, false);
-    }
+    this.queue = [];
+    this.fadeTo(name, false);
+    this.nextAmbient = Infinity;
   }
 
   /** Play one-shot clips in order, then return to the base loop. */
@@ -105,15 +102,14 @@ class MascotAnimator {
 }
 
 type Props = {
-  /** false: meditating while it rises · true: it has arrived; wakes up, waves, then idles */
+  /** false: superman rise (fist up) · true: it has arrived and settles back into meditation */
   settled: boolean;
-  /** scroll-driven turn toward the viewer, degrees */
+  /** scroll-driven turn about its own vertical axis, degrees */
   rotY: MotionValue<number>;
-  rotX: MotionValue<number>;
   onReady?: () => void;
 };
 
-function Model({ settled, rotY, rotX, onReady }: Props) {
+function Model({ settled, rotY, onReady }: Props) {
   const { scene, animations } = useGLTF(MODEL_URL);
   const animator = useMemo(() => new MascotAnimator(scene, animations), [scene, animations]);
   const group = useRef<THREE.Group>(null);
@@ -127,20 +123,12 @@ function Model({ settled, rotY, rotX, onReady }: Props) {
   }, [scene, animator, onReady]);
 
   useEffect(() => {
-    if (settled) {
-      animator.setBase("Idle");
-      animator.play("Wake", "Wave");
-    } else {
-      animator.setBase("Meditate");
-    }
+    animator.setBase(settled ? "Meditate" : "Fly");
   }, [animator, settled]);
 
   useFrame((state, dt) => {
     animator.update(Math.min(dt, 0.1), state.clock.elapsedTime);
-    if (group.current) {
-      group.current.rotation.y = THREE.MathUtils.degToRad(rotY.get());
-      group.current.rotation.x = THREE.MathUtils.degToRad(rotX.get());
-    }
+    if (group.current) group.current.rotation.y = THREE.MathUtils.degToRad(rotY.get());
   });
 
   return (
@@ -157,6 +145,8 @@ export default function Mascot3D({ active, ...props }: Props & { active: boolean
     <Canvas
       frameloop={active ? "always" : "never"}
       dpr={[1, 2]}
+      // measure the unscaled box: the parent is CSS-scaled while rising, and a scaled measure shrinks the canvas off-centre
+      resize={{ offsetSize: true }}
       // the model is 1 unit tall, sitting on y=-0.5; the canvas is wider than tall so waving/pointing arms fit
       camera={{ position: [0, 0.03, 2.15], fov: 30 }}
       gl={{ antialias: true, alpha: true }}
