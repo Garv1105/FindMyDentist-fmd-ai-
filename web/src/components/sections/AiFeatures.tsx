@@ -29,7 +29,7 @@ export default function AiFeatures() {
           <h2 className="type-h2-lg text-ink">
             An assistant that guides.
             <br />
-            <span className="text-ink-3">You make the decisions.</span>
+            <span className="bg-gradient-to-r from-[#8fb8ff] to-[#3d7bff] bg-clip-text text-transparent">You make the decisions.</span>
           </h2>
           <p className="type-lede mx-auto mt-5">
             FMD AI explains dental concepts, helps you understand options and points you to the right kind of care. Clinical

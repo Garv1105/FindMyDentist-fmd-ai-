@@ -113,7 +113,7 @@ export default function Walkthrough() {
                   <span
                     className={`grid size-11 place-items-center rounded-full border transition-all duration-500 ${
                       on
-                        ? "border-[var(--fmd-border-strong)] bg-[var(--fmd-sapphire)] text-ink shadow-[0_0_0_6px_var(--fmd-glow),0_0_28px_-6px_var(--fmd-glow-strong)]"
+                        ? "border-[rgba(150,185,255,0.45)] bg-[linear-gradient(160deg,rgba(60,100,220,0.45),rgba(10,18,40,0.85))] text-[#cfe0ff] shadow-[0_0_0_6px_var(--fmd-glow),0_0_28px_-6px_rgba(77,141,255,0.7)]"
                         : "border-[var(--fmd-border)] bg-[var(--fmd-midnight)] text-ink-4 group-hover:text-ink-2"
                     }`}
                   >
@@ -133,7 +133,7 @@ export default function Walkthrough() {
             id="wt-panel"
             role="tabpanel"
             aria-labelledby={`wt-tab-${active}`}
-            className="mt-10 rounded-[28px] border border-[var(--fmd-border)] bg-[linear-gradient(180deg,var(--fmd-deep),var(--fmd-midnight))] p-6 sm:p-8"
+            className="glass mt-10 rounded-[28px] p-6 sm:p-8"
           >
             <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
               <div className="max-w-xl">
