@@ -2,6 +2,7 @@
 
 import { ArrowRight, Bell, Crown, Mail, Users } from "lucide-react";
 import { useId, useState } from "react";
+import { api } from "@/lib/me";
 import { Reveal } from "../ui";
 
 const PERKS = [
@@ -15,17 +16,24 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 /*
  * Closing scene: centred title over a night horizon, mascot facing away.
  * Self-contained dark palette so it reads the same in any theme.
- * ponytail: no waitlist backend yet — a valid submit shows an honest "not saved" notice.
- * Wire `onSubmit` to a real endpoint and swap the "pending" state for "sent" when one exists.
+ * The general product-updates list (POST /api/leads, kind "waitlist"); clinics and other audiences have their own paths above.
  */
 export default function ComingSoon() {
   const id = useId();
   const [email, setEmail] = useState("");
-  const [state, setState] = useState<"idle" | "invalid" | "pending">("idle");
+  const [state, setState] = useState<"idle" | "invalid" | "busy" | "sent" | "error">("idle");
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setState(EMAIL_RE.test(email.trim()) ? "pending" : "invalid");
+    if (!EMAIL_RE.test(email.trim())) return setState("invalid");
+    setState("busy");
+    try {
+      // the notice under the field is the consent: joining is the explicit action it describes
+      await api("/api/leads", { method: "POST", body: { kind: "waitlist", email, consent: true } });
+      setState("sent");
+    } catch {
+      setState("error");
+    }
   }
 
   return (
@@ -80,14 +88,18 @@ export default function ComingSoon() {
               </div>
               <button
                 type="submit"
+                disabled={state === "busy" || state === "sent"}
                 className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-white px-6 text-[14.5px] font-medium text-[#0b1230] transition-transform hover:-translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7f9cff]"
               >
-                Join Waitlist <ArrowRight className="size-4" strokeWidth={1.75} />
+                {state === "busy" ? "Joining…" : state === "sent" ? "You're on the list" : "Join Waitlist"} <ArrowRight className="size-4" strokeWidth={1.75} />
               </button>
             </div>
             <p id={`${id}-msg`} role="status" aria-live="polite" className="mt-3 min-h-5 px-4 text-[13px] text-[#c3cce6]">
               {state === "invalid" && <span className="text-[#ffb4a8]">Please enter a valid email address.</span>}
-              {state === "pending" && "The waitlist isn't open yet, so your email hasn't been saved. Please check back soon."}
+              {state === "error" && <span className="text-[#ffb4a8]">We couldn&apos;t add you just now. Please try again.</span>}
+              {state === "sent" && "Thanks — we'll email you FMD product updates and early-access news."}
+              {(state === "idle" || state === "busy") &&
+                "Product updates and early-access news only. Your email is used for nothing else — to be removed, email support@findmydentist.io."}
             </p>
           </form>
         </Reveal>

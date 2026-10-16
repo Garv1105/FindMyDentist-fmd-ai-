@@ -11,29 +11,26 @@ export type Clip =
 
 type Props = {
   /** looping clip to rest in (e.g. chosen by scroll position) */
-  base: Clip;
+  base: string;
   /** one-shot gesture; pass a new object to (re)play it */
-  gesture?: { name: Clip; id: number } | null;
+  gesture?: { name: string; id: number } | null;
+  url?: string;
+  /** viewer mode: orbit all the way round and zoom; no hover/click gestures */
+  free?: boolean;
 };
 
 const MODEL_URL = "/mascot.glb";
 const FADE = 0.35;
 
-/** Owns the mixer: cross-fades, gesture -> base fallback, layered blink, head follows the cursor. */
+/** Owns the mixer: cross-fades, gesture -> base fallback, layered blink. */
 class MascotAnimator {
   private mixer: THREE.AnimationMixer;
   private actions = new Map<string, THREE.AnimationAction>();
   private current: THREE.AnimationAction | null = null;
   private gesture: THREE.AnimationAction | null = null;
-  private base: Clip = "Idle";
+  private base = "Idle";
   private blink: THREE.AnimationAction | null = null;
   private nextBlink = 2;
-  private head: THREE.Object3D | undefined;
-  private look = new THREE.Vector2();
-  private euler = new THREE.Euler(0, 0, 0, "YXZ");
-  private qParent = new THREE.Quaternion();
-  private qInv = new THREE.Quaternion();
-  private qExtra = new THREE.Quaternion();
 
   constructor(root: THREE.Object3D, clips: THREE.AnimationClip[]) {
     this.mixer = new THREE.AnimationMixer(root);
@@ -46,7 +43,6 @@ class MascotAnimator {
         this.actions.set(clip.name, this.mixer.clipAction(clip));
       }
     }
-    this.head = root.getObjectByName("head");
     this.mixer.addEventListener("finished", (e) => {
       if (e.action === this.gesture) {
         this.gesture = null;
@@ -59,16 +55,16 @@ class MascotAnimator {
     return this.gesture !== null;
   }
 
-  setBase(name: Clip) {
+  setBase(name: string) {
     this.base = name;
     if (!this.gesture) this.fadeTo(name, false); // a running gesture finishes first
   }
 
-  play(name: Clip) {
+  play(name: string) {
     this.fadeTo(name, true);
   }
 
-  private fadeTo(name: Clip, once: boolean) {
+  private fadeTo(name: string, once: boolean) {
     const next = this.actions.get(name);
     if (!next || (!once && next === this.current)) return;
     next.reset();
@@ -81,25 +77,16 @@ class MascotAnimator {
     this.gesture = once ? next : null;
   }
 
-  update(dt: number, time: number, pointer: THREE.Vector2) {
+  update(dt: number, time: number) {
     this.mixer.update(dt);
     const eyesClosed = this.current === this.actions.get("Meditate");
 
     if (this.blink && time > this.nextBlink) {
-      if (!eyesClosed) this.blink.reset().play(); // an additive blink would fight closed eyes
+      // only over a plain loop with open eyes: an additive blink would fight closed or animated eyes
+      if (!eyesClosed && !this.gesture) this.blink.reset().play();
       this.nextBlink = time + 2.5 + Math.random() * 3;
     }
 
-    // head follows the cursor on top of the clip: world rotation R on a bone -> local' = P^-1 R P local
-    const k = eyesClosed ? 0.25 : 1;
-    this.look.lerp(pointer, 0.08);
-    const parent = this.head?.parent;
-    if (this.head && parent) {
-      this.euler.set(-this.look.y * 0.2 * k, this.look.x * 0.45 * k, 0);
-      parent.getWorldQuaternion(this.qParent);
-      this.qExtra.setFromEuler(this.euler).premultiply(this.qInv.copy(this.qParent).invert()).multiply(this.qParent);
-      this.head.quaternion.premultiply(this.qExtra);
-    }
   }
 
   /** Stop everything but stay reusable: React StrictMode unmounts and remounts with the same instance. */
@@ -110,8 +97,8 @@ class MascotAnimator {
   }
 }
 
-function Model({ base, gesture }: Props) {
-  const { scene, animations } = useGLTF(MODEL_URL);
+function Model({ base, gesture, url = MODEL_URL, free }: Props) {
+  const { scene, animations } = useGLTF(url);
   const animator = useMemo(() => new MascotAnimator(scene, animations), [scene, animations]);
   const lastHoverWave = useRef(-10);
 
@@ -128,7 +115,7 @@ function Model({ base, gesture }: Props) {
     if (gesture) animator.play(gesture.name);
   }, [animator, gesture]);
 
-  useFrame((state, dt) => animator.update(dt, state.clock.elapsedTime, state.pointer));
+  useFrame((state, dt) => animator.update(dt, state.clock.elapsedTime));
 
   const onOver = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
@@ -147,9 +134,11 @@ function Model({ base, gesture }: Props) {
     <>
       <primitive object={scene} dispose={null} />
       {/* invisible hit box: raycasting the ~140k-triangle skinned mesh on every pointer move is slow */}
-      <mesh visible={false} onPointerOver={onOver} onClick={onClick}>
-        <boxGeometry args={[0.8, 1.05, 0.45]} />
-      </mesh>
+      {!free && (
+        <mesh visible={false} onPointerOver={onOver} onClick={onClick}>
+          <boxGeometry args={[0.8, 1.05, 0.45]} />
+        </mesh>
+      )}
     </>
   );
 }
@@ -185,10 +174,12 @@ export default function Mascot(props: Props) {
 
       <OrbitControls
         enablePan={false}
-        enableZoom={false}
+        enableZoom={!!props.free}
+        minDistance={1.2}
+        maxDistance={5}
         target={[0, -0.02, 0]}
-        minPolarAngle={Math.PI / 2 - 0.45}
-        maxPolarAngle={Math.PI / 2 + 0.2}
+        minPolarAngle={props.free ? 0 : Math.PI / 2 - 0.45}
+        maxPolarAngle={props.free ? Math.PI : Math.PI / 2 + 0.2}
       />
     </Canvas>
   );

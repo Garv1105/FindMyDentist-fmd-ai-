@@ -1,61 +1,67 @@
-import { ArrowRight, Building2, GraduationCap, HeartPulse, Stethoscope } from "lucide-react";
+import { ArrowRight, Building2, GraduationCap } from "lucide-react";
 import Link from "next/link";
-import { Container, Reveal, SectionHeader } from "../ui";
+import { Container, Reveal, SectionHeader, StatusTag, type Availability } from "../ui";
 
-// Only routes that exist: Scholar access is part of the student membership (sign-in), there is no Scholar page yet.
-const PRODUCTS = [
-  {
-    id: "main",
-    icon: HeartPulse,
-    tag: "For patients",
-    name: "FMD Main",
-    body: "The patient ecosystem: FMD AI guidance, verified dentist discovery, appointments, records and FMD Edge concierge.",
-    points: ["FMD AI in five languages", "Verified vs sponsored, always labelled", "Consent-first dental records"],
-    cta: { label: "Find a dentist", href: "/#dentists" },
-  },
-  {
-    id: "clinics",
-    icon: Stethoscope,
-    tag: "For clinics",
-    name: "FMD Clinic OS",
-    body: "Clinic management with an AI clinic manager that prepares work for your approval.",
-    points: ["Runs on authorised actions only", "Separate subscription from dentist membership"],
-    cta: { label: "Open Clinic OS", href: "/clinic" },
-  },
+// FMD Main and Clinic OS have their own sections; this is the secondary tier of the ecosystem.
+// Scholar: entitlements and usage limits exist server-side, but there's no Scholar workspace page yet.
+const PRODUCTS: {
+  id: string;
+  icon: typeof GraduationCap;
+  tag: string;
+  name: string;
+  body: string;
+  points: string[];
+  s: Availability;
+  cta: { label: string; href: string };
+}[] = [
   {
     id: "students",
     icon: GraduationCap,
     tag: "For students",
     name: "FMD Scholar",
-    body: "A dentistry-focused academic AI workspace for doubts, viva, seminars and research.",
-    points: ["Included with an active student membership", "Monthly usage limits apply"],
+    body: "A dentistry-focused academic AI workspace for subject doubts, viva preparation, seminars and research.",
+    points: ["Comes with an active FMD student membership", "Monthly usage limits will apply", "Workspace opens to members as it launches"],
+    s: "roadmap",
     cta: { label: "Join as a student", href: "/signin" },
+  },
+  {
+    id: "companies",
+    icon: Building2,
+    tag: "For dental companies",
+    name: "FMD for Companies",
+    body: "A future pathway for dental companies and partners to establish a relevant, clearly labelled presence within the ecosystem.",
+    points: ["Partnerships discussed individually", "Commercial presence is always labelled"],
+    s: "roadmap",
+    cta: { label: "Contact FMD", href: "mailto:support@findmydentist.io?subject=FMD%20for%20Companies" },
   },
 ];
 
-/** Section 11: the FMD product family. Panels share one frame but each leads with its own audience and action. */
+/** Brief §14: Scholar and the broader ecosystem, kept secondary to FMD Main and Clinic OS. */
 export default function Products() {
   return (
     <section className="pt-28 sm:pt-40">
       <Container>
-        <SectionHeader center eyebrow="One ecosystem" title="Different FMD, one standard of care" description="Three products built on the same verification, consent and AI boundaries." />
-        <div className="grid gap-4 lg:grid-cols-3">
-          {PRODUCTS.map(({ id, icon: Icon, tag, name, body, points, cta }, i) => (
+        <SectionHeader
+          center
+          eyebrow="The broader ecosystem"
+          title="Intelligence for every stage of dentistry."
+          description="FMD's broader ecosystem is intended to support patients, dental professionals, clinics and students through connected dental technology."
+        />
+        <div className="mx-auto grid max-w-[1000px] gap-4 md:grid-cols-2">
+          {PRODUCTS.map(({ id, icon: Icon, tag, name, body, points, s, cta }, i) => (
             <Reveal key={id} delay={i * 0.08}>
-              <article
-                id={id}
-                className={`relative flex h-full scroll-mt-28 flex-col overflow-hidden rounded-[28px] border border-[var(--fmd-border)] p-7 ${
-                  i === 0 ? "bg-[linear-gradient(160deg,var(--fmd-royal)_-30%,var(--fmd-deep)_45%,var(--fmd-midnight))]" : "bg-[linear-gradient(180deg,var(--fmd-deep),var(--fmd-midnight))]"
-                }`}
-              >
-                <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 size-56 rounded-full bg-[radial-gradient(closest-side,var(--fmd-glow),transparent)]" />
-                <span className="icon-tile relative size-11">
-                  <Icon className="size-[18px]" strokeWidth={1.3} />
-                </span>
+              <article id={id} className="glass relative flex h-full scroll-mt-28 flex-col overflow-hidden rounded-[28px] p-7">
+                <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 size-56 rounded-full bg-[radial-gradient(closest-side,var(--fmd-glow-strong),transparent)]" />
+                <div className="relative flex items-start justify-between">
+                  <span className="icon-tile size-11">
+                    <Icon className="size-[18px]" strokeWidth={1.3} />
+                  </span>
+                  <StatusTag s={s} />
+                </div>
                 <p className="relative mt-8 type-label text-ink-4">{tag}</p>
                 <h3 className="relative mt-2 text-[22px] font-normal tracking-[-0.018em] text-ink">{name}</h3>
                 <p className="relative mt-2 text-[14px] leading-relaxed text-ink-3">{body}</p>
-                <ul className="relative mt-5 space-y-2 border-t border-[var(--fmd-border)] pt-5">
+                <ul className="relative mt-5 space-y-2 border-t border-line pt-5">
                   {points.map((p) => (
                     <li key={p} className="flex items-start gap-2.5 text-[13px] text-ink-3">
                       <span aria-hidden className="mt-[7px] size-1 shrink-0 rounded-full bg-[rgb(var(--horizon-rgb)/0.6)]" />
@@ -70,9 +76,6 @@ export default function Products() {
             </Reveal>
           ))}
         </div>
-        <p id="companies" className="mt-6 flex scroll-mt-28 items-center justify-center gap-2 text-center text-[12.5px] text-ink-4">
-          <Building2 className="size-3.5" strokeWidth={1.5} /> FMD for Companies: a verified corporate presence within the dental ecosystem.
-        </p>
       </Container>
     </section>
   );
