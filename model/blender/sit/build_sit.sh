@@ -6,7 +6,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 MASCOT="$HERE/../../mascot"
 SRC="${1:-$MASCOT/8d1400c274348ff18c8f22503de0ef2c.glb}"
-REF="${2:-$MASCOT/mascot.png}"
+REF="${2:-$MASCOT/meditate.png}"  # the art Meshy built the scan from
 OUT="$MASCOT/out_sit"
 mkdir -p "$OUT/inspect"
 step() { echo "== $*"; }
@@ -14,7 +14,7 @@ step "front silhouette";   blender -b --factory-startup --python "$HERE/../inspe
 step "register reference"; python3 -I "$HERE/../register.py" "$OUT/inspect/front.png" "$REF" "$OUT/register.json" all
 step "clean, face, arms, colours"
 blender -b --factory-startup --python "$HERE/prep_sit.py" -- "$SRC" "$REF" "$OUT/register.json" "$OUT/prep.blend" \
-  | grep -E "hand |face rim|face patch|interior|arms removed|side patch|small holes|labels|fabric|saved"
+  | grep -E "hand |face rim|face patch|interior|arms removed|side patch|small holes|labels|cut verts|thin lap|ironed|head smoothed|flipped|pinholes|fabric|speck|saved"
 step "sleeves, gloves, face kit, rig, skin"
 blender -b "$OUT/prep.blend" --python "$HERE/rig_sit.py" -- "$SRC" "$OUT/rig.blend" | grep -E "^arm |bones:|body:|saved"
 step "animate + export"

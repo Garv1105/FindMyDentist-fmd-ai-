@@ -21,7 +21,7 @@ Z_NECK = 0.0             # above: tooth head (the head's underside sits at z≈0
 ARM_P0 = np.array([0.262, 0.060, -0.235])
 ARM_P1 = np.array([0.370, -0.270, -0.250])
 CUFF_T = 0.185
-WHITE, BLUE, UNK = 0, 1, -1
+WHITE, BLUE = 0, 1
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=SRC)
@@ -345,27 +345,140 @@ bm.faces.ensure_lookup_table()
 bm.normal_update()
 print("verts", len(bm.verts), "tris", len(bm.faces))
 
-# ---------------------------------------------------------------- colour labels from the reference
+# The arm-removal seams leave folded slivers on the lapels just below the shoulders (dark scribbles in renders):
+# iron that patch of coat flat. Verts outside the box stay put, so the coat's outline doesn't shrink.
+iron = [v for v in bm.verts if 0.14 < abs(v.co.x) < 0.25 and -0.20 < v.co.z < -0.06 and v.co.y < 0.06]
+for _ in range(30):
+    bmesh.ops.smooth_vert(bm, verts=iron, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+bm.normal_update()
+print(f"lapel seams ironed: {len(iron)} verts")
+
+# The head is a glossy tooth, so every ripple shows. Meshy sculpted its front as a raised plate with a ~1.5 cm step
+# round the edge (a hard line in the highlights), and the mesh is dense along that step, so plain Laplacian
+# smoothing hardly touches it. Implicit fairing (cotangent Laplacian, area-weighted mass, Desbrun et al. 1999) works
+# in real distances regardless of mesh density: creases a centimetre wide melt, the crown's big curves stay.
+# Only the neck join stays put (below HEAD_FIXED_Z within NECK_R of the neck); the head's underside rim is faired too.
+import scipy.sparse as sp  # noqa: E402
+from scipy.sparse.linalg import spsolve  # noqa: E402
+
+HEAD_FIXED_Z, NECK_R, HEAD_FAIR_T, HEAD_FAIR_STEPS = 0.03, 0.16, 1.5e-4, 4
+bmesh.ops.triangulate(bm, faces=bm.faces[:])
+bm.verts.index_update()
+pos = coords()
+F = tris_of(bm)
+n_v = len(pos)
+
+
+def cot_laplacian(P):
+    v0, v1, v2 = P[F[:, 0]], P[F[:, 1]], P[F[:, 2]]
+
+    def cot(a, b):  # cotangent of the angle between a and b; obtuse angles clamped to 0 keeps the solve stable
+        return np.clip(np.einsum("ij,ij->i", a, b) / np.maximum(np.linalg.norm(np.cross(a, b), axis=1), 1e-12), 0, 10)
+
+    c0, c1, c2 = cot(v1 - v0, v2 - v0), cot(v2 - v1, v0 - v1), cot(v0 - v2, v1 - v2)
+    rows = np.concatenate([F[:, 1], F[:, 2], F[:, 2], F[:, 0], F[:, 0], F[:, 1]])
+    cols = np.concatenate([F[:, 2], F[:, 1], F[:, 0], F[:, 2], F[:, 1], F[:, 0]])
+    W = sp.coo_matrix((0.5 * np.concatenate([c0, c0, c1, c1, c2, c2]), (rows, cols)), shape=(n_v, n_v)).tocsr()
+    area = 0.5 * np.linalg.norm(np.cross(v1 - v0, v2 - v0), axis=1)
+    mass = np.bincount(F.ravel(), weights=np.repeat(area / 3, 3), minlength=n_v)
+    return W - sp.diags(np.asarray(W.sum(1)).ravel()), mass
+
+
+free = (pos[:, 2] > HEAD_FIXED_Z) | ((pos[:, 2] > Z_NECK) & (np.hypot(pos[:, 0], pos[:, 1] - 0.03) > NECK_R))
+for _ in range(HEAD_FAIR_STEPS):
+    L, mass = cot_laplacian(pos)
+    fr = (free & (mass > 0)).astype(float)
+    A = (sp.diags(fr) @ (sp.diags(mass) - (HEAD_FAIR_T / HEAD_FAIR_STEPS) * L) + sp.diags(1 - fr)).tocsc()
+    pos = np.column_stack([spsolve(A, np.where(fr > 0, mass, 1.0) * pos[:, k]) for k in range(3)])
+for v, p_ in zip(bm.verts, pos):
+    v.co = p_
+bm.normal_update()
+print(f"head smoothed: {int(free.sum())} verts")
+
+
+def orient_islands():
+    """Make face winding consistent. Faces joined by a manifold edge walked in opposite directions form an island;
+    two islands meeting at an edge walked the SAME way disagree, so walk outward from each component's largest
+    island, flipping every island whose winding disagrees with the one it was reached from.
+    (recalc_face_normals isn't used: on this open mesh it orients islands separately and flips some inward.)"""
+    def same_way(lp):
+        g = next(x for x in lp.edge.link_faces if x is not lp.face)
+        return next(l2 for l2 in g.loops if l2.edge is lp.edge).vert is lp.vert, g
+
+    isl = {}
+    members = []
+    for f in bm.faces:
+        if f in isl:
+            continue
+        k = len(members)
+        isl[f] = k
+        members.append([f])
+        stack = [f]
+        while stack:
+            cur = stack.pop()
+            for lp in cur.loops:
+                if len(lp.edge.link_faces) != 2:
+                    continue
+                clash, g = same_way(lp)
+                if not clash and g not in isl:
+                    isl[g] = k
+                    members[k].append(g)
+                    stack.append(g)
+    nbrs = [set() for _ in members]
+    for f, k in isl.items():
+        for lp in f.loops:
+            if len(lp.edge.link_faces) == 2:
+                clash, g = same_way(lp)
+                if clash:
+                    nbrs[k].add(isl[g])
+    flip = [None] * len(members)
+    for root in sorted(range(len(members)), key=lambda k: -len(members[k])):
+        if flip[root] is not None:
+            continue
+        flip[root] = False
+        queue = [root]
+        for k in queue:
+            for n in nbrs[k]:
+                if flip[n] is None:
+                    flip[n] = not flip[k]  # they disagree as they are, so n takes the opposite choice
+                    queue.append(n)
+    flipped = 0
+    for k, fl in enumerate(flip):
+        if fl:
+            for f in members[k]:
+                f.normal_flip()
+            flipped += len(members[k])
+    bm.normal_update()
+    return flipped
+
+
+print("flipped faces fixed", orient_islands())
+# pinholes left in the ironed seam
+pin = [e for e in bm.edges if e.is_boundary and 0.13 < abs(e.verts[0].co.x) < 0.26 and -0.20 < e.verts[0].co.z < -0.05]
+print("seam pinholes filled", len(bmesh.ops.holes_fill(bm, edges=pin, sides=12)["faces"]))
+
+# ---------------------------------------------------------------- colour labels from the meditation art
+# Meshy built this scan from model/mascot/meditate.png, so that image registers onto it almost exactly: project
+# its blue/white onto every front-facing visible vertex, spread the labels over the hidden surface, then smooth the
+# field and CUT the mesh along its 0.5 contour, so colour edges are clean curves instead of triangle zig-zags.
+from scipy import ndimage  # noqa: E402
+
 co = coords()
 nrm = np.array([v.normal[:] for v in bm.verts])
 N = len(co)
+x_, y_, z_ = co.T
 bvh = BVHTree.FromBMesh(bm)
-img = bpy.data.images.load(REF_PNG)
-W, H = img.size
-px = np.array(img.pixels[:]).reshape(H, W, 4)[::-1]
-pu = np.clip(np.round(reg["ax"] * co[:, 0] + reg["bx"]).astype(int), 0, W - 1)
-pv = np.clip(np.round(reg["az"] * co[:, 2] + reg["bz"]).astype(int), 0, H - 1)
-s = px[pv, pu] * 255
-r_, g_, b_, a_ = s.T
-lum = s[:, :3].mean(1)
-label = np.full(N, WHITE)
-sat = (s[:, :3].max(1) - s[:, :3].min(1)) / np.maximum(s[:, :3].max(1), 1)
-label[(sat >= 0.6) & (b_ > 100) & (r_ < 110)] = BLUE  # rim glow tints white coat light blue: sat < 0.5, R > 160
-label[(a_ < 128) | (lum < 70)] = UNK
+ref = np.array(bpy.data.images.load(REF_PNG).pixels[:]).reshape(-1, reg["ref_w"], 4)[::-1]
+blue_map = ndimage.gaussian_filter(((ref[..., 2] - ref[..., 0]) > 0.2).astype(float), 0.7)
+pu = reg["ax"] * x_ + reg["bx"]
+pv = reg["az"] * z_ + reg["bz"]
+p_blue = ndimage.map_coordinates(blue_map, [pv, pu], order=1)
+inside = ndimage.map_coordinates(ref[..., 3], [pv, pu], order=1) > 0.5
 visible = np.array([bvh.ray_cast(Vector(c) + Vector((0, -6e-4, 0)), Vector((0, -1, 0)))[0] is None for c in co])
-confident = visible & (nrm[:, 1] < -0.35) & (label != UNK)
-label[co[:, 2] > Z_NECK] = WHITE
-confident |= co[:, 2] > Z_NECK
+label = np.where(p_blue > 0.5, BLUE, WHITE)
+label[z_ > Z_NECK] = WHITE
+# up-facing surfaces seen from the front count too (the skirt flaps on the lap; the art looks slightly down on them)
+confident = (visible & (nrm[:, 1] < 0.15) & inside) | (z_ > Z_NECK)
 
 adj = [[] for _ in range(N)]
 for e in bm.edges:
@@ -378,7 +491,7 @@ heap = [(0.0, int(i)) for i in np.nonzero(confident)[0]]
 for _, i in heap:
     dist[i] = 0
 heapq.heapify(heap)
-while heap:
+while heap:  # hidden surface takes the label of the nearest confident vertex (geodesic)
     d0, i = heapq.heappop(heap)
     if d0 > dist[i]:
         continue
@@ -387,39 +500,102 @@ while heap:
             dist[j] = d0 + w
             label[j] = label[i]
             heapq.heappush(heap, (d0 + w, j))
-label[label == UNK] = WHITE
-for _ in range(3):
-    new = label.copy()
-    for i in range(N):
-        votes = [label[j] for j, _ in adj[i]] + [label[i]]
-        new[i] = max(set(votes), key=votes.count)
-    label = new
-# clean colour edges: diffuse the blue/white field over the surface and re-threshold (removes the zig-zags)
+# the shirt only shows between the lapels: hidden torso surface outside that strip is coat
+label[~confident & (z_ > -0.30) & ((np.abs(x_) > 0.11) | (y_ > 0.08))] = WHITE
+# ...the back of the lap is the coat hem, and the pants never reach past the knees (|x| ≈ 0.26)
+label[~confident & (y_ > 0.05)] = WHITE
+label[(z_ < -0.28) & (np.abs(x_) > 0.265)] = WHITE
+# The crossed legs don't match the art closely enough to project, so below the coat's front panels the lap is
+# pants, and the socks are modelled on the scan's own feet (sock_field below) with clean cuffs.
+label[(z_ < -0.34) & (np.abs(x_) < 0.22) & (y_ < 0.06)] = BLUE
+label[(z_ < -0.30) & (np.abs(x_) < 0.22) & (y_ < -0.09)] = BLUE  # knee tops, in front of the coat panels
+# the coat skirt is a thin flap; the legs are thick: thin surface on the lap is always coat
+thick = np.array([(lambda h: h[3] if h[0] else 1.0)(bvh.ray_cast(Vector(c) - Vector(n) * 2e-4, -Vector(n), 0.5))
+                  for c, n in zip(co, nrm)])
+label[(z_ < -0.25) & (thick < 0.018)] = WHITE
+print("thin lap verts", int(((z_ < -0.25) & (thick < 0.018)).sum()))
 ei = np.array([(e.verts[0].index, e.verts[1].index) for e in bm.edges])
-Lb = (label == BLUE).astype(float)
 deg = np.bincount(ei.ravel(), minlength=N).astype(float)
-for _ in range(30):
+Lb = (label == BLUE).astype(float)
+for _ in range(40):  # diffuse: the 0.5 contour of this field is the (smooth) colour edge
     acc = np.zeros(N)
     np.add.at(acc, ei[:, 0], Lb[ei[:, 1]])
     np.add.at(acc, ei[:, 1], Lb[ei[:, 0]])
     Lb = 0.5 * Lb + 0.5 * acc / np.maximum(deg, 1)
-label = np.where(Lb > 0.5, BLUE, WHITE)
-label[co[:, 2] > Z_NECK] = WHITE
-# The lap is shaped differently from the drawing, so it's coloured from its geometry (front depth map):
-# blue pants over the knees, crossed shins and the shirt recess between them; white only on the two feet
-# that poke out at the bottom (x≈-0.075 / +0.07, z≈-0.48).
-x_, y_, z_ = co.T
-pants = (((z_ < -0.30) & (np.abs(x_) < 0.25)) | ((z_ < -0.24) & (np.abs(x_) < 0.12))) & (y_ < 0.10)
-is_foot = (z_ < -0.452) & (y_ < -0.20) & ((np.abs(x_ + 0.075) < 0.055) | (np.abs(x_ - 0.07) < 0.055))
-label[pants] = BLUE
-label[is_foot] = WHITE
-# V-neck (measured on mascot.png, re-centred): apex z=-0.128, sides rising 1.25 per unit x; inside is the white
-# body, around it the blue shirt up to the coat lapels. (The chest sits back under the big head: front y≈+0.03.)
-upper_front = (y_ < 0.12) & (z_ > -0.16) & (z_ < Z_NECK) & (np.abs(x_) < 0.08)
-is_neck = upper_front & (z_ > -0.128 + 1.25 * np.abs(x_))
-label[upper_front & ~is_neck] = BLUE
-label[is_neck] = WHITE
-print("labels: blue", int((label == BLUE).sum()), "white", int((label == WHITE).sum()), "feet", int(is_foot.sum()))
+Lb[z_ > Z_NECK] = 0.0
+
+# White socks on the scan's feet: the top foot lies in the valley between the knees (toes x≈-0.065 → ankle
+# x≈+0.075, top z≈-0.39, y≈-0.09), the two feet tucked under the front stick out below an ankle line z=-0.443.
+TOE, ANKLE, FOOT_R = np.array([-0.065, -0.09, -0.415]), np.array([0.075, -0.095, -0.41]), 0.031
+ANKLE_Z = -0.443
+
+
+def sock_field(p):
+    """> 0 inside a sock. p: (..., 3) array."""
+    p = np.asarray(p, float)
+    d = ANKLE - TOE
+    t = np.clip(((p - TOE) @ d) / (d @ d), 0, 1)
+    top = FOOT_R - np.linalg.norm(p - (TOE + t[..., None] * d), axis=-1)
+    under = np.where((np.abs(p[..., 0]) < 0.105) & (p[..., 1] < -0.20), ANKLE_Z - p[..., 2], -1.0)
+    return np.maximum(top, under)
+
+
+def in_lap(p):
+    return p.z < -0.30 and abs(p.x) < 0.22
+
+
+# V-neck as in meditate.png: the scan's head hangs ~3 cm lower than the art's, so the V is set lower and wider to
+# show the same open V below it (apex z=-0.135, nearly the full shirt width under the head), white tooth inside
+V_APEX, V_SLOPE = -0.135, 1.13
+V_BOX = lambda x, y, z: (z < Z_NECK) & (z > V_APEX - 0.02) & (np.abs(x) < 0.12) & (y < 0.12)  # noqa: E731
+
+# the scan sculpted a noisy knit texture into the scrubs and socks; the reference fabric is smooth
+fabric = [v for v in bm.verts if Lb[v.index] > 0.3 or sock_field(co[v.index]) > -0.01]
+for _ in range(14):
+    bmesh.ops.smooth_vert(bm, verts=fabric, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+print(f"fabric smoothed: {len(fabric)} verts")
+
+lay = bm.verts.layers.float.new("blue")
+for v in bm.verts:
+    v[lay] = Lb[v.index]
+
+
+def cut_contour(value, region=None):
+    """Split the mesh along value(v) == 0 (edges with a sign change, optionally only inside region(v))."""
+    bmesh.ops.triangulate(bm, faces=bm.faces[:])
+    val = {v: value(v) or 1e-9 for v in bm.verts}
+    cross = [e for e in bm.edges if val[e.verts[0]] * val[e.verts[1]] < 0
+             and (region is None or (region(e.verts[0]) and region(e.verts[1])))]
+    new = set()
+    for e in cross:
+        a, b = e.verts
+        _, nv = bmesh.utils.edge_split(e, a, val[a] / (val[a] - val[b]))
+        new.add(nv)
+    for f in list(bm.faces):
+        vs = [v for v in f.verts if v in new]
+        if len(vs) == 2:
+            bmesh.ops.connect_verts(bm, verts=vs)
+    return len(new)
+
+
+def v_field(p):
+    return p.z - (V_APEX + V_SLOPE * abs(p.x))
+
+
+def in_v_box(p):
+    return bool(V_BOX(p.x, p.y, p.z))
+
+
+print("colour edge cut verts", cut_contour(lambda v: v[lay] - 0.5, lambda v: v.co.z < Z_NECK))
+print("sock cut verts", cut_contour(lambda v: float(sock_field(v.co[:])), lambda v: in_lap(v.co)))
+# centre line first: then each side of the V is linear along every edge, so the tip is a clean point
+cut_contour(lambda v: v.co.x, lambda v: in_v_box(v.co))
+print("V-neck cut verts", cut_contour(lambda v: v_field(v.co), lambda v: in_v_box(v.co)))
+bm.verts.index_update()
+bm.verts.ensure_lookup_table()
+bm.faces.ensure_lookup_table()
+bm.normal_update()
+print("labels: blue verts", sum(v[lay] > 0.5 for v in bm.verts), "of", len(bm.verts))
 
 
 def srgb_to_lin(c):
@@ -445,7 +621,7 @@ def make_mat(name, rgb, rough, coat=0.0, coat_rough=0.1, spec=0.5):
 MATS = [
     make_mat("Tooth", (248, 246, 250), 0.2, coat=0.7, coat_rough=0.06),
     make_mat("Coat", (247, 247, 250), 0.55),
-    make_mat("Scrubs", (16, 64, 196), 0.7),
+    make_mat("Scrubs", (30, 62, 158), 0.75),
     make_mat("Feet", (248, 246, 250), 0.28, coat=0.5, coat_rough=0.1),
 ]
 for m in MATS:
@@ -453,14 +629,12 @@ for m in MATS:
 TOOTH, COAT, SCRUBS, FEET = range(4)
 
 for f in bm.faces:
-    ids = [v.index for v in f.verts]
-    c = sum((co[i] for i in ids), np.zeros(3)) / len(ids)
-    blue = sum(label[i] == BLUE for i in ids) * 2 >= len(ids)
-    if c[2] > Z_NECK or sum(is_neck[i] for i in ids) * 2 > len(ids):
+    c = f.calc_center_median()
+    if c.z > Z_NECK or (in_v_box(c) and v_field(c) > 0):
         f.material_index = TOOTH
-    elif sum(is_foot[i] for i in ids) * 2 >= len(ids):
+    elif in_lap(c) and sock_field(c[:]) > 0:
         f.material_index = FEET
-    elif blue:
+    elif sum(v[lay] for v in f.verts) / len(f.verts) > 0.5:
         f.material_index = SCRUBS
     else:
         f.material_index = COAT
@@ -481,7 +655,7 @@ def drop_specks(min_faces=80):
                         seen.add(g.index)
                         comp.append(g)
                         stack.append(g)
-        if len(comp) >= min_faces:
+        if len(comp) >= min_faces or f.material_index in (TOOTH, FEET):  # socks and V are exact shapes
             continue
         cset = {g.index for g in comp}
         around = [g.material_index for c in comp for e in c.edges for g in e.link_faces if g.index not in cset]
@@ -495,13 +669,8 @@ def drop_specks(min_faces=80):
 
 bm.faces.ensure_lookup_table()
 for _ in range(2):
-    print("speck faces reassigned", drop_specks())
+    print("speck faces reassigned", drop_specks(300))
 
-# The scan sculpted a noisy knit texture into the scrubs; the reference fabric is smooth.
-fabric = [v for v in bm.verts if any(f.material_index in (SCRUBS, FEET) for f in v.link_faces)]
-for _ in range(14):
-    bmesh.ops.smooth_vert(bm, verts=fabric, factor=0.5, use_axis_x=True, use_axis_y=True, use_axis_z=True)
-print(f"fabric smoothed: {len(fabric)} verts")
 
 bm.to_mesh(me)
 bm.free()

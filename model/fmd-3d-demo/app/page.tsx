@@ -18,17 +18,44 @@ const SECTIONS: { title: string; body: string; base: Clip; gesture?: Clip }[] = 
 const BUTTONS: Clip[] = ["Idle", "Wave", "Point", "Celebrate", "Nod", "HeadShake", "Think", "Walk", "Meditate"];
 const LOOPS: Clip[] = ["Idle", "Walk", "Meditate"];
 
-export default function Home() {
-  const [base, setBase] = useState<Clip>("Idle");
-  const [gesture, setGesture] = useState<{ name: Clip; id: number } | null>(null);
+// seated hero mascot (model/blender/sit): bump ?v= when the GLB is rebuilt, or the browser keeps the old one
+const SIT_URL = "/mascot-sitting.glb?v=9";
+const SIT_LOOPS = ["Meditate", "Fly", "Idle", "Talk"];
+const SIT_BUTTONS = [...SIT_LOOPS, "Wake", "Wave", "PointLeft", "PointRight", "Present", "LookAround", "Nod", "Smile", "Happy"];
+
+type Gesture = { name: string; id: number } | null;
+
+/** base loop + replayable one-shot gesture */
+function useClips(initial: string, loops: string[]) {
+  const [base, setBase] = useState(initial);
+  const [gesture, setGesture] = useState<Gesture>(null);
+  const id = useRef(0);
+  const play = (name: string) => (loops.includes(name) ? setBase(name) : setGesture({ name, id: ++id.current }));
+  return { base, gesture, play, setBase };
+}
+
+function ClipButtons({ clips, active, onPick }: { clips: string[]; active: string; onPick: (c: string) => void }) {
+  return (
+    <nav className="fixed inset-x-0 bottom-4 z-10 mx-auto flex w-fit max-w-[95vw] flex-wrap justify-center gap-2 rounded-2xl bg-white/80 p-2 shadow-lg backdrop-blur">
+      {clips.map((b) => (
+        <button
+          key={b}
+          onClick={() => onPick(b)}
+          className={`rounded-xl px-3 py-1.5 text-sm font-medium transition ${
+            active === b ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-blue-100"
+          }`}
+        >
+          {b}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+function Standing() {
+  const { base, gesture, play, setBase } = useClips("Idle", LOOPS);
   const refs = useRef<(HTMLElement | null)[]>([]);
   const active = useRef(-1);
-  const gestureId = useRef(0);
-
-  const play = (name: Clip) => {
-    if (LOOPS.includes(name)) setBase(name);
-    else setGesture({ name, id: ++gestureId.current });
-  };
 
   useEffect(() => {
     const io = new IntersectionObserver(
@@ -39,13 +66,14 @@ export default function Home() {
           active.current = i;
           setBase(SECTIONS[i].base);
           const g = SECTIONS[i].gesture;
-          if (g) setGesture({ name: g, id: ++gestureId.current });
+          if (g) play(g);
         }
       },
       { rootMargin: "-45% 0px -45% 0px" }, // a section is "active" when it crosses the middle of the screen
     );
     refs.current.forEach((el) => el && io.observe(el));
     return () => io.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- observe once; play/setBase only touch state
   }, []);
 
   return (
@@ -71,19 +99,40 @@ export default function Home() {
         </div>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-4 z-10 mx-auto flex w-fit max-w-[95vw] flex-wrap justify-center gap-2 rounded-2xl bg-white/80 p-2 shadow-lg backdrop-blur">
-        {BUTTONS.map((b) => (
+      <ClipButtons clips={BUTTONS} active={base} onPick={play} />
+    </main>
+  );
+}
+
+function Sitting() {
+  const { base, gesture, play } = useClips("Meditate", SIT_LOOPS);
+  return (
+    <main className="h-screen bg-gradient-to-b from-[#0b1020] to-[#1a2a55]">
+      <Mascot url={SIT_URL} free base={base} gesture={gesture} />
+      <p className="fixed inset-x-0 top-16 text-center text-sm text-slate-300">Drag to rotate · scroll to zoom</p>
+      <ClipButtons clips={SIT_BUTTONS} active={base} onPick={play} />
+    </main>
+  );
+}
+
+export default function Home() {
+  const [tab, setTab] = useState<"Standing" | "Sitting">("Standing");
+  return (
+    <>
+      <nav className="fixed inset-x-0 top-4 z-20 mx-auto flex w-fit gap-1 rounded-2xl bg-white/80 p-1 shadow-lg backdrop-blur">
+        {(["Standing", "Sitting"] as const).map((t) => (
           <button
-            key={b}
-            onClick={() => play(b)}
-            className={`rounded-xl px-3 py-1.5 text-sm font-medium transition ${
-              base === b ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-blue-100"
+            key={t}
+            onClick={() => setTab(t)}
+            className={`rounded-xl px-4 py-1.5 text-sm font-semibold transition ${
+              tab === t ? "bg-blue-600 text-white" : "text-slate-700 hover:bg-blue-100"
             }`}
           >
-            {b}
+            {t}
           </button>
         ))}
       </nav>
-    </main>
+      {tab === "Standing" ? <Standing /> : <Sitting />}
+    </>
   );
 }

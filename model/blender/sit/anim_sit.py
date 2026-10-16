@@ -2,7 +2,7 @@
 
 blender -b rig.blend --python anim_sit.py -- <out.glb> <out.blend>
 
-Clips (30 fps). Loops: Meditate, Idle, Talk. One-shots (start and end in the Idle pose, so they chain):
+Clips (30 fps). Loops: Meditate, Fly, Idle, Talk. One-shots (start and end in the Idle pose, so they chain):
 Wake (from Meditate), Wave, PointRight, PointLeft (viewer's right/left), Present, LookAround, Nod, Smile, Happy.
 Blink only keys the eye/lid bones; the web page plays it additively on top of any clip.
 Every other clip keys every bone, so cross-fades never inherit a stale pose.
@@ -42,16 +42,32 @@ def base(breath=0.0, look=(0.0, 0.0), hands="relaxed", smile=1.0):
     mouth(rig, 0.0, smile)
 
 
-def meditate(breath=0.0, hover=0.0):
+FLOAT_UP = (0.66, 0.02, -0.75)     # hands floated up to the belly, palms up
+FLOAT_FORE = (0.56, -0.72, 0.41)
+MUDRA = [(42, 58, 48), (12, 16, 10), (12, 16, 10), (12, 16, 10)]
+OPEN = [(6, 8, 4), (8, 10, 6), (10, 12, 8), (12, 14, 10)]
+
+
+def meditate(breath=0.0, hover=0.0, lift=0.0, ripple=0.0):
+    """breath -1 exhaled .. 1 inhaled; lift 0 hands in mudra on the knees .. 1 floated up, open, palms up;
+    ripple: phase of the slow finger wave that runs pinky -> index while the hands are up."""
     move(rig, "root", (0, 0, hover))
-    breathe(rig, breath)
-    rot(rig, "head", (Vector((1, 0, 0)), 4 - 1.5 * breath))
+    breathe(rig, 1.4 * breath)
+    rot(rig, "head", (Vector((1, 0, 0)), 4 - 3 * breath))
+    k = ease(lift)
     for s in "LR":
-        arm(rig, s, REST_UP, REST_FORE)
-        hand_shape(rig, s, "mudra")
+        up = Vector(REST_UP).lerp(Vector(FLOAT_UP), k)
+        fo = Vector(REST_FORE).lerp(Vector(FLOAT_FORE), k).normalized()
+        arm(rig, s, up, fo)
+        # palm stays up; the wrist trails the wave, so the hand flows rather than lifts like a tray
+        hand_dir(rig, s, (fo + Vector((0, 0, -0.25 * k * math.sin(ripple)))).normalized(), (0.0, 0.05, -1.0))
+        for i, f in enumerate(FINGERS):
+            w = 9 * k * math.sin(ripple - 0.7 * (3 - i))
+            finger(rig, s, f, [a + (b - a) * k + w for a, b in zip(MUDRA[i], OPEN[i])])
+        thumb(rig, s, [a * (1 - 0.7 * k) for a in (18, 22, 18)], 22 * (1 - k))
     eyes(rig, 0.0)
     brows(rig, 0.0)
-    mouth(rig, 0.0, 1.0)
+    mouth(rig, 0.0, 1.0 + 0.15 * max(0.0, breath))
 
 
 def wave_arm(swing=0.0, k=1.0):
@@ -146,10 +162,36 @@ def finish(act):
 
 # ---------------------------------------------------------------- clips
 def clip_meditate():
-    act = new_action("Meditate", 120, cyclic=True)
-    for f in range(0, 121, 6):
-        t = 2 * math.pi * f / 120
-        pose_at(f, lambda t=t: meditate(math.sin(t), 0.008 * math.sin(t + 0.9)))
+    # 8 s: inhale while the hands float up and open with a slow finger wave, exhale back into the mudra
+    act = new_action("Meditate", 240, cyclic=True)
+    for f in range(0, 241, 4):
+        t = 2 * math.pi * f / 240
+        b = -math.cos(t)
+        pose_at(f, lambda t=t, b=b: meditate(b, 0.012 * math.sin(t - 0.6), 0.5 + 0.5 * b, 2 * t))
+    finish(act)
+
+
+def fly(bob=0.0):
+    """Superman rise: right fist (viewer's left) punched straight up, the other hand still in the mudra."""
+    move(rig, "root", (0, 0, bob))
+    breathe(rig, 0.6)
+    head(rig, 0, 7)
+    rot(rig, "shoulder.R", (Vector((0, 1, 0)), -10))
+    # out to the side first: straight up would hide the arm behind the big head
+    arm(rig, "R", (0.88, -0.20, 0.43), (0.22, -0.30, 0.93))
+    hand_dir(rig, "R", Vector((0.15, -0.30, 0.94)).normalized(), (0.3, 1.0, 0.1))
+    hand_shape(rig, "R", "fist")
+    arm(rig, "L", REST_UP, REST_FORE)
+    hand_shape(rig, "L", "mudra")
+    eyes(rig, 1.0, (0.0, 0.006))
+    brows(rig, 1.0, 0.004, -6)
+    mouth(rig, 0.0, 1.3)
+
+
+def clip_fly():
+    act = new_action("Fly", 60, cyclic=True)
+    for f in range(0, 61, 6):
+        pose_at(f, lambda f=f: fly(0.01 * math.sin(2 * math.pi * f / 60)))
     finish(act)
 
 
@@ -324,7 +366,7 @@ def clip_blink():
     finish(act)
 
 
-for fn in (clip_meditate, clip_idle, clip_wake, clip_wave, lambda: clip_point("PointRight", "L", 1),
+for fn in (clip_meditate, clip_fly, clip_idle, clip_wake, clip_wave, lambda: clip_point("PointRight", "L", 1),
            lambda: clip_point("PointLeft", "R", -1), clip_present, clip_look_around, clip_nod, clip_smile,
            clip_happy, clip_talk, clip_blink):
     fn()

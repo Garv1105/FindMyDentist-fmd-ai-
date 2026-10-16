@@ -100,17 +100,16 @@ function CinematicHero() {
   // head stays below the nav at every viewport height.
   // It starts tiny and mostly behind the limb, rises out of the light while growing, then settles; it exits once.
   const mascotY = useTransform(p, MASCOT_KEYS, ["14%", "14%", "4%", "-8%", "-17%", "-22%", "-22%", "-16%", "-16%"]);
-  const mScale = useTransform(p, MASCOT_KEYS, [0.16, 0.16, 0.34, 0.62, 0.88, 1, 1, 0.94, 0.94]);
-  // true 3D turn of the model toward the viewer (applied inside the WebGL scene, not as a CSS tilt)
-  const rotY = useTransform(p, MASCOT_KEYS, [-40, -40, -30, -16, -5, 0, 0, 0, 0]);
-  const rotX = useTransform(p, MASCOT_KEYS, [10, 10, 7, 4, 1, 0, 0, 0, 0]);
+  const mScale = useTransform(p, MASCOT_KEYS, [0.14, 0.14, 0.29, 0.53, 0.75, 0.85, 0.85, 0.8, 0.8]);
+  // two full turns while rising, slowing to face-on as it arrives
+  const rotY = useTransform(p, MASCOT_KEYS, [-720, -720, -470, -230, -60, 0, 0, 0, 0]);
   const mOpacity = useTransform(p, MASCOT_KEYS, MASCOT_OPACITY);
 
   // F — the assistant fades in and stays until the pin releases, so the page flows straight into the next section
   const aiOpacity = useTransform(p, [a0, a1], [0, 1]);
   const aiY = useTransform(p, [a0, a1], [40, 0]);
   const [aiActive, setAiActive] = useState(false);
-  // mascot: meditates while rising, stands and waves once it arrives; WebGL only runs while it is on screen
+  // mascot: superman rise, then settles into meditation once it arrives; WebGL only runs while it is on screen
   const [settled, setSettled] = useState(false);
   const [mascotOn, setMascotOn] = useState(false);
   const [mascotReady, setMascotReady] = useState(false);
@@ -159,7 +158,7 @@ function CinematicHero() {
               />
               {/* wider than the sprite box: room for the waving / pointing arms */}
               <div className="absolute inset-y-0 left-1/2 w-[170%] -translate-x-1/2">
-                <Mascot3D active={mascotOn} settled={settled} rotY={rotY} rotX={rotX} onReady={onMascotReady} />
+                <Mascot3D active={mascotOn} settled={settled} rotY={rotY} onReady={onMascotReady} />
               </div>
             </div>
           </motion.div>
