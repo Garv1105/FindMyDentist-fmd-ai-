@@ -304,6 +304,37 @@ for vi in detached:
     _, k, _ = kd.find(co[vi])
     W[vi] = W[main_idx[k]]
 print(f"detached pieces: {n_comp - 1}, {len(detached)} verts now follow the nearest main-surface vertex")
+
+# Shoes are rigid (and set last so nothing above can undo it): heat weights + smoothing leave ~30% shin/thigh
+# on them, which smears the shoe into a cone whenever the ankle bends; the heel sits 10 cm behind the ankle.
+shoe_idx = me.materials.find("Shoe")
+is_shoe = np.zeros(len(co), bool)  # any vertex touching a shoe face, so no shoe face straddles two bones
+for p in me.polygons:
+    if p.material_index == shoe_idx:
+        is_shoe[list(p.vertices)] = True
+for s, sx in (("L", 1), ("R", -1)):
+    rows = np.nonzero(is_shoe & (sx * co[:, 0] > 0))[0]
+    k = np.ones(len(rows))  # the whole shoe; the trouser hem above it absorbs the bend
+    W[rows] *= (1 - k)[:, None]
+    W[rows, col[f"foot.{s}"]] += k
+    print(f"shoe {s}: {len(rows)} verts, fully rigid {(k > 0.999).sum()}")
+
+# The trouser hem drapes over the low heel down to the sole. If it follows the shin, a bent ankle uncovers the
+# heel as a flat tail, so the hem within 3 cm of the shoe follows the foot, blending into the shin above it.
+for s, sx in (("L", 1), ("R", -1)):
+    shoe_v = np.nonzero(is_shoe & (sx * co[:, 0] > 0))[0]
+    kd_shoe = kdtree.KDTree(len(shoe_v))
+    for k_, vi in enumerate(shoe_v):
+        kd_shoe.insert(co[vi], k_)
+    kd_shoe.balance()
+    cand = np.nonzero(~is_shoe & (sx * co[:, 0] > 0) & (z < -0.40))[0]
+    near = np.array([kd_shoe.find(co[vi])[2] < 0.03 for vi in cand], bool)
+    rows = cand[near]
+    k = ramp(-z[rows], 0.41, 0.445)
+    W[rows] *= (1 - k)[:, None]
+    W[rows, col[f"foot.{s}"]] += k
+    print(f"hem {s}: {len(rows)} verts blended toward the foot")
+
 for i, n in enumerate(names):
     g = vg[n]
     g.remove(range(len(co)))
