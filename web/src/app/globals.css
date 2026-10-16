@@ -682,56 +682,71 @@ html.theme-anim *::after {
    switches to the liquid-glass look. */
 .fmd-glass {
   color-scheme: dark;
-  --background: #000000;
-  --background-secondary: #02050f;
-  --surface: #081230;
+  /* royal-blue / deep-navy / white — the reference artwork's palette */
+  --background: #020409;
+  --background-secondary: #050a17;
+  --surface: #080d1c;
   --headline-from: #ffffff;
-  --headline-to: #a9c2f5;
+  --headline-to: #b4cbff;
   --headline-accent: #6fa4ff;
-  --accent-soft: rgba(77, 141, 255, 0.14);
+  --accent-soft: rgba(77, 141, 255, 0.16);
   --horizon: #cfe0ff;
-  --horizon-glow: rgba(77, 141, 255, 0.5);
-  --button-secondary: rgba(255, 255, 255, 0.08);
-  --edge-lo: rgba(255, 255, 255, 0.06);
-  --surface-glass: rgba(255, 255, 255, 0.08);
-  --glass-tint: rgba(255, 255, 255, 0.14);
-  --surface-elevated: rgba(255, 255, 255, 0.12);
-  --border: rgba(255, 255, 255, 0.16);
-  --border-strong: rgba(255, 255, 255, 0.3);
-  --edge-hi: rgba(255, 255, 255, 0.55);
-  --inner-hi: rgba(255, 255, 255, 0.35);
+  --horizon-glow: rgba(77, 141, 255, 0.55);
+  --button-secondary: rgba(255, 255, 255, 0.06);
+  --edge-lo: rgba(255, 255, 255, 0.05);
+  --surface-glass: rgba(120, 150, 220, 0.06);
+  --glass-tint: rgba(120, 150, 230, 0.1);
+  --surface-elevated: rgba(120, 150, 220, 0.08);
+  --border: rgba(170, 190, 235, 0.13);
+  --border-strong: rgba(170, 195, 245, 0.26);
+  --edge-hi: rgba(200, 215, 245, 0.45);
+  --inner-hi: rgba(220, 230, 255, 0.18);
   --text-primary: #ffffff;
-  --text-secondary: #dbe5ff;
-  --text-muted: #a3b4d9;
-  --text-faint: #7c8db5;
+  --text-secondary: #d4dcee;
+  --text-muted: #9aa7c2;
+  --text-faint: #6f7c98;
   --accent: #4d8dff;
   --accent-rgb: 77 141 255;
-  --accent-glow: rgba(77, 141, 255, 0.5);
+  --accent-glow: rgba(77, 141, 255, 0.55);
   --horizon-rgb: 150 190 255;
-  --shadow: rgba(2, 6, 20, 0.6);
+  --shadow: rgba(0, 0, 0, 0.7);
   --button-primary: #ffffff;
   --button-primary-fg: #1d4fd8;
   --star: #dbe6ff;
+  /* section environment (LowerWorld, cards) — navy instead of near-black */
+  --fmd-near-black: #020409;
+  --fmd-midnight: #050a17;
+  --fmd-deep: #08112a;
+  --fmd-sapphire: #0d1d45;
+  --fmd-royal: #16357f;
+  --fmd-glow: rgba(77, 141, 255, 0.12);
+  --fmd-glow-strong: rgba(77, 141, 255, 0.22);
+  --fmd-border: rgba(170, 190, 235, 0.13);
+  --fmd-border-strong: rgba(170, 195, 245, 0.26);
+  --bg-near-black: #020409;
+  --bg-midnight: #03070f;
+  --bg-navy: #060e22;
+  --bg-sapphire: #0a1633;
+  --bg-glow: rgba(70, 130, 255, 0.09);
+  --bg-glow-soft: rgba(110, 150, 255, 0.05);
+  --bg-glow-focus: rgba(70, 130, 255, 0.16);
   --glass-shadow:
-    inset 0 1px 0.5px rgba(255, 255, 255, 0.55),
-    inset 0 -1px 0.5px rgba(255, 255, 255, 0.12),
-    inset 0 0 24px rgba(255, 255, 255, 0.06),
-    0 24px 60px -24px rgba(2, 6, 20, 0.8);
+    inset 0 1px 0.5px rgba(220, 230, 255, 0.32),
+    inset 0 -1px 0.5px rgba(140, 170, 255, 0.08),
+    inset 0 0 30px rgba(120, 160, 255, 0.04),
+    0 24px 60px -24px rgba(0, 0, 0, 0.9),
+    0 0 50px -28px rgba(77, 141, 255, 0.3);
 }
 
-/* iOS-style liquid glass: frosted, saturated, rim-lit */
+/* iOS-style liquid glass, tinted blue: frosted, saturated, rim-lit */
 .liquid-glass,
-.fmd-glass .glass,
-.fmd-glass .icon-tile {
+.fmd-glass .glass {
   position: relative;
   isolation: isolate;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.16) 0%,
-    rgba(255, 255, 255, 0.05) 50%,
-    rgba(255, 255, 255, 0.09) 100%
-  );
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background:
+    linear-gradient(135deg, rgba(160, 185, 255, 0.11) 0%, rgba(90, 120, 210, 0.03) 48%, rgba(120, 150, 240, 0.06) 100%),
+    rgba(6, 10, 22, 0.55);
+  border: 1px solid rgba(170, 195, 245, 0.15);
   backdrop-filter: blur(30px) saturate(190%);
   -webkit-backdrop-filter: blur(30px) saturate(190%);
   box-shadow: var(--glass-shadow);
@@ -749,30 +764,31 @@ html.theme-anim *::after {
   inset: 0;
   z-index: -1;
   border-radius: inherit;
-  background: radial-gradient(
-    120% 60% at 30% 0%,
-    rgba(255, 255, 255, 0.22) 0%,
-    transparent 60%
-  );
+  background: radial-gradient(120% 60% at 30% 0%, rgba(210, 225, 255, 0.12) 0%, transparent 60%);
   pointer-events: none;
 }
 .liquid-glass:hover,
 .liquid-glass-active,
 .fmd-glass .glass-interactive:hover {
-  border-color: rgba(255, 255, 255, 0.32);
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.22) 0%,
-    rgba(255, 255, 255, 0.08) 50%,
-    rgba(255, 255, 255, 0.12) 100%
-  );
+  border-color: rgba(150, 185, 255, 0.32);
+  background:
+    linear-gradient(135deg, rgba(160, 190, 255, 0.16) 0%, rgba(90, 125, 230, 0.05) 48%, rgba(120, 155, 255, 0.1) 100%),
+    rgba(8, 14, 32, 0.6);
 }
-/* Large panels/drawers keep a navy tint under the frost so text stays legible */
-.fmd-glass .glass {
-  background-color: rgba(8, 18, 48, 0.35);
-}
+
+/* Icon tiles: dark glass squares with a blue glyph and a faint blue under-glow, as in the reference */
 .fmd-glass .icon-tile {
-  color: var(--text-primary);
+  position: relative;
+  isolation: isolate;
+  color: #8fb6ff;
+  background: linear-gradient(160deg, rgba(60, 100, 220, 0.28) 0%, rgba(10, 18, 40, 0.75) 70%);
+  border: 1px solid rgba(150, 185, 255, 0.28);
+  box-shadow:
+    inset 0 1px 0.5px rgba(220, 232, 255, 0.35),
+    0 10px 26px -12px rgba(47, 107, 255, 0.55);
+}
+.fmd-glass .icon-tile::before {
+  background: radial-gradient(120% 70% at 30% 0%, rgba(200, 220, 255, 0.18) 0%, transparent 60%);
 }
 
 .glass-orb {

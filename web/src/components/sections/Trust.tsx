@@ -61,7 +61,9 @@ export default function Trust() {
           {PILLARS.map(({ icon: Icon, title, body }, i) => (
             <Reveal key={title} delay={i * 0.06}>
               <div className="glass h-full rounded-[24px] p-6">
-                <Icon className="size-5 text-ink-2" strokeWidth={1.3} />
+                <span className="icon-tile size-10">
+                  <Icon className="size-[18px]" strokeWidth={1.4} />
+                </span>
                 <h3 className="mt-5 text-[15.5px] text-ink">{title}</h3>
                 <p className="mt-1.5 text-[14px] leading-relaxed text-ink-3">{body}</p>
               </div>

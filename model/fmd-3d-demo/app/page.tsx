@@ -19,8 +19,8 @@ const BUTTONS: Clip[] = ["Idle", "Wave", "Point", "Celebrate", "Nod", "HeadShake
 const LOOPS: Clip[] = ["Idle", "Walk", "Meditate"];
 
 // seated hero mascot (model/blender/sit): bump ?v= when the GLB is rebuilt, or the browser keeps the old one
-const SIT_URL = "/mascot-sitting.glb?v=9";
-const SIT_LOOPS = ["Meditate", "Fly", "Idle", "Talk"];
+const SIT_URL = "/mascot-sitting.glb?v=11";
+const SIT_LOOPS = ["Meditate", "Fly", "Idle", "Talk", "Think", "Explain"];
 const SIT_BUTTONS = [...SIT_LOOPS, "Wake", "Wave", "PointLeft", "PointRight", "Present", "LookAround", "Nod", "Smile", "Happy"];
 
 type Gesture = { name: string; id: number } | null;

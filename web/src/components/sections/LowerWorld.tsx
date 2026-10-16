@@ -53,6 +53,8 @@ export default function LowerWorld({ children }: { children: ReactNode }) {
           <path d="M-60 2620 C 500 2480, 940 2760, 1500 2560" stroke="url(#lw-line)" />
         </svg>
       </div>
+      {/* black hero above eases into the navy sections: no seam */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[420px] bg-[linear-gradient(180deg,#000_0%,rgb(0_0_0/0.6)_45%,transparent_100%)]" />
       {children}
     </div>
   );

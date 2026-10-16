@@ -22,11 +22,13 @@ const moving = (p: number) =>
   (p >= PHASES.mascotOut[0] && p <= PHASES.mascotOut[1]) ||
   (p >= PHASES.ai[0] && p <= PHASES.ai[1]);
 for (let p = PHASES.title[0]; p <= PHASES.ai[1]; p += 0.0005) {
-  // the settled-pose hold is the one intentional pause, and it is short
+  // the settled-pose hold is the one intentional pause (the mascot says its line there)
   const hold = p > PHASES.rise[1] && p < PHASES.mascotOut[0];
   assert.ok(moving(p) || hold, `dead scroll interval at p=${p.toFixed(4)}`);
 }
-assert.ok(PHASES.mascotOut[0] - PHASES.rise[1] <= 0.12, "hold stays brief");
+assert.ok(PHASES.mascotOut[0] - PHASES.rise[1] >= 0.3, "mascot stays on screen for a long stretch of scroll");
+// the speech bubble only shows once the mascot has fully risen, and is gone before it leaves
+assert.ok(PHASES.say[0] >= PHASES.rise[1] && PHASES.say[1] <= PHASES.mascotOut[0], "bubble inside the hold");
 
 // the assistant and the mascot are never on screen together
 for (let p = 0; p <= 1; p += 0.0005) {
