@@ -56,11 +56,13 @@ export default function About() {
           </div>
         </div>
 
-        <div className="mt-14 grid overflow-hidden rounded-[28px] border border-[var(--fmd-border)] bg-white/[0.02] max-md:divide-y md:grid-cols-3 md:divide-x divide-[var(--fmd-border)]">
+        <div className="glass mt-14 grid overflow-hidden rounded-[28px] max-md:divide-y md:grid-cols-3 md:divide-x divide-[var(--fmd-border)]">
           {PRINCIPLES.map(({ icon: Icon, title, body }, i) => (
             <Reveal key={title} delay={i * 0.07}>
               <div className="h-full p-7">
-                <Icon className="size-5 text-[#8fb8ff]" strokeWidth={1.4} />
+                <span className="icon-tile size-10">
+                  <Icon className="size-[18px]" strokeWidth={1.4} />
+                </span>
                 <h3 className="type-h3 mt-5">{title}</h3>
                 <p className="mt-1.5 text-[14px] leading-relaxed text-ink-3">{body}</p>
               </div>

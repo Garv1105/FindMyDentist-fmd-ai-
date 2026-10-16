@@ -5,17 +5,18 @@ import type { MotionValue } from "motion/react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Environment, Lightformer, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
+import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 
 /**
  * The seated hero mascot (built by model/blender/sit/build_sit.sh, meshopt-compressed). Clips:
- *   loops     Fly (superman rise), Meditate, Idle, Talk
+ *   loops     Fly (superman rise), Meditate, Idle, Talk, Think (hand at chin), Explain (talks while presenting)
  *   one-shots Wake, Wave, PointLeft, PointRight, Present, LookAround, Nod, Smile, Happy
  *             (each starts and ends in the Idle pose, so they chain)
  *   layer     Blink (eyes/lids only; played additively)
  * Point/Present directions are from the viewer: PointRight points to the viewer's right.
  */
 // bump ?v= whenever the GLB is rebuilt, or browsers keep the cached old model
-const MODEL_URL = "/mascot-sitting.glb?v=7";
+const MODEL_URL = "/mascot-sitting.glb?v=9";
 const FADE = 0.45;
 const AMBIENT = ["LookAround", "Smile", "Nod"];
 
@@ -81,8 +82,9 @@ class MascotAnimator {
   update(dt: number, time: number) {
     this.mixer.update(dt);
     const idle = !this.gesture && this.current === this.actions.get("Idle");
+    const eyesOpen = !this.gesture && ["Idle", "Talk", "Think", "Explain"].some((n) => this.current === this.actions.get(n));
     if (this.blink && time > this.nextBlink) {
-      if (idle) this.blink.reset().play(); // only over open eyes: an additive blink would fight closed ones
+      if (eyesOpen) this.blink.reset().play(); // only over open eyes: an additive blink would fight closed ones
       this.nextBlink = time + 2.5 + Math.random() * 3;
     }
     // a little life while it waits: an occasional glance around, smile or nod
@@ -102,15 +104,25 @@ class MascotAnimator {
 }
 
 type Props = {
-  /** false: superman rise (fist up) · true: it has arrived and settles back into meditation */
-  settled: boolean;
+  /** looping clip to rest in (Meditate, Fly, Idle, Talk, Think, Explain) */
+  base: string;
+  /** one-shot clip; pass a new object to (re)play it, then it returns to `base` */
+  gesture?: { name: string; id: number } | null;
   /** scroll-driven turn about its own vertical axis, degrees */
-  rotY: MotionValue<number>;
+  rotY?: MotionValue<number>;
   onReady?: () => void;
+  /** every frame: the mouth's position in % of the canvas, and how much it faces the viewer (0 = turned away, 1 = front) */
+  onMouth?: (leftPct: number, topPct: number, facing: number) => void;
 };
 
-function Model({ settled, rotY, onReady }: Props) {
-  const { scene, animations } = useGLTF(MODEL_URL);
+const _mouth = new THREE.Vector3();
+const _head = new THREE.Vector3();
+
+function Model({ base, gesture, rotY, onReady, onMouth }: Props) {
+  const gltf = useGLTF(MODEL_URL);
+  // each canvas gets its own copy: one three.js object can't sit in two scenes (hero rise + search bar)
+  const scene = useMemo(() => cloneSkinned(gltf.scene), [gltf.scene]);
+  const animations = gltf.animations;
   const animator = useMemo(() => new MascotAnimator(scene, animations), [scene, animations]);
   const group = useRef<THREE.Group>(null);
 
@@ -122,13 +134,25 @@ function Model({ settled, rotY, onReady }: Props) {
     return () => animator.stop();
   }, [scene, animator, onReady]);
 
+  useEffect(() => animator.setBase(base), [animator, base]);
   useEffect(() => {
-    animator.setBase(settled ? "Meditate" : "Fly");
-  }, [animator, settled]);
+    if (gesture) animator.play(gesture.name);
+  }, [animator, gesture]);
 
   useFrame((state, dt) => {
     animator.update(Math.min(dt, 0.1), state.clock.elapsedTime);
-    if (group.current) group.current.rotation.y = THREE.MathUtils.degToRad(rotY.get());
+    if (group.current && rotY) group.current.rotation.y = THREE.MathUtils.degToRad(rotY.get());
+    const mouth = scene.getObjectByName("mouth");
+    const head = scene.getObjectByName("head");
+    if (onMouth && mouth && head) {
+      group.current?.updateMatrixWorld();
+      mouth.getWorldPosition(_mouth);
+      head.getWorldPosition(_head);
+      // facing: the mouth is nearer the camera than the head's centre
+      const facing = _head.distanceTo(state.camera.position) - _mouth.distanceTo(state.camera.position);
+      _mouth.project(state.camera);
+      onMouth((_mouth.x + 1) * 50, (1 - _mouth.y) * 50, THREE.MathUtils.clamp(facing / 0.04, 0, 1));
+    }
   });
 
   return (

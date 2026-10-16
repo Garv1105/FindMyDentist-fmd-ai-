@@ -2,7 +2,7 @@
 
 blender -b rig.blend --python anim_sit.py -- <out.glb> <out.blend>
 
-Clips (30 fps). Loops: Meditate, Fly, Idle, Talk. One-shots (start and end in the Idle pose, so they chain):
+Clips (30 fps). Loops: Meditate, Fly, Idle, Talk, Think, Explain. One-shots (start and end in the Idle pose, so they chain):
 Wake (from Meditate), Wave, PointRight, PointLeft (viewer's right/left), Present, LookAround, Nod, Smile, Happy.
 Blink only keys the eye/lid bones; the web page plays it additively on top of any clip.
 Every other clip keys every bone, so cross-fades never inherit a stale pose.
@@ -171,8 +171,9 @@ def clip_meditate():
     finish(act)
 
 
-def fly(bob=0.0):
-    """Superman rise: right fist (viewer's left) punched straight up, the other hand still in the mudra."""
+def fly(bob=0.0, shout=1.0):
+    """Superman rise: right fist (viewer's left) punched straight up, the other hand still in the mudra,
+    mouth open in a "woohoo" shout."""
     move(rig, "root", (0, 0, bob))
     breathe(rig, 0.6)
     head(rig, 0, 7)
@@ -185,13 +186,15 @@ def fly(bob=0.0):
     hand_shape(rig, "L", "mudra")
     eyes(rig, 1.0, (0.0, 0.006))
     brows(rig, 1.0, 0.004, -6)
-    mouth(rig, 0.0, 1.3)
+    mouth(rig, 1.0)
+    rig.pose.bones["mouth"].scale = (1.15 + 0.2 * shout, 1.0, 1.3 + 0.5 * shout)  # wide-open shout, bigger than a smile
 
 
 def clip_fly():
     act = new_action("Fly", 60, cyclic=True)
     for f in range(0, 61, 6):
-        pose_at(f, lambda f=f: fly(0.01 * math.sin(2 * math.pi * f / 60)))
+        s = math.sin(2 * math.pi * f / 60)
+        pose_at(f, lambda s=s: fly(0.01 * s, 0.5 + 0.5 * s))  # the shout swells as it bobs up
     finish(act)
 
 
@@ -359,6 +362,52 @@ def clip_talk():
     finish(act)
 
 
+def think(look=0.0, k=1.0):
+    """Hmm...: right hand (viewer's left) up at the chin, head tilted, eyes up and to the side, brows knit."""
+    base(0.0, (0.0, 0.0), smile=0.7)
+    up = Vector(REST_UP).lerp(Vector(THINK_UP), k)
+    fo = Vector(REST_FORE).lerp(Vector(THINK_FORE), k).normalized()
+    arm(rig, "R", up, fo)
+    hand_dir(rig, "R", Vector((0.25, -0.95, -0.05)).lerp(Vector(THINK_HAND), k).normalized(),
+             Vector((0.0, 0.05, -1.0)).lerp(Vector((0.3, -0.4, 0.0)), k).normalized())
+    hand_shape(rig, "R", "fist", 0.7 * k)
+    head(rig, yaw=-6 * k + 4 * look, pitch=5 * k, roll=-7 * k)
+    eyes(rig, 1.0, ((-0.008 + 0.012 * look) * k, 0.010 * k))
+    brows(rig, k, 0.006 * k, 6 * k)
+
+
+THINK_UP, THINK_FORE, THINK_HAND = (0.45, -0.62, -0.64), (-0.40, -0.40, 0.82), (-0.35, -0.45, 0.82)
+
+
+def clip_think():
+    act = new_action("Think", 120, cyclic=True)
+    for f in range(0, 121, 10):
+        t = 2 * math.pi * f / 120
+        pose_at(f, lambda t=t: think(math.sin(t)))
+    finish(act)
+
+
+def clip_explain():
+    """Talking while presenting the answer with the open hand (viewer's right)."""
+    act = new_action("Explain", 60, cyclic=True)
+    opens = (0, 1, 0.3, 1, 0, 0.8, 0.2, 1, 0.5, 0, 1, 0.3, 0)
+    for i, o in enumerate(opens):
+        f = round(i * 60 / (len(opens) - 1))
+
+        def ex(o=o, i=i):
+            base(0.2 * math.sin(i), smile=1.2)
+            k = 0.95 + 0.05 * math.sin(i * 0.9)
+            present_arm("L", k)
+            head(rig, yaw=10, pitch=2 * math.sin(i * 1.3), roll=4 + 2 * math.sin(i * 0.7))
+            eyes(rig, 1.0, (0.008, -0.001))
+            brows(rig, 0.8, 0.003 * o)
+            mouth(rig, 1.0 if o > 0.5 else 0.0, 1.2)
+            if o > 0.5:
+                rig.pose.bones["mouth"].scale = (0.9 + 0.1 * o, 1, 0.55 + 0.45 * o)
+        pose_at(f, ex)
+    finish(act)
+
+
 def clip_blink():
     act = new_action("Blink", 8)
     for f, o in ((0, 1.0), (2, 0.4), (3, 0.0), (5, 0.0), (6, 0.4), (8, 1.0)):
@@ -368,7 +417,7 @@ def clip_blink():
 
 for fn in (clip_meditate, clip_fly, clip_idle, clip_wake, clip_wave, lambda: clip_point("PointRight", "L", 1),
            lambda: clip_point("PointLeft", "R", -1), clip_present, clip_look_around, clip_nod, clip_smile,
-           clip_happy, clip_talk, clip_blink):
+           clip_happy, clip_talk, clip_think, clip_explain, clip_blink):
     fn()
 
 reset(rig)
