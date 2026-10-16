@@ -10,7 +10,7 @@ import {
   useMotionValue,
   type MotionValue,
 } from "motion/react";
-import { ArrowUp, Mic, ShieldCheck, Sparkles, X } from "lucide-react";
+import { ArrowRight, ArrowUp, Mic, ShieldCheck, Sparkles, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { api } from "@/lib/me";
@@ -91,6 +91,8 @@ function CinematicHero() {
   // A — headline and centre light; both dim once the assistant takes over
   const titleOpacity = useTransform(p, PHASES.title, [1, 0]);
   const titleY = useTransform(p, PHASES.title, [0, -70]);
+  // the CTAs fade with the headline; stop catching clicks once they are mostly gone
+  const titlePointer = useTransform(titleOpacity, (o) => (o > 0.25 ? "auto" : "none"));
   const sky = useTransform(p, [c0, c1, a0, a1], [1, 0.45, 0.45, 0.02]);
   const earthFade = useTransform(p, [a0, a1], [1, 0.06]);
   const stageNavy = useTransform(p, [a0, a1], [0, 1]);
@@ -231,7 +233,7 @@ function CinematicHero() {
 
         {/* A — headline */}
         <motion.div
-          style={{ opacity: titleOpacity, y: titleY }}
+          style={{ opacity: titleOpacity, y: titleY, pointerEvents: titlePointer }}
           className="absolute inset-x-0 top-[calc(68px+var(--stage)*0.1)] z-10 px-4 text-center"
         >
           <p className="eyebrow">Redefining Dental Intelligence</p>
@@ -243,9 +245,7 @@ function CinematicHero() {
               with AI.
             </span>
           </h1>
-          <p aria-hidden className="mt-7 type-label tracking-[0.3em] text-ink-4">
-            Scroll
-          </p>
+          <HeroCtas />
         </motion.div>
 
         {/* D — the assistant, its own state */}
@@ -696,6 +696,25 @@ function HeroAssistantStage({ active = true, still = false }: { active?: boolean
 /* ------------------------------------------------------------------------- */
 
 /** Reduced motion: the same story as a still composition, no pinning. */
+/** PDF §1: a short introduction to FMD's vision and the two hero calls to action. */
+function HeroCtas() {
+  return (
+    <>
+      <p className="mx-auto mt-6 max-w-[560px] text-[clamp(15px,1.15vw,17.5px)] leading-relaxed text-ink-2 [text-shadow:0_1px_14px_rgba(0,0,0,0.9)]">
+        An AI-first dental technology ecosystem connecting patients, dentists and dental clinics — for clearer care and smarter clinics.
+      </p>
+      <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+        <a href="#ecosystem" className="btn-primary group h-12 px-6 text-[14px]">
+          Explore FMD <ArrowRight className="arrow-nudge size-4" strokeWidth={1.75} />
+        </a>
+        <a href="#clinic-os" className="btn-ghost h-12 px-6 text-[14px] backdrop-blur-md">
+          For Dental Clinics
+        </a>
+      </div>
+    </>
+  );
+}
+
 function StaticHero() {
   const full = useMotionValue(1);
   return (
@@ -719,6 +738,7 @@ function StaticHero() {
               with AI.
             </span>
           </h1>
+          <HeroCtas />
         </div>
       </div>
       <div className="py-16">
