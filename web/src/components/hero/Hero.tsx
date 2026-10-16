@@ -234,13 +234,13 @@ function CinematicHero() {
           style={{ opacity: titleOpacity, y: titleY }}
           className="absolute inset-x-0 top-[calc(68px+var(--stage)*0.1)] z-10 px-4 text-center"
         >
-          <p className="eyebrow">AI-Powered Dental Care</p>
+          <p className="eyebrow">Redefining Dental Intelligence</p>
           <h1 className="mx-auto mt-5 max-w-[900px] text-[clamp(40px,min(7vw,10.5svh),104px)] font-light leading-[0.98] tracking-[-0.045em]">
-            <span className="headline-silver">Better Oral Health</span>
+            <span className="headline-silver">Dentistry,</span>
             <br />
-            <span className="headline-silver">Starts </span>
+            <span className="headline-silver">Reimagined </span>
             <span className="font-normal" style={{ color: "var(--headline-accent)", textShadow: "0 0 40px var(--accent-glow)" }}>
-              Here.
+              with AI.
             </span>
           </h1>
           <p aria-hidden className="mt-7 type-label tracking-[0.3em] text-ink-4">
@@ -710,13 +710,13 @@ function StaticHero() {
         </MascotStage>
         <div aria-hidden className="hero-rimfront absolute left-1/2 -translate-x-1/2 translate-y-1/2" />
         <div className="absolute inset-x-0 top-[calc(68px+var(--stage)*0.06)] z-10 px-4 text-center">
-          <p className="eyebrow">AI-Powered Dental Care</p>
+          <p className="eyebrow">Redefining Dental Intelligence</p>
           <h1 className="mx-auto mt-4 text-[clamp(34px,min(6vw,8.5svh),84px)] font-light leading-[0.98] tracking-[-0.045em]">
-            <span className="headline-silver">Better Oral Health</span>
+            <span className="headline-silver">Dentistry,</span>
             <br />
-            <span className="headline-silver">Starts </span>
+            <span className="headline-silver">Reimagined </span>
             <span className="font-normal" style={{ color: "var(--headline-accent)" }}>
-              Here.
+              with AI.
             </span>
           </h1>
         </div>
