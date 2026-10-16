@@ -90,6 +90,24 @@ export function SponsoredBadge() {
   );
 }
 
+/** What exists today vs what's in beta vs what's planned — the homepage never blurs these. */
+export type Availability = "available" | "beta" | "roadmap" | "concept";
+const AVAILABILITY: Record<Availability, { label: string; cls: string }> = {
+  available: { label: "Available", cls: "border-[rgba(74,222,160,0.32)] text-[#8ef0c2]" },
+  beta: { label: "Beta", cls: "border-[var(--fmd-border-strong)] text-[#a9c8ff]" },
+  roadmap: { label: "Roadmap", cls: "border-dashed border-line-strong text-ink-4" },
+  concept: { label: "Concept preview", cls: "border-dashed border-line-strong text-ink-3" },
+};
+export function StatusTag({ s, className = "" }: { s: Availability; className?: string }) {
+  const { label, cls } = AVAILABILITY[s];
+  return (
+    <span className={`inline-flex w-fit shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.14em] ${cls} ${className}`}>
+      {s === "available" && <span aria-hidden className="size-1.5 rounded-full bg-[#4ade9f]" />}
+      {label}
+    </span>
+  );
+}
+
 export function Chip({ children }: { children: ReactNode }) {
   return (
     <span className="rounded-full border border-line bg-[var(--accent-soft)] px-2.5 py-1 text-[11px] text-ink-2">{children}</span>
