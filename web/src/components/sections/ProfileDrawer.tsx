@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ExternalLink, GraduationCap, Languages, MapPin, Navigation, Phone, Clock, Wallet, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -13,6 +13,7 @@ export default function ProfileDrawer({ id, onClose }: { id: string | null; onCl
 }
 
 function Drawer({ id, onClose }: { id: string; onClose: () => void }) {
+  const reduced = useReducedMotion(); // opened by a click, so client-only: no server state to match
   const [p, setP] = useState<ProviderProfile | null>(null);
   const [err, setErr] = useState("");
 
@@ -33,10 +34,10 @@ function Drawer({ id, onClose }: { id: string; onClose: () => void }) {
         role="dialog"
         aria-modal="true"
         aria-label={p ? `${p.name} profile` : "Dentist profile"}
-        initial={{ x: 40, opacity: 0 }}
+        initial={reduced ? { opacity: 0 } : { x: 40, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
-        exit={{ x: 40, opacity: 0 }}
-        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        exit={reduced ? { opacity: 0 } : { x: 40, opacity: 0 }}
+        transition={{ duration: reduced ? 0.15 : 0.5, ease: [0.16, 1, 0.3, 1] }}
         className="glass absolute inset-y-2 right-2 flex w-[min(480px,calc(100%-16px))] flex-col overflow-hidden rounded-[28px]"
         style={{ backgroundColor: "var(--surface)" }}
       >

@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowRight, Bell, Crown, Mail, Users } from "lucide-react";
-import { useId, useState } from "react";
+import { Fragment, useId, useState } from "react";
 import { Reveal } from "../ui";
 
 const PERKS = [
@@ -13,8 +13,36 @@ const PERKS = [
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 /*
- * Closing scene: centred title over a night horizon, mascot facing away.
- * Self-contained dark palette so it reads the same in any theme.
+ * The orbit around the title: one tilted ellipse in a 1280 × 520 box (centre 640, 250), brightest across the top and
+ * fading where it passes behind the form, with light nodes riding it. Node positions are computed once and rounded, so
+ * server and client markup match.
+ */
+const ORBIT = { cx: 640, cy: 250, rx: 610, ry: 220, tilt: -5 };
+const NODES = [196, 232, 292, 318, 348, 14].map((deg) => {
+  const t = (deg * Math.PI) / 180;
+  const a = (ORBIT.tilt * Math.PI) / 180;
+  const x = ORBIT.rx * Math.cos(t);
+  const y = ORBIT.ry * Math.sin(t);
+  return {
+    x: Math.round((ORBIT.cx + x * Math.cos(a) - y * Math.sin(a)) * 10) / 10,
+    y: Math.round((ORBIT.cy + x * Math.sin(a) + y * Math.cos(a)) * 10) / 10,
+    big: deg === 232 || deg === 318,
+  };
+});
+
+// a static star field: three tiled layers of tiny dots at fixed spots (no random numbers)
+const STARS = [
+  "radial-gradient(1px 1px at 20px 30px, rgb(255 255 255 / 0.8), transparent)",
+  "radial-gradient(1px 1px at 140px 90px, rgb(200 215 255 / 0.7), transparent)",
+  "radial-gradient(1.5px 1.5px at 90px 160px, rgb(255 255 255 / 0.9), transparent)",
+  "radial-gradient(1px 1px at 210px 200px, rgb(170 195 255 / 0.6), transparent)",
+  "radial-gradient(1px 1px at 60px 230px, rgb(255 255 255 / 0.5), transparent)",
+].join(",");
+
+/*
+ * Closing scene: the title inside a glowing orbit in a starry sky, above the Earth's rim where the guide sits facing away
+ * (coming-soon-scene.webp: the clean lower band of the approved artwork). Self-contained dark palette, so it reads the
+ * same in any theme.
  * ponytail: no waitlist backend yet — a valid submit shows an honest "not saved" notice.
  * Wire `onSubmit` to a real endpoint and swap the "pending" state for "sent" when one exists.
  */
@@ -34,33 +62,84 @@ export default function ComingSoon() {
       aria-labelledby={`${id}-h`}
       className="relative isolate mt-20 overflow-hidden bg-[#03050f] text-[#eef2ff] sm:mt-28"
     >
-      {/* copy sits in the empty sky; a soft navy pool keeps it legible over the artwork */}
-      <div className="relative z-10 mx-auto flex max-w-[1320px] flex-col items-center px-5 pb-10 pt-20 text-center sm:px-6 sm:pt-24 md:pb-0">
+      {/* the sky: deep navy deepening upward, blue haze on either side, stars mostly toward the edges, and the horizon's glow */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-20">
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,#03050f_0%,#060b1c_45%,#0a1428_100%)]" />
+        <div className="absolute -left-[10%] top-[20%] h-[60%] w-[45%] rounded-full bg-[radial-gradient(closest-side,rgb(40_80_170/0.22),transparent)] blur-2xl" />
+        <div className="absolute -right-[10%] top-[5%] h-[60%] w-[45%] rounded-full bg-[radial-gradient(closest-side,rgb(40_80_170/0.2),transparent)] blur-2xl" />
         <div
-          aria-hidden
-          className="pointer-events-none absolute left-1/2 top-4 -z-10 h-[420px] w-[min(900px,100%)] -translate-x-1/2 bg-[radial-gradient(closest-side,rgba(3,5,15,0.9),rgba(3,5,15,0.6)_55%,transparent)]"
+          className="absolute inset-0 opacity-60 [mask-image:radial-gradient(ellipse_45%_55%_at_50%_40%,transparent_40%,#000_100%)]"
+          style={{ backgroundImage: STARS, backgroundSize: "260px 260px" }}
         />
+        <div
+          className="absolute inset-0 opacity-40 [mask-image:radial-gradient(ellipse_45%_55%_at_50%_40%,transparent_50%,#000_100%)]"
+          style={{ backgroundImage: STARS, backgroundSize: "410px 410px", backgroundPosition: "130px 70px" }}
+        />
+      </div>
+
+      <div className="relative z-10 mx-auto flex max-w-[1320px] flex-col items-center px-5 pt-20 text-center sm:px-6 sm:pt-24">
+        {/* the orbit, centred on the title block */}
+        <div aria-hidden className="pointer-events-none absolute left-1/2 top-6 -z-10 aspect-[1280/520] w-[min(1280px,135vw)] -translate-x-1/2 sm:top-8">
+          <svg viewBox="0 0 1280 520" className="absolute inset-0 size-full overflow-visible" fill="none">
+            <defs>
+              <linearGradient id={`${id}-orbit`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#9ec0ff" stopOpacity="0.9" />
+                <stop offset="0.55" stopColor="#5b8cff" stopOpacity="0.55" />
+                <stop offset="1" stopColor="#3b6cff" stopOpacity="0.08" />
+              </linearGradient>
+              <radialGradient id={`${id}-node`}>
+                <stop offset="0" stopColor="#ffffff" />
+                <stop offset="0.25" stopColor="#bcd3ff" stopOpacity="0.9" />
+                <stop offset="1" stopColor="#5b8cff" stopOpacity="0" />
+              </radialGradient>
+            </defs>
+            <g transform={`rotate(${ORBIT.tilt} ${ORBIT.cx} ${ORBIT.cy})`}>
+              {/* glow under a crisp line, then a slow glint travelling round it */}
+              <ellipse cx={ORBIT.cx} cy={ORBIT.cy} rx={ORBIT.rx} ry={ORBIT.ry} stroke={`url(#${id}-orbit)`} strokeWidth={6} opacity={0.35} className="blur-[6px]" />
+              <ellipse cx={ORBIT.cx} cy={ORBIT.cy} rx={ORBIT.rx} ry={ORBIT.ry} stroke={`url(#${id}-orbit)`} strokeWidth={1.4} />
+              <ellipse
+                cx={ORBIT.cx}
+                cy={ORBIT.cy}
+                rx={ORBIT.rx}
+                ry={ORBIT.ry}
+                pathLength={1000}
+                stroke="#dbe7ff"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeDasharray="60 940"
+                className="cs-orbit-glint"
+              />
+            </g>
+            {NODES.map((n, i) => (
+              <g key={i}>
+                <circle cx={n.x} cy={n.y} r={n.big ? 16 : 10} fill={`url(#${id}-node)`} />
+                <circle cx={n.x} cy={n.y} r={n.big ? 2.6 : 1.8} fill="#ffffff" />
+              </g>
+            ))}
+          </svg>
+        </div>
+
         <Reveal>
-          <p className="text-[11.5px] font-medium uppercase tracking-[0.32em] text-[#b7c2e0]">Find My Dentist</p>
-          <span aria-hidden className="mx-auto mt-5 block h-px w-14 bg-white/30" />
+          <p className="text-[11.5px] font-medium uppercase tracking-[0.5em] text-[#b7c2e0] sm:text-[13px]">Find My Dentist</p>
+          <span aria-hidden className="mx-auto mt-5 block w-16 border-t border-dashed border-white/35" />
           <h2
             id={`${id}-h`}
-            className="mt-6 bg-[linear-gradient(180deg,#ffffff_10%,#aebbe0_90%)] bg-clip-text text-[clamp(48px,9vw,112px)] font-light leading-[1] tracking-[-0.035em] text-transparent"
+            className="mt-5 bg-[linear-gradient(180deg,#ffffff_8%,#e3eaff_40%,#9fb2e0_78%,#c6d3f7_100%)] bg-clip-text pb-[0.14em] text-[clamp(52px,9.5vw,128px)] font-normal leading-[1.02] tracking-[-0.03em] text-transparent [filter:drop-shadow(0_0_28px_rgb(110_150_255/0.35))]"
           >
             Coming Soon
           </h2>
-          <p className="mx-auto mt-6 max-w-[520px] text-[12.5px] font-medium uppercase leading-[2] tracking-[0.22em] text-[#c3cce6] sm:text-[13.5px]">
+          <p className="mx-auto mt-[max(0.375rem,calc(1.5rem-1.33vw))] max-w-[34ch] text-[12px] font-medium uppercase leading-[2] tracking-[0.42em] text-[#c3cce6] sm:max-w-[38ch] sm:text-[14.5px]">
             A healthier, happier world through better dental care.
           </p>
         </Reveal>
 
-        <Reveal delay={0.12} className="w-full max-w-[560px]">
+        <Reveal delay={0.12} className="w-full max-w-[660px]">
           <form onSubmit={onSubmit} noValidate className="mt-9">
             <label htmlFor={`${id}-email`} className="sr-only">
               Email address
             </label>
-            <div className="flex flex-col gap-2 rounded-[22px] border border-white/15 bg-[#080d28]/75 p-2 shadow-[0_0_60px_-20px_rgba(110,135,255,0.5)] backdrop-blur-md sm:flex-row sm:items-center sm:rounded-full">
-              <div className="flex min-w-0 flex-1 items-center gap-3 px-3">
+            <div className="flex flex-col gap-2 rounded-[22px] border border-white/12 bg-[linear-gradient(180deg,rgb(18_28_62/0.75),rgb(8_13_40/0.8))] p-2 shadow-[inset_0_1px_0_rgb(255_255_255/0.08),0_0_60px_-18px_rgb(110_135_255/0.55)] backdrop-blur-md transition-colors has-[input:focus-visible]:border-[#7f9cff]/80 sm:flex-row sm:items-center sm:rounded-full">
+              <div className="flex min-w-0 flex-1 items-center gap-3 px-4">
                 <Mail className="size-[18px] shrink-0 text-[#aab6d8]" strokeWidth={1.4} />
                 <input
                   id={`${id}-email`}
@@ -80,9 +159,9 @@ export default function ComingSoon() {
               </div>
               <button
                 type="submit"
-                className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-white px-6 text-[14.5px] font-medium text-[#0b1230] transition-transform hover:-translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7f9cff]"
+                className="group inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-white px-7 text-[15px] font-medium text-[#0b1230] shadow-[0_8px_24px_-10px_rgb(180_200_255/0.7)] transition-[translate,box-shadow] hover:-translate-y-px hover:shadow-[0_10px_30px_-8px_rgb(180_200_255/0.9)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7f9cff]"
               >
-                Join Waitlist <ArrowRight className="size-4" strokeWidth={1.75} />
+                Join Waitlist <ArrowRight className="arrow-nudge size-4" strokeWidth={1.75} />
               </button>
             </div>
             <p id={`${id}-msg`} role="status" aria-live="polite" className="mt-3 min-h-5 px-4 text-[13px] text-[#c3cce6]">
@@ -93,28 +172,34 @@ export default function ComingSoon() {
         </Reveal>
 
         <Reveal delay={0.2}>
-          <ul className="mt-4 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-[13.5px] text-[#d3daf0]">
-            {PERKS.map(({ icon: Icon, label }) => (
-              <li key={label} className="flex items-center gap-2.5">
-                <span className="grid size-9 place-items-center rounded-full border border-white/15 bg-[#0a1030]/70">
-                  <Icon className="size-4 text-[#c3cce6]" strokeWidth={1.4} />
-                </span>
-                {label}
-              </li>
+          <ul className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-3 text-[14px] text-[#d3daf0] sm:gap-x-5">
+            {PERKS.map(({ icon: Icon, label }, i) => (
+              <Fragment key={label}>
+                {i > 0 && <li aria-hidden className="hidden h-6 w-px bg-white/15 sm:block" />}
+                <li className="flex items-center gap-3 rounded-full border border-white/[0.07] bg-white/[0.03] py-1 pl-1 pr-4">
+                  <span className="grid size-9 place-items-center rounded-full border border-white/15 bg-[#0a1030]/80">
+                    <Icon className="size-4 text-[#c3cce6]" strokeWidth={1.4} />
+                  </span>
+                  {label}
+                </li>
+              </Fragment>
             ))}
           </ul>
         </Reveal>
       </div>
 
-      {/* scene: pulled up so its clear sky sits behind the copy; fades into the section colour */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/img/coming-soon-night.webp"
-        alt=""
-        aria-hidden
-        loading="lazy"
-        className="relative -z-10 -mt-6 h-[320px] w-full object-cover object-[50%_100%] [mask-image:linear-gradient(180deg,transparent,#000_22%)] md:-mt-[calc(23.7vw-24px)] md:h-auto"
-      />
+      {/* the Earth's rim and the guide, facing away: the artwork's own lower band, its top dissolving into the sky above */}
+      <div aria-hidden className="relative -z-10 mt-2 md:mt-0">
+        {/* the horizon's haze reaching up into the CSS sky, matching the artwork's lighter sky so no seam shows */}
+        <div className="absolute inset-x-0 bottom-[calc(100%-2rem)] h-40 bg-[radial-gradient(ellipse_55%_100%_at_50%_100%,rgb(16_32_55/0.9),rgb(12_24_45/0.4)_55%,transparent)]" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/img/coming-soon-scene.webp"
+          alt=""
+          loading="lazy"
+          className="relative h-[240px] w-full object-cover object-[50%_100%] [mask-image:linear-gradient(180deg,transparent,#000_7%)] sm:h-[300px] md:h-auto"
+        />
+      </div>
     </section>
   );
 }
