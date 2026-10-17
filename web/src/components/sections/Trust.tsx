@@ -47,7 +47,7 @@ export default function Trust() {
               the heading is lifted clear of it instead */}
           <p
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-[9.5rem] -z-10 select-none bg-[linear-gradient(90deg,rgb(203_213_225/0)_6%,rgb(203_213_225/0.12)_28%,rgb(226_232_240/0.26)_42%,rgb(248_250_252/0.38)_50%,rgb(226_232_240/0.26)_58%,rgb(203_213_225/0.12)_72%,rgb(203_213_225/0)_94%)] bg-clip-text text-center text-[26vw] font-black leading-none tracking-wider text-transparent [mask-image:linear-gradient(180deg,#000_35%,transparent_95%)] lg:top-3 lg:text-[15rem]"
+            className="pointer-events-none absolute inset-x-0 top-[9.5rem] -z-10 select-none bg-[linear-gradient(90deg,rgb(203_213_225/0)_6%,rgb(203_213_225/0.17)_28%,rgb(226_232_240/0.36)_42%,rgb(248_250_252/0.52)_50%,rgb(226_232_240/0.36)_58%,rgb(203_213_225/0.17)_72%,rgb(203_213_225/0)_94%)] bg-clip-text text-center text-[26vw] font-black leading-none tracking-wider text-transparent [mask-image:linear-gradient(180deg,#000_35%,transparent_95%)] lg:top-3 lg:text-[15rem]"
           >
             TRUST
           </p>

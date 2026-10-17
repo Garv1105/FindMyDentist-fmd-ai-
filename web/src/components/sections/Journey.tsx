@@ -105,36 +105,42 @@ const TICKS = Array.from({ length: 24 }, (_, k) => at(R_OUTER, k * 15));
 const ORIGIN = `${(C.x / W) * 100}% ${(C.y / H) * 100}%`;
 const pct = (n: number, of: number) => `${(n / of) * 100}%`;
 const pad2 = (n: number) => String(n).padStart(2, "0");
-const CYCLE_MS = 2500;
+const CYCLE_MS = 1800;
 const EASE = [0.16, 1, 0.3, 1] as const;
 
 /**
  * Section 06: the FMD Trust Standard. Six safeguards on a slowly turning orbit around the guide; pick one to read it in
- * the panel below. Autoplay advances every 2.5s while the section is on screen; picking a node (click or arrows) jumps
- * there and the timer restarts from it. Hovering (mouse only) holds it, the pause button stops it;
- * reduced motion never autoplays.
+ * the panel below. Autoplay advances every 1.8s while the section is on screen, and keeps going under the cursor. Picking
+ * a node (click or arrows) holds it on that choice until the pointer leaves the orbit and panel (or keyboard focus does),
+ * then it carries on from there. The play/pause button starts or stops it at any time. Reduced motion never autoplays.
  */
 export default function Journey() {
   const reduced = useReducedMotion();
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [hovered, setHovered] = useState(false);
+  // held on a node the user picked, until they move away
+  const [held, setHeld] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { amount: 0.2 });
   const step = STEPS[active];
-  const turn = reduced ? { duration: 0 } : { duration: 0.9, ease: EASE };
+  const turn = reduced ? { duration: 0 } : { duration: 0.7, ease: EASE };
 
-  // a fresh timeout per step: any change of `active`, auto or picked, restarts the 2.5s count
+  // a fresh timeout per step, so every safeguard gets the full 1.8s on stage
   useEffect(() => {
-    if (reduced || paused || hovered || !inView) return;
+    if (reduced || paused || held || !inView) return;
     const t = setTimeout(() => setActive((a) => (a + 1) % STEPS.length), CYCLE_MS);
     return () => clearTimeout(t);
-  }, [active, reduced, paused, hovered, inView]);
+  }, [active, reduced, paused, held, inView]);
+  // a choice the user makes holds the rotation, so it doesn't move away from what they picked while they read it
+  const pick = (n: number) => {
+    setActive(n);
+    setHeld(true);
+  };
 
   const onKeys = (e: KeyboardEvent) => {
     if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
     const n = (active + (e.key === "ArrowRight" ? 1 : STEPS.length - 1)) % STEPS.length;
-    setActive(n);
+    pick(n);
     document.getElementById(`ts-tab-${n}`)?.focus();
   };
 
@@ -152,11 +158,11 @@ export default function Journey() {
           </p>
         </Reveal>
 
-        {/* mouse only: a touch fires pointerenter but often no pointerleave, which would hold it for good */}
+        {/* leaving with the mouse, or tabbing out, releases a hold and the rotation carries on from the picked node */}
         <div
           ref={ref}
-          onPointerEnter={(e) => e.pointerType === "mouse" && setHovered(true)}
-          onPointerLeave={() => setHovered(false)}
+          onPointerLeave={(e) => e.pointerType === "mouse" && setHeld(false)}
+          onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && setHeld(false)}
         >
           {/* the orbit */}
           <div className="relative mx-auto mt-10 max-w-[1000px] overflow-hidden md:mt-4" style={{ aspectRatio: `${W} / ${H}` }}>
@@ -188,7 +194,7 @@ export default function Journey() {
               className="absolute inset-0"
               style={{ transformOrigin: ORIGIN }}
               animate={reduced ? undefined : { rotate: 360 }}
-              transition={{ duration: 160, ease: "linear", repeat: Infinity }}
+              transition={{ duration: 70, ease: "linear", repeat: Infinity }}
             >
               <svg className="size-full" viewBox={`0 0 ${W} ${H}`} fill="none">
                 {TICKS.map((p, k) => (
@@ -244,7 +250,7 @@ export default function Journey() {
                       aria-selected={on}
                       aria-controls="ts-panel"
                       tabIndex={on ? 0 : -1}
-                      onClick={() => setActive(i)}
+                      onClick={() => pick(i)}
                       className="group absolute -translate-x-1/2 -translate-y-1/2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[#60A5FA] focus-visible:ring-offset-4 focus-visible:ring-offset-[#0B101E]"
                       style={{ left: pct(p.x, W), top: pct(p.y, H) }}
                     >
