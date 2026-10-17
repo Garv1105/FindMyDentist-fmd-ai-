@@ -39,6 +39,10 @@ const field =
  */
 const PEDESTAL = { x: "48.3%", y: "75%" };
 const BG = "/img/walkthrough/edge-bg.webp";
+// the room's layers fade to nothing over their outer ~7% sideways and ~10% top and bottom (two gradient masks, kept where
+// both are opaque: Tailwind adds the -webkit- form itself), so the lounge dissolves into the page instead of ending on an edge
+const DISSOLVE =
+  "[mask-image:linear-gradient(90deg,transparent,#000_7%,#000_93%,transparent),linear-gradient(180deg,transparent,#000_10%,#000_90%,transparent)] [mask-composite:intersect]";
 // static fractal-noise tile (SVG feTurbulence, fixed seed): identical on server and client
 const GRAIN =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
@@ -226,16 +230,22 @@ export default function Concierge() {
         <Reveal y={30} className="relative">
           {/* ambient aura: a large, very soft amber orb behind the card, blurred until it's only warmth in the air */}
           <div aria-hidden className="pointer-events-none absolute inset-x-[12%] inset-y-[8%] -z-20 rounded-full bg-[radial-gradient(circle_at_center,rgb(245_158_11/0.1),transparent_70%)] blur-[120px]" />
-          {/* the slab lifting off the page: a deep, warm drop shadow, plus a fine gold highlight catching the top edge
-              (light from the room's lamp), fading out toward the corners */}
-          <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 rounded-3xl shadow-[0_30px_100px_-15px_rgba(218,165,32,0.12)]" />
+          {/* no outline: the room dissolves into the page on every side (see DISSOLVE). Around it only diffuse warmth: a wide,
+              soft golden bloom and a warm glow from below, no rim (box-shadow, painted once, nothing animated), plus the soft
+              lamp-light above the top edge */}
+          {/* the glow's source sits well inside the room (inset 12%) with no spread: a shadow drawn from the panel's own edge
+              would start at full strength right on that edge and redraw the outline we are dissolving */}
+          <div aria-hidden className="pointer-events-none absolute inset-[12%] -z-10 rounded-[40%] shadow-[0_0_180px_60px_rgb(218_165_32/0.12),0_60px_160px_0_rgba(218,165,32,0.12)]" />
           <div aria-hidden className="pointer-events-none absolute inset-x-[22%] -top-3 -z-10 h-6 rounded-[50%] bg-[radial-gradient(closest-side,rgb(var(--edge-gold-rgb)/0.14),transparent)] blur-md" />
-          <div aria-hidden className="pointer-events-none absolute inset-x-[16%] top-0 z-10 h-px bg-[linear-gradient(90deg,transparent,rgb(var(--edge-gold-rgb)/0.55),transparent)]" />
           {/* the lounge: on lg the whole panel is the room, at least the image's shape (an invisible spacer shares the content's grid
-              cell, so whichever is taller sets the height); below lg the room is a stage under the introduction */}
-          <div ref={panel} className="edge-panel relative isolate overflow-hidden rounded-3xl border border-amber-500/15 lg:grid lg:grid-cols-[minmax(0,1fr)]">
+              cell, so whichever is taller sets the height); below lg the room is a stage under the introduction. The panel
+              keeps the edge-panel class for its scoped focus colour, but paints nothing itself: its espresso backdrop and the
+              room image are layers below that fade out toward every edge, so there is no border, only the room thinning into
+              the dark. The copy and the request form sit above those layers, untouched by the fade */}
+          <div ref={panel} className="edge-panel relative isolate overflow-hidden rounded-3xl bg-none! shadow-none! lg:grid lg:grid-cols-[minmax(0,1fr)]">
+            <div aria-hidden className={`edge-panel absolute inset-0 -z-20 shadow-none! ${DISSOLVE}`} />
             <div aria-hidden className="hidden lg:col-start-1 lg:row-start-1 lg:block lg:aspect-[2330/1696]" />
-            <div aria-hidden className="absolute inset-0 -z-10 hidden lg:block">
+            <div aria-hidden className={`absolute inset-0 -z-10 hidden lg:block ${DISSOLVE}`}>
               <Image src={BG} alt="" fill sizes="(min-width:1320px) 1240px, 100vw" className="object-cover" style={{ objectPosition: `${PEDESTAL.x} ${PEDESTAL.y}` }} />
               {/* readability: dark behind the copy on the left and under the form on the right, the stage left open */}
               <div className="absolute inset-0 bg-[linear-gradient(90deg,rgb(8_7_10/0.9)_0%,rgb(8_7_10/0.78)_30%,rgb(8_7_10/0.45)_37%,rgb(8_7_10/0.06)_46%,rgb(8_7_10/0.08)_56%,rgb(8_7_10/0.5)_75%,rgb(8_7_10/0.6)_100%)]" />

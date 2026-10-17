@@ -136,27 +136,25 @@ function QuestionStream() {
 }
 
 /*
- * The Care Bridge, after the blueprint: the hand reaches in from the left edge and points at the questions; the
- * questions lead to the Care Core (the translucent tooth); the guide on the right presents it with an open hand.
+ * The Care Bridge: the questions people bring, on the left, lead to the Care Core (the translucent tooth); the guide on
+ * the right presents it with an open hand.
  * Each composition is one box in its own units that scales with the width. Wide (xl+, 1240 × 450, the container's
  * full width at 1440): the heading sits over its top-left in normal flow. Narrow: core and guide only, re-spaced.
- * Art: hand-point.webp and care-core-v2.webp are the owner's black-background renders keyed to alpha (alpha = brightest
- * channel, colour un-premultiplied, so the glass stays see-through). Measured from the files: the hand's fingertip
- * is at 98.4%, 19.9% of its box; the guide (mascot-guide-1024, mirrored) has its palm at 14.6%, 41.6%, feet at 91.9%.
+ * Art: care-core-v2.webp is the owner's black-background render keyed to alpha (alpha = brightest channel, colour
+ * un-premultiplied, so the glass stays see-through). The guide (mascot-guide-1024, mirrored) has its palm at 14.6%,
+ * 41.6% of its box, feet at 91.9%.
  */
 type Box = { l: number; t: number; w: number; ar: number };
-type SceneDef = { W: number; H: number; core: Box; guide: Box; hand?: Box };
-const HAND_AR = 1200 / 459;
+type SceneDef = { W: number; H: number; core: Box; guide: Box };
 const CORE_AR = 1000 / 716;
-// wide: fingertip at (268, 199), just short of the first card at x 282; tooth centred at (760, 247); palm at (926, 222)
+// wide: tooth centred at (760, 247); palm at (926, 222)
 const WIDE: SceneDef = {
   W: 1240,
   H: 450,
-  hand: { l: -194, t: 163, w: 470, ar: HAND_AR },
   core: { l: 551, t: 91, w: 436, ar: CORE_AR },
   guide: { l: 867, t: 56, w: 400, ar: 1 },
 };
-// the card column: first card level with the fingertip, right edge (282 + 320px) well short of the tooth's body at 669
+// the card column: right edge (282 + 320px) well short of the tooth's body at 669
 const WIDE_CARDS = { l: 282, t: 171 };
 const NARROW: SceneDef = { W: 740, H: 400, core: { l: 91, t: 44, w: 436, ar: CORE_AR }, guide: { l: 456, t: 74, w: 300, ar: 1 } };
 const pct = (n: number, of: number) => `${(n / of) * 100}%`;
@@ -167,7 +165,7 @@ function Scene({ s, className = "", children }: { s: SceneDef; className?: strin
     <div className={`relative ${className}`} style={{ aspectRatio: `${s.W} / ${s.H}` }}>
       <div
         role="img"
-        aria-label="A person's question and the FMD guide meeting at one glowing tooth: FMD helps turn a question into a path to the right care."
+        aria-label="People's questions and the FMD guide meeting at one glowing tooth: FMD helps turn a question into a path to the right care."
         className="absolute inset-0"
       >
         {/* a pool of sapphire behind the tooth and a floor for the guide; the art carries the rest */}
@@ -184,11 +182,6 @@ function Scene({ s, className = "", children }: { s: SceneDef; className?: strin
         <div aria-hidden className="absolute" style={at(s.core)}>
           <Image src="/img/walkthrough/care-core-v2.webp" alt="" fill sizes="(min-width:1280px) 436px, 280px" className="object-contain" />
         </div>
-        {s.hand && (
-          <div aria-hidden className="absolute [mask-image:linear-gradient(90deg,transparent,#000_30%)]" style={at(s.hand)}>
-            <Image src="/img/walkthrough/hand-point.webp" alt="" fill sizes="470px" className="object-contain" />
-          </div>
-        )}
         <div aria-hidden className="absolute -scale-x-100" style={at(s.guide)}>
           <Image src="/img/mascots/mascot-guide-1024.webp" alt="" fill sizes="(min-width:1280px) 400px, 200px" className="object-contain" />
         </div>
@@ -224,18 +217,18 @@ const nodeFrac = (i: number) => PATH.frac(NODE_X[i]);
 /*
  * The swell: the line itself brightening and thickening as a slow wave of light passes through it, like a sound wave
  * along a string; nothing rides on it. Two copies of the line, a touch brighter and a touch thicker, are each seen
- * only through a soft band (a bell-shaped gradient) that drifts left to right (.wt-swell, ~12s a pass). The thicker
+ * only through a soft band (a bell-shaped gradient) that drifts left to right (.wt-swell, ~8s a pass). The thicker
  * copy's band is the narrower, so the swell is fullest at its centre and thins to nothing at its ends; a wide faint
  * copy under them is its glow. Two swells run half a pass apart (PHASES, seconds), so the line is never still for
  * long. All sit under the end fade, so each surfaces out of the dark and goes back into it.
  */
 const SWELL = [
-  { band: 340, w: 16, c: "#60A5FA", o: 0.32 },
-  { band: 260, w: 8, c: "#93C5FD", o: 0.45 },
-  { band: 130, w: 5.4, c: "#BFDBFE", o: 0.85 },
-  { band: 220, w: 3.4, c: "#FFFFFF", o: 1 },
+  { band: 340, w: 18, c: "#60A5FA", o: 0.42 },
+  { band: 260, w: 9, c: "#93C5FD", o: 0.6 },
+  { band: 130, w: 5.8, c: "#DBEAFE", o: 0.95 },
+  { band: 220, w: 3.8, c: "#FFFFFF", o: 1 },
 ];
-const PHASES = [0, 6];
+const PHASES = [0, 4];
 const swells = PHASES.flatMap((ph) => SWELL.map((s) => ({ ...s, ph, id: `${s.band}-${ph}`, delay: { animationDelay: `${1 - ph}s` } })));
 // bell-shaped opacity profile across a band (left edge → right edge)
 const BELL = [0, 0.06, 0.25, 0.6, 1, 0.6, 0.25, 0.06, 0];

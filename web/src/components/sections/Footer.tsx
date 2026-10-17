@@ -12,9 +12,9 @@ const COLS = [
 export default function Footer() {
   return (
     <footer id="footer" className="relative overflow-hidden bg-[linear-gradient(180deg,#03050f,var(--bg-near-black))]">
-      {/* the horizon returns, quietly */}
-      <div aria-hidden className="pointer-events-none absolute -top-px left-1/2 h-px w-[70%] -translate-x-1/2 bg-[linear-gradient(90deg,transparent,rgb(var(--horizon-rgb)/0.5),transparent)]" />
-      <div aria-hidden className="pointer-events-none absolute -top-24 left-1/2 h-48 w-[60%] -translate-x-1/2 rounded-[50%] opacity-60 blur-3xl" style={{ background: "radial-gradient(closest-side, var(--horizon-glow), transparent)" }} />
+      {/* the horizon's afterglow, wholly inside the footer (fading out before every edge), so the Coming Soon scene above
+          runs straight into it with no line between them */}
+      <div aria-hidden className="pointer-events-none absolute left-1/2 top-4 h-48 w-[60%] -translate-x-1/2 rounded-[50%] opacity-40 blur-3xl" style={{ background: "radial-gradient(closest-side, var(--horizon-glow), transparent)" }} />
       <Container className="relative py-16 sm:py-20">
         <div className="grid gap-12 lg:grid-cols-[1.4fr_repeat(3,1fr)]">
           <div>
@@ -44,6 +44,10 @@ export default function Footer() {
             FMD AI provides educational information and is not a substitute for a registered dental professional. FMD does not provide clinical treatment; care is delivered by qualified providers.
           </p>
         </div>
+        {/* the maker's credit: quiet, last thing on the page */}
+        <p className="mt-8 text-center text-[13px] tracking-[0.04em] text-ink-3">
+          Made by <span className="font-medium text-ink-2">Garv Kumar Agarwal</span>
+        </p>
       </Container>
     </footer>
   );
