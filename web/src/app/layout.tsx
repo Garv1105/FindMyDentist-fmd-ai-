@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import CursorFx from "@/components/CursorFx";
 import { noFlashScript } from "@/lib/themes";
 import "./globals.css";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+// brand face: Plus Jakarta Sans, variable (200–800), self-hosted by next/font
+const brandSans = Plus_Jakarta_Sans({ variable: "--font-brand", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
@@ -22,12 +24,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       data-theme="obsidian-royal"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      className={`${brandSans.variable} ${geistMono.variable} antialiased`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: noFlashScript }} />
       </head>
-      <body className="min-h-dvh">{children}</body>
+      <body className="min-h-dvh">
+        {children}
+        <CursorFx />
+      </body>
     </html>
   );
 }
