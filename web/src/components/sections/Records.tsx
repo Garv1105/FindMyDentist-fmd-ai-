@@ -122,9 +122,10 @@ const bloom = (s: number) =>
  * so deciding it on the first render would make the server and browser markup differ.
  */
 /*
- * The guide's HUD (lg+): three small glass panes circling the top of the guide's head on a flat ellipse, like an
- * analyst's dashboard turning slowly. It sits in the open space above him, left of the taller vault card: centred 41%
- * across his 270px box, its right-most pane ends ~15px short of the card. On the front half of the orbit a pane passes
+ * The guide's HUD (lg+): an angel's halo just above his head, and three small glass panes on a flat ellipse turning
+ * above it, like his own thoughts rising out of it (an analyst's dashboard turning slowly), wholly clear of the head.
+ * Halo, orbit and speech bubble share one axis, the head's own centre (50% of his 270px box); the orbit's radius keeps
+ * its widest pane short of the taller vault card beside him. On the front half of the orbit a pane passes
  * in front of him, a touch larger and brighter; on the back half it slips behind, smaller and dimmer. Hovering a vault item
  * lights the pane it relates to and the speech bubble names the item. Bubble lines restate what each tile already shows.
  * Orbit points are computed once here (no randomness), so server and browser markup match.
@@ -145,7 +146,16 @@ const HUD_FOR = [
   { pane: 0, say: "Dental history since 2019." },
 ];
 const IDLE_SAY = "Your vault, private to you.";
-const ORBIT = { rx: 80, ry: 22, steps: 12, seconds: 26 };
+const ORBIT = { rx: 76, ry: 16, steps: 12, seconds: 26 };
+// the halo: a hollow ring of light hovering just above his head, like an angel's; its two halves (centred on 0,0): far
+// through the top, near through the bottom
+// sized from the art: his head is 147px wide at its widest (233–789 of the 1024px image, centred at 49.9%), its crown
+// 23px below the box top (8.6%). The halo is ~80% of that width, its centre 10px above the crown, its near edge ~3px clear
+const HALO = { rx: 58, ry: 10 };
+const HALF_FAR = `M ${-HALO.rx} 0 A ${HALO.rx} ${HALO.ry} 0 0 1 ${HALO.rx} 0`;
+const HALF_NEAR = `M ${-HALO.rx} 0 A ${HALO.rx} ${HALO.ry} 0 0 0 ${HALO.rx} 0`;
+const HALO_BOX = { left: -HALO.rx - 16, top: -HALO.ry - 16, width: (HALO.rx + 16) * 2, height: (HALO.ry + 16) * 2 };
+const HALO_VIEW = `${-HALO.rx - 16} ${-HALO.ry - 16} ${(HALO.rx + 16) * 2} ${(HALO.ry + 16) * 2}`;
 const r1 = (n: number) => Math.round(n * 10) / 10;
 const ORBIT_PATH = Array.from({ length: ORBIT.steps + 1 }, (_, k) => {
   const a = (k / ORBIT.steps) * 2 * Math.PI;
@@ -168,7 +178,7 @@ function GuideHud({ hot }: { hot: number | null }) {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 hidden lg:block">
       {/* the speech bubble, just above his head (positioned by the wrapper: .fmd-glass-pane sets its own position) */}
-      <div className="absolute bottom-[112%] left-[41%] z-[4] -translate-x-1/2">
+      <div className="absolute bottom-[133%] left-1/2 z-[4] -translate-x-1/2">
       <div className="fmd-glass-pane w-max max-w-[200px] rounded-[12px] px-3 py-1.5 text-center">
         <AnimatePresence mode="wait" initial={false}>
           <motion.p
@@ -185,8 +195,48 @@ function GuideHud({ hot }: { hot: number | null }) {
         <span className="absolute left-1/2 top-full size-2 -translate-x-1/2 -translate-y-1 rotate-45 border-b border-r border-white/10 bg-[#0f1a2e]" />
       </div>
       </div>
-      {/* the orbit, round the top of his head */}
-      <div className="absolute left-[41%] top-[10%]">
+      {/* the halo, hovering just above his head (his head's top is ~9% down his box): far half behind him, near half in front */}
+      <div className="absolute left-1/2 top-[3.6%]">
+        <svg
+          aria-hidden
+          className="absolute overflow-visible"
+          style={HALO_BOX}
+          viewBox={HALO_VIEW}
+          fill="none"
+        >
+          <defs>
+            <radialGradient id="hud-core">
+              <stop offset="0" stopColor="#93C5FD" stopOpacity="0.28" />
+              <stop offset="0.6" stopColor="#3B82F6" stopOpacity="0.1" />
+              <stop offset="1" stopColor="#3B82F6" stopOpacity="0" />
+            </radialGradient>
+            <linearGradient id="hud-rim" x1="0" x2="1">
+              <stop offset="0" stopColor="#60A5FA" stopOpacity="0.25" />
+              <stop offset="0.5" stopColor="#BFDBFE" stopOpacity="0.95" />
+              <stop offset="1" stopColor="#60A5FA" stopOpacity="0.25" />
+            </linearGradient>
+          </defs>
+          {/* the light inside the hollow */}
+          <ellipse rx={HALO.rx} ry={HALO.ry} fill="url(#hud-core)" />
+          {/* far half (through the top): soft glow, then a fine rim */}
+          <path d={HALF_FAR} stroke="#3B82F6" strokeOpacity={0.35} strokeWidth={7} className="blur-[3px]" />
+          <path d={HALF_FAR} stroke="url(#hud-rim)" strokeOpacity={0.6} strokeWidth={1.4} />
+        </svg>
+        <svg
+          aria-hidden
+          className="absolute z-[3] overflow-visible"
+          style={HALO_BOX}
+          viewBox={HALO_VIEW}
+          fill="none"
+        >
+          {/* near half (through the bottom): brighter, it's nearer the viewer; a slow spark runs round it */}
+          <path d={HALF_NEAR} stroke="#3B82F6" strokeOpacity={0.5} strokeWidth={8} className="blur-[3px]" />
+          <path d={HALF_NEAR} stroke="url(#hud-rim)" strokeWidth={2} />
+          <path d={HALF_NEAR} pathLength={1} stroke="#EFF6FF" strokeWidth={2} strokeLinecap="round" strokeDasharray="0.12 0.88" className="hud-spark" />
+        </svg>
+      </div>
+      {/* the questions, circling a little above the halo, as if rising out of it */}
+      <div className="absolute left-1/2 top-[-15%]">
         {HUD.map((h, i) => {
           const on = lit === i;
           const verified = on && i === VERIFIED;

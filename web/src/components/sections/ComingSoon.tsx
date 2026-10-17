@@ -64,7 +64,8 @@ export default function ComingSoon() {
     >
       {/* the sky: deep navy deepening upward, blue haze on either side, stars mostly toward the edges, and the horizon's glow */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-20">
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,#03050f_0%,#060b1c_45%,#0a1428_100%)]" />
+        {/* lightest behind the Earth's rim, back to the footer's own #03050f at the very bottom, so the two meet without a line */}
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,#03050f_0%,#060b1c_40%,#0a1428_68%,#08101f_86%,#03050f_100%)]" />
         <div className="absolute -left-[10%] top-[20%] h-[60%] w-[45%] rounded-full bg-[radial-gradient(closest-side,rgb(40_80_170/0.22),transparent)] blur-2xl" />
         <div className="absolute -right-[10%] top-[5%] h-[60%] w-[45%] rounded-full bg-[radial-gradient(closest-side,rgb(40_80_170/0.2),transparent)] blur-2xl" />
         <div
@@ -75,6 +76,8 @@ export default function ComingSoon() {
           className="absolute inset-0 opacity-40 [mask-image:radial-gradient(ellipse_45%_55%_at_50%_40%,transparent_50%,#000_100%)]"
           style={{ backgroundImage: STARS, backgroundSize: "410px 410px", backgroundPosition: "130px 70px" }}
         />
+        {/* the top eases in from the page's own background, so the section has no starting edge */}
+        <div className="absolute inset-x-0 top-0 h-40 bg-[linear-gradient(180deg,var(--background),transparent)]" />
       </div>
 
       <div className="relative z-10 mx-auto flex max-w-[1320px] flex-col items-center px-5 pt-20 text-center sm:px-6 sm:pt-24">
@@ -188,16 +191,19 @@ export default function ComingSoon() {
         </Reveal>
       </div>
 
-      {/* the Earth's rim and the guide, facing away: the artwork's own lower band, its top dissolving into the sky above */}
+      {/* the Earth's rim and the guide, facing away: the artwork's own lower band. Nothing fades over the image (his head is
+          only ~6% below its top edge, so any fade would shade him). Instead a strip of sky above it carries the image's own
+          top-row colours, left to right (near-black at the edges, lighter in the middle; sampled from the file), rising out
+          of the CSS sky, so the image's edge meets its own shade and no line shows. Below md the image is cropped to its
+          middle, so the strip is that middle's colour. Only the image's bottom dissolves, into the footer below */}
       <div aria-hidden className="relative -z-10 mt-2 md:mt-0">
-        {/* the horizon's haze reaching up into the CSS sky, matching the artwork's lighter sky so no seam shows */}
-        <div className="absolute inset-x-0 bottom-[calc(100%-2rem)] h-40 bg-[radial-gradient(ellipse_55%_100%_at_50%_100%,rgb(16_32_55/0.9),rgb(12_24_45/0.4)_55%,transparent)]" />
+        <div className="absolute inset-x-0 bottom-full h-48 bg-[#0b1626] [mask-image:linear-gradient(180deg,transparent,#000)] md:bg-[linear-gradient(90deg,#03040a_0%,#01050b_5%,#03050f_10%,#050a16_15%,#040b19_20%,#040b19_25%,#050d19_30%,#060d1b_35%,#091322_40%,#091526_45%,#0b1526_50%,#0b1828_55%,#0a1727_60%,#091626_65%,#0a1727_70%,#0a1526_75%,#0b1728_80%,#091525_85%,#081525_90%,#081323_95%,#07101f_100%)]" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/img/coming-soon-scene.webp"
           alt=""
           loading="lazy"
-          className="relative h-[240px] w-full object-cover object-[50%_100%] [mask-image:linear-gradient(180deg,transparent,#000_7%)] sm:h-[300px] md:h-auto"
+          className="relative h-[240px] w-full object-cover object-[50%_100%] [mask-image:linear-gradient(180deg,#000_74%,transparent)] sm:h-[300px] md:h-auto"
         />
       </div>
     </section>

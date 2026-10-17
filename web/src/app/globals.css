@@ -1073,12 +1073,12 @@ html.theme-anim *::after {
 }
 
 /* Walkthrough wave: the swell. Each band (a rect inside a mask, in the wave's own units) drifts from before the
-   line's start (x -260) to past its end (x 1500), ~12s a pass, easing in and out so it gathers and settles like a
+   line's start (x -260) to past its end (x 1500), ~8s a pass, easing in and out so it gathers and settles like a
    breath. At rest (and so under reduced motion, which ends the animation at once) it sits off the line, unseen.
    -m: the phone strip, 600 units across */
 .wt-swell {
   transform: translateX(-700px);
-  animation: wt-swell 12s cubic-bezier(0.37, 0, 0.63, 1) 1s infinite;
+  animation: wt-swell 8s cubic-bezier(0.37, 0, 0.63, 1) 1s infinite;
 }
 @keyframes wt-swell {
   from { transform: translateX(-360px); }
@@ -1086,7 +1086,7 @@ html.theme-anim *::after {
 }
 .wt-swell-m {
   transform: translateX(-300px);
-  animation: wt-swell-m 12s cubic-bezier(0.37, 0, 0.63, 1) 1s infinite;
+  animation: wt-swell-m 8s cubic-bezier(0.37, 0, 0.63, 1) 1s infinite;
 }
 @keyframes wt-swell-m {
   from { transform: translateX(-60px); }
@@ -1106,7 +1106,7 @@ html.theme-anim *::after {
   height: 252px;
   border-radius: 9999px;
   pointer-events: none;
-  background: radial-gradient(closest-side, rgb(34 211 238 / 0.135), rgb(59 130 246 / 0.0945) 38%, rgb(59 130 246 / 0.027) 66%, transparent);
+  background: radial-gradient(closest-side, rgb(34 211 238 / 0.17), rgb(59 130 246 / 0.12) 38%, rgb(59 130 246 / 0.035) 66%, transparent);
   opacity: 0;
   transition: opacity 0.4s ease;
   will-change: transform;
@@ -1147,7 +1147,14 @@ html.theme-anim *::after {
   animation: fmd-holo 6s linear infinite;
 }
 
+/* Private Vault: a spark of light running along the near half of the guide's thinking ring, left to right, every 3.2s.
+   With pathLength 1 the 0.12 dash travels from just off the left end to past the right; at rest (and so under reduced
+   motion) it sits off the end, unseen. */
+.hud-spark { stroke-dashoffset: 0.12; animation: hud-spark 3.2s ease-in-out infinite; }
+@keyframes hud-spark { to { stroke-dashoffset: -1; } }
+
 @media (prefers-reduced-motion: reduce) {
+  .hud-spark { animation: none; }
   .fmd-spin, .fmd-spin-rev, .fmd-holo { animation: none; }
   .fmd-sweep { display: none; } /* a sweep that cannot turn is just a hard wedge */
   .fmd-radar { animation: none; }

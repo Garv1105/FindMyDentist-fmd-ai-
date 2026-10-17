@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowRight, BadgeCheck, Bot, Building2, CalendarDays, CreditCard, GraduationCap, HeartPulse, LayoutDashboard, Search, Sparkles, Stethoscope, UsersRound } from "lucide-react";
-import { motion, useMotionValueEvent, useScroll, useSpring, useTransform, type MotionValue } from "motion/react";
+import { motion, useMotionValueEvent, useScroll } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
@@ -217,22 +217,16 @@ const panel = "relative flex h-full scroll-mt-28 flex-col overflow-hidden rounde
 const HEADER = { eyebrow: "One ecosystem", title: "Different FMD, one standard of care", description: "Three products built on the same verification, consent and AI boundaries." };
 
 /*
- * The Holographic Nexus (lg+, motion allowed): a 300vh track with a sticky stage. The guide floats at the centre on a lit
- * pedestal inside a turning orbit; as the track scrolls, each product's device swings in beside him, tilted toward him,
- * with its card on the other side, then makes way for the next. Scroll progress runs through an overdamped spring, so
- * every move (scale, opacity, rotateY, x) glides with weight and never bounces past its mark.
- * Windows: [in, full, hold, out] in progress units; each product owns a third of the track. Strictly in sequence: each
- * one has fully left (0.30, 0.64) before the next begins (0.36, 0.70), so two never share the stage, even mid-scroll.
+ * The Holographic Nexus (lg+, motion allowed): a sticky stage pinned for 375px of scrolling. The guide floats at the
+ * centre on a lit pedestal inside a turning orbit; each product's device swings in beside him, tilted toward him, with
+ * its card on the other side, then makes way for the next.
+ * One switch per 1.25 scrolls: the 375px are three 125px stretches, a wheel notch and a quarter each (a notch is ~100px)
+ * so a notch never crosses two boundaries. Crossing one plays the whole change as one timed, overdamped
+ * spring: the outgoing product recedes while the incoming one swings in, at the same pace however fast the page was
+ * scrolled. Nothing is scrubbed by the wheel, so a product is never left half-arrived.
  */
-const WINDOWS: [number, number, number, number][] = [
-  [-1, -0.5, 0.22, 0.3],
-  [0.36, 0.44, 0.56, 0.64],
-  [0.7, 0.78, 1.5, 2],
-];
-// device on the left (-1) or right (+1) of the guide; its card goes on the other side
-const SIDES = [-1, 1, -1];
-// where each product's stretch of the track sits (its state's centre), for the nav's /#main, /#clinics, /#students links
-const ANCHORS = ["11%", "33%", "56%"];
+// the middle of each product's stretch, for the nav's /#main, /#clinics, /#students links
+const ANCHORS = ["62px", "187px", "312px"];
 const LG_MOTION = "(min-width: 1024px) and (prefers-reduced-motion: no-preference)";
 const subscribeLg = (cb: () => void) => {
   const m = matchMedia(LG_MOTION);
@@ -249,33 +243,39 @@ function Tablet() {
   );
 }
 
-/** One product's layer: its device on one side of the guide, its card on the other. */
-function NexusLayer({ p, i, active, product, children }: { p: MotionValue<number>; i: number; active: boolean; product: Product; children: ReactNode }) {
-  const w = WINDOWS[i];
-  const s = SIDES[i];
-  // it swings in from beside the guide, settles almost face-on (exactly scale 1, a slight 8° turn, so text renders
-  // crisp), then recedes back and away before the next arrives
-  const opacity = useTransform(p, w, [0, 1, 1, 0]);
-  const scale = useTransform(p, w, [0.88, 1, 1, 0.9]);
-  const rotateY = useTransform(p, w, [s * -30, s * -8, s * -8, s * 6]);
-  const x = useTransform(p, w, [s * 90, 0, 0, s * -36]);
-  const y = useTransform(p, w, [28, 0, 0, -24]);
-  const cardX = useTransform(p, w, [s * -40, 0, 0, s * 24]);
+/** One product's layer: its device on one side of the guide, its card on the other. `at`: where this product stands
+ * relative to the one on stage (-1 already passed, 0 on stage, +1 still to come). */
+// side: the device on the left (-1) or right (+1) of the guide; its card goes on the other side
+function NexusLayer({ at, product, side: s, children }: { at: -1 | 0 | 1; product: Product; side: number; children: ReactNode }) {
+  // on stage it settles almost face-on (exactly scale 1, a slight 8° turn, so text renders crisp); still to come it waits
+  // turned away beside the guide; once passed it has receded back and away
+  const states = {
+    1: { opacity: 0, scale: 0.88, rotateY: s * -30, x: s * 90, y: 28, cardX: s * -40 },
+    0: { opacity: 1, scale: 1, rotateY: s * -8, x: 0, y: 0, cardX: 0 },
+    [-1]: { opacity: 0, scale: 0.9, rotateY: s * 6, x: s * -36, y: -24, cardX: s * 24 },
+  }[at];
+  const { cardX, ...device } = states;
+  const on = at === 0;
+  // the outgoing product leaves a beat sooner than the incoming one arrives, so the two pass rather than overlap
+  const transition = { type: "spring" as const, stiffness: 120, damping: 26, mass: 1, delay: on ? 0.12 : 0, opacity: { duration: on ? 0.55 : 0.35, delay: on ? 0.15 : 0, ease: "easeOut" as const } };
   // device and card zones either side of the guide, closer in on narrower screens
   const zone = (side: number) => ({ left: `calc(50% + ${side} * min(30vw, 400px))` });
   return (
     <>
-      <motion.div aria-hidden className="absolute top-[58%] -translate-x-1/2 -translate-y-1/2 [transform-style:flat]" style={{ ...zone(s), opacity, scale, rotateY, x, y }}>
+      <motion.div aria-hidden className="absolute top-[58%] -translate-x-1/2 -translate-y-1/2 [transform-style:flat]" style={zone(s)} initial={false} animate={device} transition={transition}>
         {/* the device's own light: a holographic pool beneath it */}
         <div className="absolute -inset-10 -z-10 rounded-full bg-[radial-gradient(closest-side,rgb(59_130_246/0.22),transparent)]" />
         {/* smaller screens: sized down by layout (zoom), not by a scale transform, so the interface stays sharp */}
         <div className="lg:[zoom:0.82] xl:[zoom:1]">{children}</div>
       </motion.div>
       <motion.article
-        inert={!active}
-        aria-hidden={!active}
+        inert={!on}
+        aria-hidden={!on}
         className="absolute top-[58%] w-[340px] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/10 bg-white/[0.02] p-7 shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_30px_60px_-30px_rgb(0_0_0/0.8)] backdrop-blur-xl"
-        style={{ ...zone(-s), opacity, x: cardX }}
+        style={zone(-s)}
+        initial={false}
+        animate={{ opacity: device.opacity, x: cardX }}
+        transition={transition}
       >
         <Copy p={product} />
       </motion.article>
@@ -286,17 +286,16 @@ function NexusLayer({ p, i, active, product, children }: { p: MotionValue<number
 function Nexus() {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
-  // overdamped (damping ratio ≈ 1.5): a smooth, weighted glide that settles without overshooting into the next state
-  const p = useSpring(scrollYProgress, { stiffness: 80, damping: 26, mass: 0.9 });
-  // which product is on stage: only changes three times over the whole track
+  // which product is on stage: the track's three equal stretches
   const [active, setActive] = useState(0);
   useMotionValueEvent(scrollYProgress, "change", (v) => {
     const n = v < 1 / 3 ? 0 : v < 2 / 3 ? 1 : 2;
     setActive((a) => (a === n ? a : n));
   });
+  const at = (i: number) => (i < active ? -1 : i > active ? 1 : 0) as -1 | 0 | 1;
   const [main, clinics, students] = PRODUCTS;
   return (
-    <div ref={ref} className="relative h-[300vh]">
+    <div ref={ref} className="relative h-[calc(100vh+375px)]">
       {PRODUCTS.map((pr, i) => (
         <span key={pr.id} id={pr.id} aria-hidden className="absolute left-0 h-px w-px" style={{ top: ANCHORS[i] }} />
       ))}
@@ -307,7 +306,7 @@ function Nexus() {
           </Container>
         </div>
         {/* the word behind the stage */}
-        <p aria-hidden className="pointer-events-none absolute inset-x-0 top-[34%] select-none whitespace-nowrap text-center text-[clamp(72px,11vw,190px)] font-bold leading-none tracking-[-0.04em] text-white/[0.035]">
+        <p aria-hidden className="pointer-events-none absolute inset-x-0 top-[34%] select-none whitespace-nowrap bg-gradient-to-b from-white/[0.22] to-white/[0.07] bg-clip-text text-center text-[clamp(72px,11vw,190px)] font-bold leading-none tracking-[-0.015em] text-transparent [-webkit-text-stroke:1px_rgb(255_255_255/0.1)]">
           ONE ECOSYSTEM
         </p>
 
@@ -327,16 +326,16 @@ function Nexus() {
           </motion.div>
         </div>
 
-        <NexusLayer p={p} i={0} active={active === 0} product={main}>
+        <NexusLayer at={at(0)} side={-1} product={main}>
           <Phone />
         </NexusLayer>
-        <NexusLayer p={p} i={1} active={active === 1} product={clinics}>
+        <NexusLayer at={at(1)} side={1} product={clinics}>
           {/* a solid dark-glass frame: a backdrop blur inside a 3D-turned layer renders soft */}
           <div className="w-[480px] rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgb(16_26_44/0.95),rgb(7_12_22/0.97))] p-2 shadow-[inset_0_1px_0_rgb(255_255_255/0.08),0_0_40px_rgb(59_130_246/0.18),0_40px_90px_-30px_rgb(0_0_0/0.9)]">
             <ClinicWindow />
           </div>
         </NexusLayer>
-        <NexusLayer p={p} i={2} active={active === 2} product={students}>
+        <NexusLayer at={at(2)} side={-1} product={students}>
           <Tablet />
         </NexusLayer>
 
