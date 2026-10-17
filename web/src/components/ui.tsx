@@ -1,10 +1,28 @@
 "use client";
 
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { ArrowRight, BadgeCheck, Megaphone } from "lucide-react";
 import type { ReactNode } from "react";
 
-/** Staggered fade-up as a section enters the viewport. */
+/**
+ * Homepage motion vocabulary (mirrors --ease-settle / --dur-* in globals.css). Motion explains a change: something
+ * arrives (reveal, once), changes place (move) or changes state (quick). Nothing loops unless it carries meaning,
+ * and every caller drops movement under reduced motion.
+ */
+export const MOTION = {
+  ease: [0.16, 1, 0.3, 1] as const,
+  quick: 0.3,
+  move: 0.7,
+  reveal: 0.9,
+};
+
+/**
+ * Staggered fade-up as a section enters the viewport; with reduced motion, content is simply there.
+ * Reduced motion is handled in two places on purpose: useReducedMotion() is null during SSR, so the server always
+ * renders the hidden `initial` state. The [data-reveal] rule in globals.css overrides that from first paint (before
+ * hydration or any viewport trigger), and here the in-view transition becomes instant. `initial` itself never varies,
+ * so server and client markup match.
+ */
 export function Reveal({
   children,
   delay = 0,
@@ -16,13 +34,15 @@ export function Reveal({
   className?: string;
   y?: number;
 }) {
+  const reduced = useReducedMotion();
   return (
     <motion.div
+      data-reveal=""
       className={className}
       initial={{ opacity: 0, y }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-60px" }}
-      transition={{ duration: 0.9, delay, ease: [0.16, 1, 0.3, 1] }}
+      transition={reduced ? { duration: 0 } : { duration: MOTION.reveal, delay, ease: MOTION.ease }}
     >
       {children}
     </motion.div>
@@ -62,7 +82,7 @@ export function SectionHeader({
 }
 
 export function Container({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`mx-auto w-full max-w-[1320px] px-4 sm:px-6 lg:px-10 ${className}`}>{children}</div>;
+  return <div className={`mx-auto w-full max-w-[var(--container-max)] px-4 sm:px-6 lg:px-10 ${className}`}>{children}</div>;
 }
 
 /** Verification and paid promotion are deliberately different visual languages. */
