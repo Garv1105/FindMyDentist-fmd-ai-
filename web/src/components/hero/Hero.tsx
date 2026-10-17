@@ -11,7 +11,8 @@ import {
   type MotionValue,
 } from "motion/react";
 import { ArrowUp, Mic, ShieldCheck, Sparkles } from "lucide-react";
-import { useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
+import dynamic from "next/dynamic";
+import { useCallback, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { openAssistant } from "./Assistant";
 import { MASCOT_KEYS, MASCOT_OPACITY, PHASES } from "./phases";
 import { RIM, RIM_APEX, RIM_H, RIM_W, rimPath, rimYAt } from "./rim";
@@ -49,6 +50,9 @@ const stageVars = (height: string) =>
     "--apex-up": "calc(var(--stage) * 0.27)",
     "--eb": `calc(var(--apex-up) - var(--ew) * ${APEX_UP.toFixed(4)})`,
   }) as CSSProperties;
+
+// WebGL can't render on the server; the sprite stays visible until the model has loaded
+const Mascot3D = dynamic(() => import("./Mascot3D"), { ssr: false });
 
 const noop = () => () => {};
 function useReducedMotionSafe() {
@@ -96,19 +100,27 @@ function CinematicHero() {
   // head stays below the nav at every viewport height.
   // It starts tiny and mostly behind the limb, rises out of the light while growing, then settles; it exits once.
   const mascotY = useTransform(p, MASCOT_KEYS, ["14%", "14%", "4%", "-8%", "-17%", "-22%", "-22%", "-16%", "-16%"]);
-  const mScale = useTransform(p, MASCOT_KEYS, [0.16, 0.16, 0.34, 0.62, 0.88, 1, 1, 0.94, 0.94]);
-  // flat sprite: this is a perspective tilt, not true 3D rotation
-  const rotY = useTransform(p, MASCOT_KEYS, [-40, -40, -30, -16, -5, 0, 0, 0, 0]);
-  const rotX = useTransform(p, MASCOT_KEYS, [14, 14, 10, 5, 1, 0, 0, 0, 0]);
+  const mScale = useTransform(p, MASCOT_KEYS, [0.14, 0.14, 0.29, 0.53, 0.75, 0.85, 0.85, 0.8, 0.8]);
+  // two full turns while rising, slowing to face-on as it arrives
+  const rotY = useTransform(p, MASCOT_KEYS, [-720, -720, -470, -230, -60, 0, 0, 0, 0]);
   const mOpacity = useTransform(p, MASCOT_KEYS, MASCOT_OPACITY);
 
   // F — the assistant fades in and stays until the pin releases, so the page flows straight into the next section
   const aiOpacity = useTransform(p, [a0, a1], [0, 1]);
   const aiY = useTransform(p, [a0, a1], [40, 0]);
   const [aiActive, setAiActive] = useState(false);
+  // mascot: superman rise, then settles into meditation once it arrives; WebGL only runs while it is on screen
+  const [settled, setSettled] = useState(false);
+  const [mascotOn, setMascotOn] = useState(false);
+  const [mascotReady, setMascotReady] = useState(false);
+  const onMascotReady = useCallback(() => setMascotReady(true), []);
   useMotionValueEvent(p, "change", (v) => {
     const on = v > a0 + 0.02;
-    if (on !== aiActive) setAiActive(on); // flips only at one threshold
+    if (on !== aiActive) setAiActive(on); // each flag flips only at its own threshold
+    const s = v >= PHASES.rise[1] - 0.03;
+    if (s !== settled) setSettled(s);
+    const m = v > MASCOT_KEYS[1] - 0.02 && v < PHASES.mascotOut[1] + 0.01;
+    if (m !== mascotOn) setMascotOn(m);
   });
 
   return (
@@ -133,11 +145,21 @@ function CinematicHero() {
         {/* the mascot rises from behind the limb: clipped to the measured rim, so it emerges from the planet's edge */}
         <MascotStage>
           <motion.div
-            style={{ y: mascotY, rotateY: rotY, rotateX: rotX, scale: mScale, opacity: mOpacity }}
+            style={{ y: mascotY, scale: mScale, opacity: mOpacity }}
             className="absolute inset-x-0 bottom-0 mx-auto h-[var(--mh)] w-[var(--mh)] origin-bottom will-change-transform"
           >
             <div className="relative size-full">
-              <Image src="/img/hero/mascot.webp" alt="" fill sizes="380px" className="object-contain" />
+              <Image
+                src="/img/hero/mascot.webp"
+                alt=""
+                fill
+                sizes="380px"
+                className={`object-contain transition-opacity duration-500 ${mascotReady ? "opacity-0" : ""}`}
+              />
+              {/* wider than the sprite box: room for the arms */}
+              <div className="absolute inset-y-0 left-1/2 w-[170%] -translate-x-1/2">
+                <Mascot3D active={mascotOn} base={settled ? "Meditate" : "Fly"} rotY={rotY} onReady={onMascotReady} />
+              </div>
             </div>
           </motion.div>
         </MascotStage>
