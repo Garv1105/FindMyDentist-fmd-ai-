@@ -5,19 +5,20 @@ import { ChevronDown, Menu, Search, UserRound, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useMe } from "@/lib/me";
+import ThemeSwitcher from "./ThemeSwitcher";
 
 const LINKS = [
   { label: "Find Dentists", href: "/#dentists" },
   { label: "Treatments", href: "/#treatments" },
   { label: "AI Assistant", href: "/#assistant" },
-  { label: "For Clinics", href: "/#clinic-os" },
-  // { label: "For Students", href: "/#students" }, // Scholar section hidden
+  { label: "For Clinics", href: "/clinic" },
+  { label: "For Students", href: "/#students" },
 ];
 const MORE = [
   { label: "Explore", href: "/explore" },
   { label: "My Appointments", href: "/appointments" },
   { label: "Dental Records", href: "/records" },
-  // { label: "FMD Edge", href: "/#concierge" }, // FMD Edge section hidden
+  { label: "FMD Edge", href: "/#concierge" },
   { label: "Jobs", href: "/jobs" },
   { label: "Help", href: "/help" },
 ];
@@ -99,9 +100,10 @@ export default function Navbar() {
           </ul>
 
           <div className="ml-auto flex shrink-0 items-center gap-1 xl:ml-0">
-            <Link href="/#dentists" aria-label="Search dentists" className="hidden size-9 place-items-center rounded-full text-ink-2 transition-colors hover:text-ink sm:grid">
+            <Link href="/#search" aria-label="Search" className="hidden size-9 place-items-center rounded-full text-ink-2 transition-colors hover:text-ink sm:grid">
               <Search className="size-[18px]" strokeWidth={1.5} />
             </Link>
+            <ThemeSwitcher />
             <Link
               href={account.href}
               aria-label={me ? "Your account" : "Sign in"}
