@@ -1,3 +1,4 @@
+import { Clock3, FileText, History, Image as ImageIcon, KeyRound, Lock, Pill, ScanLine, Share2, ClipboardList } from "lucide-react";
 "use client";
 
 import { CircleCheck, Clock3, FileText, History, Image as ImageIcon, KeyRound, Lock, Pill, ScanLine, Share2, ClipboardList } from "lucide-react";
@@ -8,60 +9,14 @@ import Link from "next/link";
 import { Container, Reveal } from "../ui";
 import { Atmosphere } from "./LowerWorld";
 
-/* Abstract thumbnails — no real patient data is ever depicted. */
-const lines = (n: number, w = [90, 70, 82, 55, 76]) => (
-  <div className="space-y-1.5 p-3">
-    {Array.from({ length: n }, (_, i) => (
-      <div key={i} className="h-[3px] rounded-full bg-[var(--text-faint)] opacity-40" style={{ width: `${w[i % w.length]}%` }} />
-    ))}
-  </div>
-);
-
-const DOCS: { icon: typeof FileText; name: string; meta: string; thumb: ReactNode }[] = [
-  {
-    icon: ScanLine,
-    name: "Panoramic X-ray",
-    meta: "Mar 2026 · Demo Clinic",
-    thumb: (
-      <div
-        className="h-full w-full"
-        style={{
-          background:
-            "radial-gradient(14% 30% at 22% 58%, rgb(var(--horizon-rgb)/0.35), transparent), radial-gradient(14% 32% at 40% 55%, rgb(var(--horizon-rgb)/0.3), transparent), radial-gradient(14% 32% at 60% 55%, rgb(var(--horizon-rgb)/0.3), transparent), radial-gradient(14% 30% at 78% 58%, rgb(var(--horizon-rgb)/0.35), transparent), #0b0c0f",
-        }}
-      />
-    ),
-  },
-  { icon: FileText, name: "Consultation report", meta: "Mar 2026 · PDF", thumb: lines(6) },
-  {
-    icon: ImageIcon,
-    name: "Intra-oral photos",
-    meta: "4 images",
-    thumb: (
-      <div className="grid h-full grid-cols-2 gap-1 p-2">
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="rounded-md" style={{ background: `linear-gradient(${140 + i * 30}deg, var(--surface-elevated), rgb(var(--accent-rgb)/0.12))` }} />
-        ))}
-      </div>
-    ),
-  },
-  { icon: ClipboardList, name: "Treatment plan", meta: "3 phases · estimate", thumb: lines(5, [60, 85, 85, 85, 40]) },
-  { icon: Pill, name: "Prescription", meta: "Feb 2026", thumb: lines(4, [40, 90, 70, 50]) },
-  {
-    icon: History,
-    name: "Dental history",
-    meta: "Since 2019",
-    thumb: (
-      <div className="flex h-full items-center gap-0 px-3">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className="flex flex-1 items-center">
-            <span className="size-1.5 rounded-full bg-[var(--text-muted)]" />
-            {i < 4 && <span className="h-px flex-1 bg-[var(--border-strong)]" />}
-          </div>
-        ))}
-      </div>
-    ),
-  },
+/* Demo documents for a fictitious clinic and patient (public/img/records) — no real patient data is depicted. */
+const DOCS: { icon: typeof FileText; name: string; meta: string; img: string; pos: string }[] = [
+  { icon: ScanLine, name: "Panoramic X-ray", meta: "Mar 2026 · Demo Clinic", img: "/img/records/xray.webp", pos: "50% 55%" },
+  { icon: FileText, name: "Consultation report", meta: "Mar 2026 · PDF", img: "/img/records/consultation.webp", pos: "50% 0%" },
+  { icon: ImageIcon, name: "Intra-oral photos", meta: "4 images", img: "/img/records/intraoral.webp", pos: "50% 30%" },
+  { icon: ClipboardList, name: "Treatment plan", meta: "3 phases · estimate", img: "/img/records/treatment-plan.webp", pos: "50% 0%" },
+  { icon: Pill, name: "Prescription", meta: "Feb 2026", img: "/img/records/prescription.webp", pos: "50% 8%" },
+  { icon: History, name: "Dental history", meta: "Since 2019", img: "/img/records/history.webp", pos: "0% 40%" },
 ];
 
 const POINTS = [
@@ -321,16 +276,21 @@ export default function Records() {
                 </p>
                 <p className="text-[11px] text-ink-4">6 items · demo</p>
               </div>
-              {/* two columns beside the guide on desktop, so tiles keep a readable width */}
-              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-2 2xl:grid-cols-3">
-                {DOCS.map(({ icon: Icon, name, meta, thumb }, i) => (
-                  <div
-                    key={name}
-                    onPointerEnter={() => setHot(i)}
-                    onPointerLeave={() => setHot((h) => (h === i ? null : h))}
-                    className="group relative rounded-[16px] bg-white/[0.025] p-2 transition-colors hover:bg-white/[0.045]"
-                  >
-                    <div className="h-[84px] overflow-hidden rounded-[var(--sf-r-sm)] bg-[#050a14]">{thumb}</div>
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                {DOCS.map(({ icon: Icon, name, meta, img, pos }) => (
+                  <div key={name} className="glass-interactive group relative rounded-[18px] border border-line bg-[var(--surface-glass)] p-2">
+                    <div className="relative h-[104px] overflow-hidden rounded-[12px] border border-line bg-[var(--background-secondary)]">
+                      <Image
+                        src={img}
+                        alt={`${name} (demo)`}
+                        fill
+                        sizes="(min-width: 1024px) 200px, 45vw"
+                        className="object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-[1.06]"
+                        style={{ objectPosition: pos }}
+                      />
+                      {/* soft vignette keeps the bright documents sitting inside the dark glass */}
+                      <span aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,transparent_55%,rgba(2,4,9,0.45))]" />
+                    </div>
                     <div className="flex items-start gap-2 px-1 pb-1 pt-2.5">
                       <Icon className="mt-0.5 size-3.5 shrink-0 text-ink-3" strokeWidth={1.5} />
                       <div className="min-w-0">
