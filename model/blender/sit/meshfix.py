@@ -62,7 +62,7 @@ def fill_loop(bm, loop, target):
             break
         res = bmesh.ops.subdivide_edges(bm, edges=long_edges, cuts=1, use_grid_fill=False)
         new_verts += [g for g in res["geom_split"] if isinstance(g, bmesh.types.BMVert)]
-        patch = {fc for v in new_verts for fc in v.link_faces} | {fc for fc in patch if fc.is_valid}
+        patch = {fc for v in new_verts if v.is_valid for fc in v.link_faces} | {fc for fc in patch if fc.is_valid}
         bmesh.ops.triangulate(bm, faces=[fc for fc in patch if fc.is_valid and len(fc.verts) > 3])
         patch = {fc for v in new_verts if v.is_valid for fc in v.link_faces} | {fc for fc in patch if fc.is_valid}
         inner = [e for fc in patch for e in fc.edges if all(lf in patch for lf in e.link_faces)]

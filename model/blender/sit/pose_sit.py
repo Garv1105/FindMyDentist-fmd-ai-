@@ -117,6 +117,9 @@ def mouth(rig, open_=0.0, smile=1.0):
         sm.location = (0.0, -S, 0.0)
         mo.location = (0.0, S, 0.0)
         mo.scale = (0.85 + 0.15 * open_, 1.0, 0.5 + 0.5 * open_)
+    cover = rig.pose.bones.get("mouth_cover")  # models with a carved 3D mouth: its lid sinks away when it opens
+    if cover:
+        cover.location = (0.0, -S * 1.5 if open_ >= 0.5 else 0.0, 0.0)
 
 
 # ---------------------------------------------------------------- body
