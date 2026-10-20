@@ -11,7 +11,7 @@ Stack: Next.js 16 (App Router, Cache Components) · React 19 · TypeScript · Ta
 <p align="center">
   <img src="web/public/img/hero/earth-4320.webp" alt="Hero: Earth rim light" width="48%">
   <img src="web/public/img/hero/mascot.webp" alt="FMD mascot" width="22%">
-  <img src="web/public/img/coming-soon-night.webp" alt="Closing 'Coming soon' scene" width="48%">
+  <img src="web/public/img/coming-soon-scene.webp" alt="Closing 'Coming soon' scene" width="48%">
 </p>
 
 *Hero, mascot, closing scene, demo dentists and treatment artwork from the homepage. All people shown are fictitious demo data.*
@@ -32,7 +32,7 @@ npm run dev                     # http://localhost:3000  (any port: next dev -p 
 | `npm run dev` | Dev server. Seeds a labelled demo directory and demo clinic on first use |
 | `npm run build` / `npm start` | Production build and server |
 | `npm run lint` | ESLint (React Compiler rules included) |
-| `npm test` | 66 service-level tests (`node:test`), no framework or database server needed |
+| `npm test` | 68 service-level tests (`node:test`), no framework or database server needed |
 | `npx tsc --noEmit` | Type check |
 | `npx next typegen` | Regenerate route types after adding routes |
 
@@ -56,9 +56,27 @@ Internal roles (`fmd_ops`, `super_admin`, `accountant`) can only come from envir
 ### Homepage: cinematic hero and landing sections (Milestone 1)
 Pinned, scroll-scrubbed sequence driven by one timeline (`components/hero/phases.ts`): headline → light spreading along the Earth's rim → the meditating mascot rising from behind the horizon with a 3D turn → the FMD AI conversation as its own stage → mascot descends and the page continues. Fully reversible; simplified on mobile; a still composition under `prefers-reduced-motion`. `npm test` asserts the timeline invariants (mascot starts at 75–80% illumination; AI stage and mascot never overlap).
 
-Below the hero the homepage continues through treatments, dentists, the care journey, records, trust and FMD Edge on one midnight-navy backdrop (`LowerWorld.tsx`), and closes with a **Coming soon** night-horizon scene (`ComingSoon.tsx`) with an early-access email field. There is no waitlist backend yet, so a valid submit honestly shows "not saved".
+Below the hero, sections 03–11 share one midnight-navy backdrop (`LowerWorld.tsx`). Order as in `app/page.tsx`:
 
-Assets: `public/img/hero/earth-4320.webp` and `mascot.webp` were cut from `Refrenece Image Mascot and Hero.jpeg`. A higher-resolution mascot master would improve edge quality (OD-H1).
+| # | Section | File | What it does |
+|---|---|---|---|
+| 01 | Hero | `hero/*` | Scroll-scrubbed Earth, mascot and FMD AI stage |
+| 02 | Search | `Search.tsx` | Dentist search continuing out of the hero |
+| 03 | AI features | `AiFeatures.tsx` | FMD AI's capabilities orbiting the guide |
+| 04 | Walkthrough | `Walkthrough.tsx` | "From a question to the right care": hand, Care Core, guide, rotating example questions, six-step wave tablist with crossfading panel |
+| 05 | Explore | `Explore.tsx` | Editorial preview of the feed |
+| 06 | Trust Standard | `Journey.tsx` | Six safeguards on a rotating orbit (see below) |
+| 07 | Private Vault | `Records.tsx` | Records, sharing, access history |
+| 08 | FMD Edge | `Concierge.tsx` | Enquiry form; "received", never "confirmed" |
+| 09 | Dentists | `Dentists.tsx`, `ProfileDrawer.tsx` | Cards and profile drawer; verified vs sponsored |
+| 10 | Trust | `Trust.tsx` | Verification, privacy, AI disclaimer |
+| 11 | Products | `Products.tsx` | Main, Clinic OS, Scholar |
+| 12 | Coming soon | `ComingSoon.tsx` | Night-horizon scene with early-access field (no waitlist backend; a valid submit honestly shows "not saved") |
+| 13 | Footer | `Footer.tsx` | Links and legal |
+
+**06 · FMD Trust Standard** (repurposed from the old "Dental Journey"): six safeguards (AI Guardrails, Verification, Fair Ranking, Zero-Trust, Audit Trails, Anonymization) as tabs on a semicircular orbit around the mascot. The wheel turns 6° per step, the progress arc fills to the active node, and the hub mascot crossfades to the step's pose. It auto-advances every 2.5s while on screen, holds on mouse hover, has a pause button (WCAG 2.2.2) and never autoplays under reduced motion; clicks and arrow keys jump and restart the timer. Coordinates are rounded so server and client markup match. **Open:** some panel copy overclaims against the PRD ("cryptographic", "real-time", "encrypted", "state dental council") and the CTA links are placeholders; it also overlaps section 10.
+
+Assets: `public/img/hero/earth-4320.webp` and `mascot.webp` were cut from `Refrenece Image Mascot and Hero.jpeg`. A higher-resolution mascot master would improve edge quality (OD-H1). Mascot poses live in `public/img/mascots/` (source packs in `Images/*_asset_pack.zip`); `mascot-trust-1024.webp` (shield) was keyed from `Images/FMD Trust Mascot.png` the same way as the others (alpha = brightest channel, colour un-premultiplied). `mascot-shield-1024.webp` does not actually hold a shield. Walkthrough art is in `public/img/walkthrough/`. Shared path geometry for the wave sections is `components/sections/path.ts` (tested in `path.test.ts`).
 
 ### FMD Main (Milestone 2)
 

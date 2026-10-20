@@ -1,70 +1,43 @@
-import type { Metadata } from "next";
 import { DiscoveryProvider } from "@/components/discovery";
 import { AssistantPanel } from "@/components/hero/Assistant";
 import Hero from "@/components/hero/Hero";
 import Navbar from "@/components/nav/Navbar";
-import About from "@/components/sections/About";
 import AiFeatures from "@/components/sections/AiFeatures";
-import ClinicOS from "@/components/sections/ClinicOS";
-// /* extra (not in homepage PDF) — restore when needed */
-// import ComingSoon from "@/components/sections/ComingSoon";
-// import Concierge from "@/components/sections/Concierge";
+import ComingSoon from "@/components/sections/ComingSoon";
+import Concierge from "@/components/sections/Concierge";
 import Dentists from "@/components/sections/Dentists";
-import Ecosystem from "@/components/sections/Ecosystem";
 import Explore from "@/components/sections/Explore";
-import Faq from "@/components/sections/Faq";
 import Footer from "@/components/sections/Footer";
-import ForDentists from "@/components/sections/ForDentists";
-// import Intelligence from "@/components/sections/Intelligence";
-import JoinNetwork from "@/components/sections/JoinNetwork";
+import Journey from "@/components/sections/Journey";
 import LowerWorld from "@/components/sections/LowerWorld";
-// import Products from "@/components/sections/Products";
+import Products from "@/components/sections/Products";
 import Records from "@/components/sections/Records";
-// import Search from "@/components/sections/Search"; // extra (not in homepage PDF)
-import Showcase from "@/components/sections/Showcase";
-// import { BrandStatement, Philosophy } from "@/components/sections/Statements";
+import Search from "@/components/sections/Search";
 import Trust from "@/components/sections/Trust";
 import Walkthrough from "@/components/sections/Walkthrough";
-import WhyFMD from "@/components/sections/WhyFMD";
 
-export const metadata: Metadata = {
-  title: "FindMyDentist — The world's first AI-native ecosystem for dentistry",
-  description:
-    "FMD connects patient care, dentist discovery, dental records and AI-assisted clinic operations in one dentistry-focused ecosystem: FMD Main, FMD Clinic OS and FMD Intelligence.",
-};
-
-// Order follows the FMD homepage revision brief (§ numbers). The hero is unchanged.
+// Homepage order (01–13) is fixed by the FMD homepage brief.
 export default function Home() {
   return (
     <DiscoveryProvider>
       <Navbar />
       <main>
         <Hero /> {/* 01 */}
-        {/* extra (not in homepage PDF), restore when needed: <Search /> */}
+        <Search /> {/* 02 */}
         <LowerWorld>
-          {/* extra (not in homepage PDF), restore when needed: <BrandStatement /> */}
-          <About /> {/* 03 */}
-          {/* <Philosophy /> */}
-          <Ecosystem /> {/* 04 */}
-          {/* <Intelligence /> */}
-          <ClinicOS /> {/* 06 */}
-          <Walkthrough /> {/* 07 FMD Main */}
-          <AiFeatures /> {/* 08 */}
-          <Explore /> {/* 09 */}
-          <Records /> {/* 10 */}
-          {/* <Concierge /> FMD Edge */}
-          <Dentists /> {/* 12 */}
-          <ForDentists /> {/* 13 */}
-          {/* <Products /> Scholar & companies */}
-          <Showcase /> {/* 15 */}
-          <WhyFMD /> {/* 16 */}
-          <Trust /> {/* 17 — §18 testimonials omitted until genuine evidence exists */}
-          <JoinNetwork /> {/* 19 */}
-          <Faq /> {/* 20 */}
+          <AiFeatures /> {/* 03 */}
+          <Walkthrough /> {/* 04 */}
+          <Explore /> {/* 05 */}
+          <Journey /> {/* 06 */}
+          <Records /> {/* 07 Private Vault */}
+          <Concierge /> {/* 08 FMD Edge */}
+          <Dentists /> {/* 09 */}
+          <Trust /> {/* 10 */}
+          <Products /> {/* 11 */}
         </LowerWorld>
-        {/* <ComingSoon /> general product-updates waitlist */}
+        <ComingSoon /> {/* 12 */}
       </main>
-      <Footer /> {/* 21 */}
+      <Footer /> {/* 13 */}
       <AssistantPanel />
     </DiscoveryProvider>
   );

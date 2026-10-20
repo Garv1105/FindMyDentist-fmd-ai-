@@ -274,7 +274,7 @@
   --color-accent: var(--accent);
   --color-cta: var(--button-primary);
   --color-cta-fg: var(--button-primary-fg);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-brand);
   --font-mono: var(--font-geist-mono);
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -289,7 +289,7 @@ html {
 body {
   background: var(--background);
   color: var(--text-primary);
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-brand), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow-x: clip;
 }
@@ -472,7 +472,7 @@ html.theme-anim *::after {
 }
 
 /* ---------- Typography system ----------
-   One family (Geist, variable, self-hosted by next/font), a few roles. Sizes are fluid between mobile and desktop;
+   One family (Plus Jakarta Sans, variable 200–800, self-hosted by next/font), a few roles. Sizes are fluid between mobile and desktop;
    weights stay at 300+ so large text keeps stroke clarity on dark backgrounds.
    Lives in @layer components (opened above), so Tailwind utilities on an element still override a token. */
 .eyebrow {
@@ -503,7 +503,7 @@ html.theme-anim *::after {
   line-height: 1.65;
   color: var(--text-muted);
   text-wrap: pretty;
-  max-width: 62ch;
+  max-width: var(--measure-prose);
 }
 .type-h3 {
   font-size: 17px;
@@ -547,46 +547,11 @@ html.theme-anim *::after {
 }
 }
 
-/* ---------- Concierge: premium warm amber-to-indigo gradient surface ---------- */
-.concierge-card {
-  position: relative;
-  isolation: isolate;
-  background:
-    radial-gradient(110% 70% at 30% 0%,   rgba(180, 80, 20, 0.22),  transparent 55%),
-    radial-gradient(80%  60% at 75% 10%,  rgba(140, 55, 10, 0.14),  transparent 50%),
-    radial-gradient(100% 80% at 10% 100%, rgba(60, 20, 100, 0.18),  transparent 60%),
-    radial-gradient(70%  50% at 90% 90%,  rgba(40, 15, 80, 0.12),   transparent 55%),
-    linear-gradient(160deg, rgba(100, 35, 8, 0.18) 0%, rgba(30, 12, 55, 0.12) 50%, transparent 100%),
-    var(--surface);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 175, 90, 0.10),
-    0 40px 120px -50px rgba(180, 80, 20, 0.28),
-    0 30px 80px  -40px rgba(0, 0, 0, 0.60);
-}
-/* luminous hairline border: warm amber glow at top, fading to subtle edge */
-.concierge-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background:
-    radial-gradient(65% 130% at 40% 0%, rgba(255, 160, 70, 0.65), transparent 65%),
-    radial-gradient(40% 80%  at 85% 5%, rgba(220, 110, 40, 0.30), transparent 60%),
-    linear-gradient(180deg, rgba(255, 145, 55, 0.22), rgba(255, 120, 40, 0.06) 40%, rgba(255, 255, 255, 0.05));
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  z-index: 1;
-}
-.concierge-glow {
-  background: radial-gradient(closest-side, rgba(210, 95, 30, 0.22), rgba(160, 55, 10, 0.10) 50%, transparent);
-  mix-blend-mode: screen;
-}
-
 /* ---------- Homepage world: near-black → midnight navy → royal sapphire ----------
-   Used by the sections after the hero (fixed dark palette, same in every theme, like the hero and Coming Soon). */
+   Used by the sections after the hero (fixed dark palette, same in every theme, like the hero and Coming Soon).
+   This is the one token set for the homepage environment; the per-theme sets above stay the app-wide system.
+   Categories, in order: legacy section colours · page backgrounds · surfaces & geometry · environment · sapphire
+   accent & states · text · FMD Edge (warm) · layout & measure · motion. Utilities that read them follow below. */
 :root {
   --fmd-near-black: #03060c;
   --fmd-midnight: #060d1b;
@@ -607,6 +572,447 @@ html.theme-anim *::after {
   --bg-glow: rgba(66, 120, 195, 0.07);
   --bg-glow-soft: rgba(110, 145, 190, 0.04);
   --bg-glow-focus: rgba(66, 120, 195, 0.11); /* behind a focal element, e.g. the mascot */
+
+  /* homepage surface tokens: one radius scale, one hairline, one shadow stack */
+  --sf-r-lg: 28px; /* section panels */
+  --sf-r-md: 20px; /* cards inside a panel */
+  --sf-r-sm: 12px; /* tiles, inputs, mockup parts */
+  --sf-r-xl: 36px; /* a feature room (FMD Edge) */
+  --sf-r-pill: 999px; /* buttons, chips */
+  --sf-edge: rgba(150, 182, 230, 0.08); /* hairline drawn as an inset shadow: quieter than a border, no layout */
+  --sf-edge-hover: rgba(150, 182, 230, 0.16);
+  --sf-hi: rgba(255, 255, 255, 0.045); /* top inner highlight */
+  --sf-shadow: 0 1px 1px rgba(0, 0, 0, 0.35), 0 10px 24px -14px rgba(0, 0, 0, 0.7), 0 34px 64px -40px rgba(0, 0, 0, 0.9);
+
+  /* environment (sections 03–11): the foundation stays near-black; sapphire only ever arrives as light */
+  --env-obsidian: #050609;
+  --env-black: #080b11;
+  --env-midnight: #0a101a;
+  --env-deep: #0d1929; /* deepest surface tint */
+  --sapphire-light-rgb: 35 70 111; /* #23466F: light fields behind a composition */
+  --sapphire-soft-rgb: 82 127 182; /* #527FB6: highlights, glass edges */
+  --silver-rgb: 230 234 242; /* #E6EAF2: soft silver-white light, used at ≤ 0.06 */
+  --fmd-divider: rgba(255, 255, 255, 0.06); /* separators inside a surface */
+
+  /* sapphire accent: the one interactive blue. Active fill, lit text, and the states built from them */
+  --sapphire-rgb: 91 140 255; /* #5b8cff */
+  --sapphire-hi: #9db8ff; /* lit text and line ends */
+  --sapphire-hover: rgb(91 140 255 / 0.1); /* hover/selected wash */
+  --glow-sapphire: 0 0 30px -4px rgb(91 140 255 / 0.55); /* an active node; never on body text */
+  --focus-ring: rgb(157 184 255 / 0.85); /* re-pointed to champagne inside .edge-panel */
+
+  /* text on the environment. Values equal the default (obsidian-royal) theme, so nothing shifts; .fmd-world pins them
+     for light themes. Contrast on --env-midnight / --env-deep: 1 ≥ 14:1 · 2 ≥ 12:1 · 3 ≥ 7:1 · 4 ≥ 4.7:1 (AA) ·
+     disabled ≈ 3:1 (exempt; never the only signal) */
+  --fmd-text-1: #f3f5fa; /* headings, primary content */
+  --fmd-text-2: #d5dbe7; /* supporting copy */
+  --fmd-text-3: #9ea7b9; /* body on surfaces, lede */
+  --fmd-text-4: #7b8599; /* labels, metadata */
+  --fmd-text-disabled: #5b6576;
+
+  /* FMD Edge: a warm room lit from one place. Espresso everywhere, champagne only at the light source */
+  --edge-black: #090807;
+  --edge-espresso: #100c08;
+  --edge-espresso-2: #19110b;
+  --edge-bronze: #2d1e12;
+  --edge-amber-rgb: 98 67 34; /* #624322: the broad halo */
+  --edge-champagne: #c9aa76;
+  --edge-champagne-rgb: 201 170 118;
+  --edge-light-rgb: 218 178 111; /* the core, used at ≤ 0.15 alpha (no hotspot) */
+  --edge-gold: #d4af37; /* the VIP highlight: bell, eyebrow, call to action */
+  --edge-gold-rgb: 212 175 55;
+  --edge-violet-rgb: 15 15 26; /* #0F0F1A: the cool shadow in the room's corners */
+  --glow-champagne: 0 0 16px rgb(218 178 111 / 0.1);
+
+  /* layout: what Container and sections already do, named. Section rhythm ≈ pt-28 → pt-40 */
+  --container-max: 1320px; /* gutters 16 / 24 / 40px at base / sm / lg live in Container */
+  --section-pad: clamp(7rem, 5vw + 5rem, 10rem);
+  --section-pad-tight: clamp(6rem, 4vw + 4rem, 8rem); /* a section that continues the one above */
+  --measure-prose: 62ch; /* body and lede */
+  --measure-narrow: 44ch; /* side-column copy */
+
+  /* motion: one ease for everything that settles, three durations. Mirrors MOTION in components/ui.tsx.
+     The curve is Tailwind's --ease-out-expo (the ease-out-expo utility), aliased so there is one source */
+  --ease-settle: var(--ease-out-expo);
+  --dur-quick: 0.3s; /* state changes: hover, focus, selection */
+  --dur-move: 0.7s; /* things changing place */
+  --dur-reveal: 0.9s; /* entering view, once */
+}
+
+/* ---------- Homepage surfaces: materials, chosen by job ----------
+   .fmd-surface        solid, for reading: articles, records, stats, product mockups
+   .fmd-surface-raised the lead panel of a group: same material, a soft sapphire lift from above
+   .fmd-glass          only for things that float over a lit background (example prompts, the AI capability orbit)
+   .edge-panel         FMD Edge's VIP lounge; .edge-glass its warm glass form card (.edge-surface: the solid alternative)
+   Rules: glass never holds long-form reading or forms; solid surfaces carry no blur; edges are inset hairlines, not borders. */
+.fmd-surface,
+.fmd-surface-raised {
+  background: linear-gradient(180deg, #0B121D, var(--env-black));
+  box-shadow: inset 0 1px 0 var(--sf-hi), inset 0 0 0 1px var(--sf-edge), var(--sf-shadow);
+}
+.fmd-surface-raised {
+  background:
+    radial-gradient(120% 70% at 50% -12%, rgb(var(--sapphire-light-rgb) / 0.42), transparent 62%),
+    linear-gradient(180deg, var(--env-deep), #090E17);
+}
+/* glass: one hue (deep sapphire) through fill, edge, highlight and shadow; opaque enough to read on dark */
+.fmd-glass {
+  background: linear-gradient(180deg, rgba(20, 38, 62, 0.62), rgba(10, 18, 30, 0.7));
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  box-shadow:
+    inset 0 1px 0 rgba(230, 234, 242, 0.09),
+    inset 0 0 0 1px rgb(var(--sapphire-soft-rgb) / 0.16),
+    0 2px 6px rgba(2, 4, 8, 0.45),
+    0 24px 48px -22px rgba(2, 4, 8, 0.9);
+}
+/* glass pane: the larger, genuinely translucent variant (AI capability panels). Mostly transparent, so the lit
+   environment behind reads through and the blur has something to diffuse; the edge is a gradient hairline, brightest
+   along the top; depth from a soft two-layer shadow. Text sits on it directly, never with opacity on the container. */
+.fmd-glass-pane {
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(180deg, rgb(var(--silver-rgb) / 0.055), rgb(var(--silver-rgb) / 0) 42%),
+    rgb(var(--sapphire-light-rgb) / 0.14);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow:
+    inset 0 1px 0 rgb(var(--silver-rgb) / 0.1),
+    inset 0 -1px 0 rgb(2 4 8 / 0.25),
+    0 1px 2px rgb(2 4 8 / 0.35),
+    0 22px 44px -24px rgb(2 4 8 / 0.8);
+}
+.fmd-glass-pane::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(180deg, rgb(225 233 248 / 0.26), rgb(160 185 230 / 0.09) 38%, rgb(160 185 230 / 0.05));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  pointer-events: none;
+}
+@media (max-width: 639px) {
+  .fmd-glass-pane {
+    backdrop-filter: blur(12px) saturate(130%);
+    -webkit-backdrop-filter: blur(12px) saturate(130%);
+  }
+}
+/* VIP lounge: obsidian base, deep violet-blue pooling in the corners, a warm gold bloom where the concierge stands
+   (upper right, lg+ only; on narrow screens he sits mid-panel and his own light in Concierge.tsx is the bloom) */
+.edge-panel {
+  --edge-bloom: linear-gradient(transparent, transparent);
+  background:
+    var(--edge-bloom),
+    radial-gradient(60% 55% at 0% 100%, rgb(var(--edge-violet-rgb) / 0.95), transparent 70%),
+    radial-gradient(55% 50% at 100% 0%, rgb(var(--edge-violet-rgb) / 0.9), transparent 70%),
+    radial-gradient(70% 60% at 50% 30%, var(--edge-espresso-2), transparent 70%),
+    linear-gradient(160deg, #07070c, var(--edge-black) 50%, #08080f);
+  box-shadow:
+    inset 0 1px 0 rgb(var(--edge-champagne-rgb) / 0.1),
+    inset 0 0 0 1px rgb(var(--edge-champagne-rgb) / 0.08),
+    0 40px 100px -50px rgba(0, 0, 0, 0.9);
+}
+@media (min-width: 1024px) {
+  .edge-panel {
+    --edge-bloom: radial-gradient(42% 50% at 74% 34%, rgb(var(--edge-gold-rgb) / 0.26), rgb(var(--edge-amber-rgb) / 0.16) 45%, transparent 76%);
+  }
+}
+.edge-surface {
+  background: linear-gradient(180deg, var(--edge-espresso), var(--edge-black));
+  box-shadow:
+    inset 0 1px 0 rgb(var(--edge-light-rgb) / 0.07),
+    inset 0 0 0 1px rgb(var(--edge-champagne-rgb) / 0.1),
+    0 30px 60px -30px rgba(0, 0, 0, 0.85);
+}
+/* FMD Edge's form card: .fmd-glass-pane re-tinted warm. Dark enough (≥ 0.7) that the fields read first, which is the
+   one exception to "glass never holds forms"; the hairline is champagne, brightest along the top */
+.fmd-glass-pane.edge-glass {
+  background:
+    linear-gradient(180deg, rgb(var(--edge-champagne-rgb) / 0.07), transparent 40%),
+    linear-gradient(180deg, rgb(16 12 9 / 0.72), rgb(9 8 7 / 0.82));
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  box-shadow:
+    inset 0 1px 0 rgb(var(--edge-gold-rgb) / 0.12),
+    0 1px 2px rgb(0 0 0 / 0.4),
+    0 30px 60px -30px rgb(0 0 0 / 0.9);
+}
+.fmd-glass-pane.edge-glass::before {
+  background: linear-gradient(180deg, rgb(var(--edge-gold-rgb) / 0.45), rgb(255 255 255 / 0.08) 38%, rgb(var(--edge-champagne-rgb) / 0.12));
+}
+/* gold lettering: champagne → bright gold, with a slow sheen passing through (still under reduced motion) */
+.edge-shimmer {
+  background: linear-gradient(100deg, #ffd700 0%, #f3e5ab 45%, var(--edge-gold) 70%, #ffd700 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: edge-sheen 6s ease-in-out infinite;
+}
+@keyframes edge-sheen {
+  0%, 100% { background-position: 100% 0; }
+  50% { background-position: 0% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .edge-shimmer { animation: none; background-position: 50% 0; }
+}
+/* the concierge's call to action: polished champagne-gold metal. A bright top lip and darker base give it depth; a gold
+   ring and warm glow say "press me"; on hover it lifts, glows warmer and a band of light sweeps across. Waiting on
+   consent it keeps its metal but dims and desaturates, so it reads as "not yet" rather than broken. */
+.edge-cta {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fff4d8 0%, #f3d696 42%, #dcb062 100%);
+  color: #1a1208;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.8),
+    inset 0 -1px 0 rgb(120 80 20 / 0.35),
+    0 0 0 1px rgb(var(--edge-gold-rgb) / 0.55),
+    0 10px 30px -10px rgb(var(--edge-gold-rgb) / 0.6);
+  transition: transform 0.25s var(--ease-out-expo), box-shadow 0.3s ease, filter 0.3s ease;
+}
+.edge-cta::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.6) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 0.9s var(--ease-out-expo);
+}
+.edge-cta:enabled:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.85),
+    inset 0 -1px 0 rgb(120 80 20 / 0.35),
+    0 0 0 1px rgb(var(--edge-gold-rgb) / 0.75),
+    0 14px 40px -10px rgb(var(--edge-gold-rgb) / 0.8);
+}
+.edge-cta:enabled:hover::after {
+  transform: translateX(120%);
+}
+.edge-cta:enabled:active {
+  transform: translateY(0) scale(0.99);
+}
+.edge-cta:disabled {
+  cursor: not-allowed;
+  filter: saturate(0.5) brightness(0.78);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.5),
+    0 0 0 1px rgb(var(--edge-gold-rgb) / 0.3);
+}
+@media (prefers-reduced-motion: reduce) {
+  .edge-cta, .edge-cta::after { transition: none; }
+  .edge-cta:enabled:hover { transform: none; }
+  .edge-cta:enabled:hover::after { transform: translateX(-120%); }
+}
+/* Coming soon: a short glint travelling round the title's orbit (pathLength 1000), about once every 14s; still under reduced motion */
+.cs-orbit-glint {
+  animation: cs-orbit 14s linear infinite;
+}
+@keyframes cs-orbit {
+  to { stroke-dashoffset: -1000; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cs-orbit-glint { animation: none; opacity: 0; }
+}
+/* restrained hover for linked surfaces: the hairline firms up; nothing jumps */
+.fmd-hover {
+  transition: box-shadow 0.35s ease;
+}
+.fmd-hover:hover,
+.fmd-hover:focus-visible {
+  box-shadow: inset 0 1px 0 var(--sf-hi), inset 0 0 0 1px var(--sf-edge-hover), var(--sf-shadow);
+}
+/* no backdrop-filter (older browsers, some low-power modes): the same glass, opaque enough to read on its own */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .fmd-glass {
+    background: linear-gradient(180deg, rgba(20, 38, 62, 0.94), rgba(10, 18, 30, 0.96));
+  }
+  .fmd-glass-pane {
+    background: linear-gradient(180deg, rgb(24 40 64 / 0.96), rgb(13 22 36 / 0.97));
+  }
+}
+/* FMD Edge scopes its own focus colour; everything inside reads --focus-ring */
+.edge-panel {
+  --focus-ring: rgb(var(--edge-champagne-rgb) / 0.8);
+}
+/* The environment is dark in every theme, so its text is too: light themes would otherwise put #17181a on near-black.
+   Dark themes keep their own tints (no change there). Applied once, on the LowerWorld wrapper. */
+:is([data-theme="pearl-light"], [data-theme="silver-light"], [data-theme="white-royal"]) .fmd-world {
+  color-scheme: dark;
+  --text-primary: var(--fmd-text-1);
+  --text-secondary: var(--fmd-text-2);
+  --text-muted: var(--fmd-text-3);
+  --text-faint: var(--fmd-text-4);
+  --border: rgba(200, 215, 255, 0.085);
+  --border-strong: rgba(150, 180, 255, 0.17);
+}
+
+/* ---------- Composable environment utilities (opt-in; nothing applies them globally) ----------
+   Layered so Tailwind utilities on the same element still win.
+   .fmd-atmosphere  a section's light layer: behind content, reaching 6rem past both edges so it fades into neighbours
+   .fmd-light       one radial light; tune with --light-at, --light-shape, --light-rgb, --light-a
+                    e.g. <div class="fmd-atmosphere fmd-light" style="--light-at: 70% 40%">; warm: --light-rgb: var(--edge-amber-rgb)
+   .fmd-depth       the layered near-black → midnight gradient the environment is built on
+   .fmd-hairline    an inset 1px edge, for elements with no other shadow (surfaces already include one)
+   .fmd-divider     a separator line inside a surface
+   .fmd-focus       a visible keyboard ring in the local accent (sapphire; champagne inside .edge-panel)
+   .fmd-section     standard section rhythm (.fmd-section-tight for one that continues the section above) */
+@layer components {
+  .fmd-atmosphere {
+    position: absolute;
+    inset: -6rem 0;
+    z-index: -10;
+    pointer-events: none;
+  }
+  .fmd-light {
+    background: radial-gradient(
+      var(--light-shape, 50% 40%) at var(--light-at, 50% 50%),
+      rgb(var(--light-rgb, var(--sapphire-light-rgb)) / var(--light-a, 0.3)),
+      transparent 72%
+    );
+  }
+  /* a slow drift between near-black and midnight down the whole run of sections (LowerWorld) */
+  .fmd-depth {
+    background: linear-gradient(
+      180deg,
+      var(--env-obsidian) 0%,
+      var(--env-black) 10%,
+      var(--env-midnight) 24%,
+      var(--env-black) 38%,
+      var(--env-midnight) 52%,
+      #070a10 64%,
+      var(--env-midnight) 78%,
+      var(--env-black) 90%,
+      var(--env-obsidian) 100%
+    );
+  }
+  .fmd-hairline {
+    box-shadow: inset 0 0 0 1px var(--sf-edge);
+  }
+  .fmd-divider {
+    border-top: 1px solid var(--fmd-divider);
+  }
+  .fmd-focus {
+    outline: none;
+  }
+  .fmd-focus:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 3px;
+  }
+  .fmd-section {
+    padding-top: var(--section-pad);
+  }
+  .fmd-section-tight {
+    padding-top: var(--section-pad-tight);
+  }
+
+  /* ---------- Lighting scenes: <Atmosphere scene> in LowerWorld.tsx ----------
+     One light plan for the page. Each scene is lit for its own focal point and job, layered front to back in each
+     background list. Rules: every layer ends in transparent (fields overlap 6rem into neighbours, so no seams); veils
+     darken a section only between soft ramps; sapphire ≤ 0.32, silver ≤ 0.06, warm ≤ 0.18; nothing animates. */
+
+  /* 02 Search: a cool pool under the search bar. Reaches down only: never up over the hero */
+  .fmd-atmosphere[data-scene="search"] {
+    inset: 0 0 -4rem;
+    background:
+      radial-gradient(38% 34% at 50% 22%, rgb(var(--sapphire-light-rgb) / 0.22), transparent 72%),
+      radial-gradient(60% 40% at 50% 70%, rgb(var(--sapphire-light-rgb) / 0.08), transparent 75%);
+  }
+  /* 03 AI Features: a faint silver key light on the headline; the sapphire pool itself is drawn in the stage SVG,
+     so here only a wide, low bed of light under it (no second competing glow) */
+  /* two broad, shared fields where the capability panels sit (left and right of the stage; the right one also covers
+     the lg grid), so the glass panes have soft variation to diffuse: two environment lights, not six halos */
+  .fmd-atmosphere[data-scene="assistant"] {
+    background:
+      radial-gradient(30% 32% at 17% 62%, rgb(var(--sapphire-light-rgb) / 0.2), transparent 74%),
+      radial-gradient(32% 34% at 82% 62%, rgb(var(--sapphire-light-rgb) / 0.2), transparent 74%),
+      radial-gradient(34% 18% at 50% 8%, rgb(var(--silver-rgb) / 0.035), transparent 75%),
+      radial-gradient(60% 34% at 50% 66%, rgb(var(--sapphire-light-rgb) / 0.2), transparent 72%),
+      radial-gradient(70% 16% at 50% 92%, rgb(var(--sapphire-light-rgb) / 0.12), transparent 75%);
+  }
+  /* 04 Walkthrough: editorial and quieter. A long low band along the step path, and one shared light behind the stack of
+     example-question cards (upper right) so their glass has soft variation to diffuse: one field, not a halo per card */
+  /* 04 Walkthrough: the Care Bridge. One light at the Care Core (right of centre, as the tooth is), a softer field
+     behind the question cards so their glass has something to show, and a low band along the path */
+  .fmd-atmosphere[data-scene="walkthrough"] {
+    background:
+      radial-gradient(20% 15% at 60% 30%, rgb(var(--sapphire-soft-rgb) / 0.12), transparent 72%),
+      radial-gradient(38% 24% at 60% 30%, rgb(var(--sapphire-light-rgb) / 0.32), transparent 74%),
+      radial-gradient(24% 16% at 34% 30%, rgb(var(--sapphire-light-rgb) / 0.24), transparent 74%),
+      radial-gradient(72% 16% at 52% 66%, rgb(var(--sapphire-light-rgb) / 0.16), transparent 75%);
+  }
+  /* 05 Learn: a reading lamp. Cool silver-white over the lead story, a little sapphire under it; the rest stays dark */
+  .fmd-atmosphere[data-scene="learn"] {
+    background:
+      radial-gradient(30% 34% at 64% 46%, rgb(var(--silver-rgb) / 0.04), transparent 72%),
+      radial-gradient(44% 48% at 66% 58%, rgb(var(--sapphire-light-rgb) / 0.18), transparent 72%);
+  }
+  /* 06 Journey: set apart by contrast. A darker veil (soft ramps in and out), then light laid along the wave itself:
+     a long thin field at the path's height, brightest towards the later stages. Static: no scroll, no animation */
+  .fmd-atmosphere[data-scene="journey"] {
+    background:
+      radial-gradient(56% 9% at 60% 70%, rgb(var(--sapphire-soft-rgb) / 0.12), transparent 75%),
+      radial-gradient(80% 20% at 50% 70%, rgb(var(--sapphire-light-rgb) / 0.3), transparent 72%),
+      linear-gradient(180deg, transparent 0%, rgb(3 4 7 / 0.5) 22%, rgb(3 4 7 / 0.5) 82%, transparent 100%);
+  }
+  /* 07 Private Vault: the darkest, most enclosed room. A deep veil, a tight cool light on the vault, a faint core on
+     the documents; the copy side falls away to near-black */
+  .fmd-atmosphere[data-scene="vault"] {
+    background:
+      radial-gradient(18% 22% at 32% 50%, rgb(var(--sapphire-soft-rgb) / 0.1), transparent 70%),
+      radial-gradient(34% 40% at 30% 54%, rgb(var(--sapphire-light-rgb) / 0.3), transparent 72%),
+      linear-gradient(180deg, transparent 0%, rgb(3 4 6 / 0.6) 20%, rgb(3 4 6 / 0.6) 84%, transparent 100%);
+  }
+  /* 08 FMD Edge: the one warm room. The panel holds the light source; around it the blue gives way to espresso-black,
+     with a low warm spill from the scene and a faint reflection under the panel. Edges stay dark */
+  .fmd-atmosphere[data-scene="edge"] {
+    background:
+      radial-gradient(40% 32% at 66% 36%, rgb(var(--edge-amber-rgb) / 0.18), transparent 72%),
+      radial-gradient(50% 10% at 50% 97%, rgb(var(--edge-amber-rgb) / 0.12), transparent 75%),
+      linear-gradient(180deg, transparent 0%, rgb(9 8 7 / 0.62) 24%, rgb(9 8 7 / 0.62) 84%, transparent 100%);
+  }
+  /* 09 Discovery: precise. A small bright-ish point where the guide holds the pin, a broad faint field under the cards */
+  .fmd-atmosphere[data-scene="discovery"] {
+    background:
+      radial-gradient(16% 14% at 84% 16%, rgb(var(--sapphire-soft-rgb) / 0.12), transparent 72%),
+      radial-gradient(30% 26% at 82% 18%, rgb(var(--sapphire-light-rgb) / 0.32), transparent 72%),
+      radial-gradient(70% 30% at 50% 74%, rgb(var(--sapphire-light-rgb) / 0.08), transparent 75%);
+  }
+  /* 10 Trust: steady, even light. Low behind the statement and its guide, a whisper of silver over the numbers */
+  .fmd-atmosphere[data-scene="trust"] {
+    background:
+      radial-gradient(28% 30% at 66% 34%, rgb(var(--silver-rgb) / 0.03), transparent 72%),
+      radial-gradient(40% 46% at 16% 50%, rgb(var(--sapphire-light-rgb) / 0.24), transparent 72%);
+  }
+  /* 11 FMD OS: three products, three pools on one floor. Main lit from above, Clinic OS and Scholar below it */
+  .fmd-atmosphere[data-scene="os"] {
+    background:
+      radial-gradient(54% 26% at 50% 30%, rgb(var(--sapphire-light-rgb) / 0.26), transparent 72%),
+      radial-gradient(28% 24% at 27% 78%, rgb(var(--sapphire-light-rgb) / 0.16), transparent 72%),
+      radial-gradient(28% 24% at 73% 78%, rgb(var(--sapphire-soft-rgb) / 0.1), transparent 72%);
+  }
+  /* small screens: sections are tall and narrow, so the same fields cover more of the reading area; ease them off */
+  @media (max-width: 639px) {
+    .fmd-atmosphere[data-scene] {
+      opacity: 0.8;
+    }
+  }
 }
 
 /* ---------- Cinematic hero ----------
@@ -666,140 +1072,101 @@ html.theme-anim *::after {
   100% { top: 100%; opacity: 0; }
 }
 
+/* Walkthrough wave: the swell. Each band (a rect inside a mask, in the wave's own units) drifts from before the
+   line's start (x -260) to past its end (x 1500), ~8s a pass, easing in and out so it gathers and settles like a
+   breath. At rest (and so under reduced motion, which ends the animation at once) it sits off the line, unseen.
+   -m: the phone strip, 600 units across */
+.wt-swell {
+  transform: translateX(-700px);
+  animation: wt-swell 8s cubic-bezier(0.37, 0, 0.63, 1) 1s infinite;
+}
+@keyframes wt-swell {
+  from { transform: translateX(-360px); }
+  to { transform: translateX(1600px); }
+}
+.wt-swell-m {
+  transform: translateX(-300px);
+  animation: wt-swell-m 8s cubic-bezier(0.37, 0, 0.63, 1) 1s infinite;
+}
+@keyframes wt-swell-m {
+  from { transform: translateX(-60px); }
+  to { transform: translateX(660px); }
+}
+
+/* Site-wide cursor light (CursorFx): a small, soft sapphire/cyan spotlight that trails the pointer. Fixed, under the
+   nav and dialogs, never catches a click. Kept cheap on purpose: a plain translucent gradient (no blend mode, no blur
+   filter, which would force the page beneath to be re-composited or re-blurred every frame), on its own layer, moved by
+   transform only. The gradient's own falloff gives the soft edge. Absent for touch and under reduced motion. */
+.fmd-cursor-orb {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 35;
+  width: 252px;
+  height: 252px;
+  border-radius: 9999px;
+  pointer-events: none;
+  background: radial-gradient(closest-side, rgb(34 211 238 / 0.17), rgb(59 130 246 / 0.12) 38%, rgb(59 130 246 / 0.035) 66%, transparent);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  will-change: transform;
+  contain: strict;
+}
+@media (pointer: coarse), (prefers-reduced-motion: reduce) {
+  .fmd-cursor-orb { display: none; }
+}
+
+/* Private Vault: the glows behind the guide and behind the vault card breathe together (one shared loop, no delay, so
+   they stay in step): a slow swell to 1.02 and a slight lift in strength, then back. Uses the separate `scale`
+   property, so it composes with the glows' own centring translate. Off under reduced motion (rule below) */
+@keyframes fmd-breathe {
+  0%, 100% { scale: 1; opacity: 0.85; }
+  50% { scale: 1.02; opacity: 1; }
+}
+.fmd-breathe { animation: fmd-breathe 7s ease-in-out infinite; }
+
+/* Dentists locator: rings pulsing out from the guide's pin, staggered by inline delays. At rest (and so under reduced
+   motion) each ring holds still, a faint static target */
+@keyframes fmd-radar {
+  0% { scale: 0.35; opacity: 0; }
+  15% { opacity: 0.55; }
+  100% { scale: 1; opacity: 0; }
+}
+.fmd-radar { scale: 0.7; opacity: 0.18; animation: fmd-radar 4.2s cubic-bezier(0.2, 0.6, 0.35, 1) infinite; }
+
+/* Dentists locator hub: rings turning (80s one way, 120s the other) and a radar sweep (6s); and the holographic rim on a
+   verified card's chip, its sapphire-cyan-silver gradient drifting slowly round. All stop under reduced motion */
+@keyframes fmd-spin { to { rotate: 360deg; } }
+.fmd-spin { animation: fmd-spin 80s linear infinite; }
+.fmd-spin-rev { animation: fmd-spin 120s linear infinite reverse; }
+.fmd-sweep { animation: fmd-spin 6s linear infinite; }
+@keyframes fmd-holo { to { background-position: 200% 0; } }
+.fmd-holo {
+  background: linear-gradient(110deg, #93c5fd, #e2e8f0, #67e8f9, #3b82f6, #93c5fd);
+  background-size: 200% 100%;
+  animation: fmd-holo 6s linear infinite;
+}
+
+/* Private Vault: a spark of light running along the near half of the guide's thinking ring, left to right, every 3.2s.
+   With pathLength 1 the 0.12 dash travels from just off the left end to past the right; at rest (and so under reduced
+   motion) it sits off the end, unseen. */
+.hud-spark { stroke-dashoffset: 0.12; animation: hud-spark 3.2s ease-in-out infinite; }
+@keyframes hud-spark { to { stroke-dashoffset: -1; } }
+
 @media (prefers-reduced-motion: reduce) {
+  .hud-spark { animation: none; }
+  .fmd-spin, .fmd-spin-rev, .fmd-holo { animation: none; }
+  .fmd-sweep { display: none; } /* a sweep that cannot turn is just a hard wedge */
+  .fmd-radar { animation: none; }
+  .fmd-breathe { animation: none; scale: 1; opacity: 1; }
   html { scroll-behavior: auto; }
+  /* <Reveal>: visible and in place from first paint, whatever inline state SSR or Motion wrote (see ui.tsx) */
+  [data-reveal] { opacity: 1 !important; transform: none !important; }
+  /* decorative SVG lines that draw in (Motion pathLength): shown whole instead of drawn */
+  [data-draw] { opacity: 1 !important; stroke-dasharray: none !important; stroke-dashoffset: 0 !important; }
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
-}
-
-@layer components {
-/* ---------- Liquid glass (iOS-style) — navy theme scope + panel ---------- */
-/* Navy / electric-blue palette. Wrap a page (or section) in .fmd-glass and
-   every token-driven component inside it — including .glass and .icon-tile —
-   switches to the liquid-glass look. */
-.fmd-glass {
-  color-scheme: dark;
-  /* royal-blue / deep-navy / white — the reference artwork's palette */
-  --background: #020409;
-  --background-secondary: #050a17;
-  --surface: #080d1c;
-  --headline-from: #ffffff;
-  --headline-to: #b4cbff;
-  --headline-accent: #6fa4ff;
-  --accent-soft: rgba(77, 141, 255, 0.16);
-  --horizon: #cfe0ff;
-  --horizon-glow: rgba(77, 141, 255, 0.55);
-  --button-secondary: rgba(255, 255, 255, 0.06);
-  --edge-lo: rgba(255, 255, 255, 0.05);
-  --surface-glass: rgba(120, 150, 220, 0.06);
-  --glass-tint: rgba(120, 150, 230, 0.1);
-  --surface-elevated: rgba(120, 150, 220, 0.08);
-  --border: rgba(170, 190, 235, 0.13);
-  --border-strong: rgba(170, 195, 245, 0.26);
-  --edge-hi: rgba(200, 215, 245, 0.45);
-  --inner-hi: rgba(220, 230, 255, 0.18);
-  --text-primary: #ffffff;
-  --text-secondary: #d4dcee;
-  --text-muted: #9aa7c2;
-  --text-faint: #6f7c98;
-  --accent: #4d8dff;
-  --accent-rgb: 77 141 255;
-  --accent-glow: rgba(77, 141, 255, 0.55);
-  --horizon-rgb: 150 190 255;
-  --shadow: rgba(0, 0, 0, 0.7);
-  --button-primary: #ffffff;
-  --button-primary-fg: #1d4fd8;
-  --star: #dbe6ff;
-  /* section environment (LowerWorld, cards) — navy instead of near-black */
-  --fmd-near-black: #020409;
-  --fmd-midnight: #050a17;
-  --fmd-deep: #08112a;
-  --fmd-sapphire: #0d1d45;
-  --fmd-royal: #16357f;
-  --fmd-glow: rgba(77, 141, 255, 0.12);
-  --fmd-glow-strong: rgba(77, 141, 255, 0.22);
-  --fmd-border: rgba(170, 190, 235, 0.13);
-  --fmd-border-strong: rgba(170, 195, 245, 0.26);
-  --bg-near-black: #020409;
-  --bg-midnight: #03070f;
-  --bg-navy: #060e22;
-  --bg-sapphire: #0a1633;
-  --bg-glow: rgba(70, 130, 255, 0.09);
-  --bg-glow-soft: rgba(110, 150, 255, 0.05);
-  --bg-glow-focus: rgba(70, 130, 255, 0.16);
-  --glass-shadow:
-    inset 0 1px 0.5px rgba(220, 230, 255, 0.32),
-    inset 0 -1px 0.5px rgba(140, 170, 255, 0.08),
-    inset 0 0 30px rgba(120, 160, 255, 0.04),
-    0 24px 60px -24px rgba(0, 0, 0, 0.9),
-    0 0 50px -28px rgba(77, 141, 255, 0.3);
-}
-
-/* iOS-style liquid glass, tinted blue: frosted, saturated, rim-lit */
-.liquid-glass,
-.fmd-glass .glass {
-  position: relative;
-  isolation: isolate;
-  background:
-    linear-gradient(135deg, rgba(160, 185, 255, 0.11) 0%, rgba(90, 120, 210, 0.03) 48%, rgba(120, 150, 240, 0.06) 100%),
-    rgba(6, 10, 22, 0.55);
-  border: 1px solid rgba(170, 195, 245, 0.15);
-  backdrop-filter: blur(30px) saturate(190%);
-  -webkit-backdrop-filter: blur(30px) saturate(190%);
-  box-shadow: var(--glass-shadow);
-}
-/* Specular sheen across the top edge (replaces .glass's masked hairline) */
-.liquid-glass::before,
-.fmd-glass .glass::before,
-.fmd-glass .icon-tile::before {
-  -webkit-mask: none;
-  mask: none;
-  padding: 0;
-  opacity: 1;
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  background: radial-gradient(120% 60% at 30% 0%, rgba(210, 225, 255, 0.12) 0%, transparent 60%);
-  pointer-events: none;
-}
-.liquid-glass:hover,
-.liquid-glass-active,
-.fmd-glass .glass-interactive:hover {
-  border-color: rgba(150, 185, 255, 0.32);
-  background:
-    linear-gradient(135deg, rgba(160, 190, 255, 0.16) 0%, rgba(90, 125, 230, 0.05) 48%, rgba(120, 155, 255, 0.1) 100%),
-    rgba(8, 14, 32, 0.6);
-}
-
-/* Icon tiles: dark glass squares with a blue glyph and a faint blue under-glow, as in the reference */
-.fmd-glass .icon-tile {
-  position: relative;
-  isolation: isolate;
-  color: #8fb6ff;
-  background: linear-gradient(160deg, rgba(60, 100, 220, 0.28) 0%, rgba(10, 18, 40, 0.75) 70%);
-  border: 1px solid rgba(150, 185, 255, 0.28);
-  box-shadow:
-    inset 0 1px 0.5px rgba(220, 232, 255, 0.35),
-    0 10px 26px -12px rgba(47, 107, 255, 0.55);
-}
-.fmd-glass .icon-tile::before {
-  background: radial-gradient(120% 70% at 30% 0%, rgba(200, 220, 255, 0.18) 0%, transparent 60%);
-}
-
-.glass-orb {
-  animation: orbDrift 18s ease-in-out infinite;
-}
-@keyframes orbDrift {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33%      { transform: translate(40px, -30px) scale(1.08); }
-  66%      { transform: translate(-30px, 25px) scale(0.95); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .glass-orb { animation: none; }
-}
 }
