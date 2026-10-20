@@ -12,8 +12,7 @@ import {
 } from "motion/react";
 import { ArrowRight, ArrowUp, Mic, ShieldCheck, Sparkles, X } from "lucide-react";
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
-import { api } from "@/lib/me";
+import { useCallback, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { openAssistant } from "./Assistant";
 import { MASCOT_KEYS, MASCOT_OPACITY, PHASES } from "./phases";
 import { RIM, RIM_APEX, RIM_H, RIM_W, rimPath, rimYAt } from "./rim";
@@ -53,10 +52,6 @@ const stageVars = (height: string) =>
   }) as CSSProperties;
 
 // WebGL can't render on the server; the sprite stays visible until the model has loaded
-// what it shouts while spinning up: [word, sideways drift (px) as it floats off]; one word every SHOUT_GAP seconds
-const SHOUT: [string, number][] = [["Woo!", -70], ["Whoo!", 75], ["Woohoo!", -20]];
-const SHOUT_GAP = 0.6;
-
 const Mascot3D = dynamic(() => import("./Mascot3D"), { ssr: false });
 
 const noop = () => () => {};
@@ -111,14 +106,6 @@ function CinematicHero() {
   // two full turns while rising, slowing to face-on as it arrives
   const rotY = useTransform(p, MASCOT_KEYS, [-720, -720, -470, -230, -60, 0, 0, 0, 0]);
   const mOpacity = useTransform(p, MASCOT_KEYS, MASCOT_OPACITY);
-  // C — a "woohoo" shout while it spins up out of the light; counter-scaled so it stays readable while the mascot is tiny
-  const [r0, r1] = PHASES.rise;
-  const shoutOpacity = useTransform(p, [r0 + 0.015, r0 + 0.035, r1 - 0.035, r1 - 0.01], [0, 1, 1, 0]);
-  const shoutScale = useTransform(mScale, (s) => Math.min(0.9 / s, 3));
-  // D — its line, popped in once it has settled in the middle
-  const [s0, s1] = PHASES.say;
-  const sayOpacity = useTransform(p, [s0, s0 + 0.025, s1 - 0.025, s1], [0, 1, 1, 0]);
-  const sayScale = useTransform(p, [s0, s0 + 0.025], [0.6, 1]);
 
   // F — the assistant fades in and stays until the pin releases, so the page flows straight into the next section
   const aiOpacity = useTransform(p, [a0, a1], [0, 1]);
@@ -128,14 +115,6 @@ function CinematicHero() {
   const [settled, setSettled] = useState(false);
   const [mascotOn, setMascotOn] = useState(false);
   const [mascotReady, setMascotReady] = useState(false);
-  const mouthAnchor = useRef<HTMLDivElement>(null);
-  const onMouth = useCallback((left: number, top: number, facing: number) => {
-    const el = mouthAnchor.current;
-    if (!el) return;
-    el.style.left = `${left}%`;
-    el.style.top = `${top}%`;
-    el.style.opacity = String(facing);
-  }, []);
   const onMascotReady = useCallback(() => setMascotReady(true), []);
   useMotionValueEvent(p, "change", (v) => {
     const on = v > a0 + 0.02;
@@ -151,7 +130,7 @@ function CinematicHero() {
       id="top"
       ref={ref}
       aria-label="FindMyDentist introduction"
-      className="relative h-[330vh] bg-black md:h-[420vh]"
+      className="relative h-[250vh] md:h-[310vh]"
     >
       <div
         className="sticky top-0 h-svh overflow-hidden"
@@ -179,50 +158,9 @@ function CinematicHero() {
                 sizes="380px"
                 className={`object-contain transition-opacity duration-500 ${mascotReady ? "opacity-0" : ""}`}
               />
-              {/* thought bubble above-left of the head, trailing dots pointing at it; inside the scaled box so it rides
-                  along with the mascot */}
-              <motion.div
-                style={{ opacity: sayOpacity, scale: sayScale }}
-                className="absolute -left-[42%] -top-[16%] z-10 origin-bottom-right"
-              >
-                <p className="whitespace-nowrap rounded-[999px] bg-white px-[1.3em] py-[0.8em] text-[clamp(13px,2.1svh,20px)] font-bold text-slate-900 shadow-[0_0_0_3px_rgba(255,255,255,0.25),0_10px_40px_rgba(120,160,255,0.45)]">
-                  I will take over!
-                </p>
-                <span className="absolute -bottom-[0.9em] right-[0.6em] size-[0.95em] rounded-full bg-white text-[clamp(13px,2.1svh,20px)]" />
-                <span className="absolute -bottom-[1.8em] -right-[0.1em] size-[0.55em] rounded-full bg-white text-[clamp(13px,2.1svh,20px)]" />
-              </motion.div>
-              {/* wider than the sprite box: room for the waving / pointing arms */}
+              {/* wider than the sprite box: room for the arms */}
               <div className="absolute inset-y-0 left-1/2 w-[170%] -translate-x-1/2">
-                <Mascot3D active={mascotOn} base={settled ? "Meditate" : "Fly"} rotY={rotY} onReady={onMascotReady} onMouth={onMouth} />
-                {/* the shout: words pop out of its mouth one after another and float off; the anchor is moved onto the
-                    mouth every frame by Mascot3D and hidden while the mascot faces away */}
-                <div ref={mouthAnchor} aria-hidden className="pointer-events-none absolute z-10 size-0">
-                  <motion.div style={{ opacity: shoutOpacity, scale: shoutScale }} className="size-0">
-                {SHOUT.map(([word, dx], i) => (
-                      <motion.span
-                        key={word}
-                        className="absolute left-0 top-0 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap text-[clamp(16px,2.6svh,26px)] font-black italic tracking-wide text-white [text-shadow:0_0_18px_rgba(120,170,255,0.9),0_2px_0_#1d4ed8]"
-                        initial={{ opacity: 0, scale: 0.15 }}
-                        animate={{
-                          opacity: [0, 1, 1, 0],
-                          scale: [0.15, 1.15, 1, 1.1],
-                          x: [0, 0, dx * 0.35, dx],
-                          y: [0, -8, -40, -120],
-                          rotate: [0, 0, -4, 4],
-                        }}
-                        transition={{
-                          duration: SHOUT.length * SHOUT_GAP,
-                          times: [0, 0.14, 0.3, 1],
-                          ease: "easeOut",
-                          repeat: Infinity,
-                          delay: i * SHOUT_GAP,
-                        }}
-                      >
-                        {word}
-                      </motion.span>
-                    ))}
-                  </motion.div>
-                </div>
+                <Mascot3D active={mascotOn} base={settled ? "Meditate" : "Fly"} rotY={rotY} onReady={onMascotReady} />
               </div>
             </div>
           </motion.div>
@@ -255,7 +193,7 @@ function CinematicHero() {
           aria-hidden={!aiActive}
           className="absolute inset-x-0 top-[calc(68px+var(--stage)*0.03)] z-20 px-4"
         >
-          <HeroAssistantStage active={aiActive} />
+          <HeroAssistantStage />
         </motion.div>
       </div>
     </section>
@@ -379,91 +317,16 @@ function getSpeech(): SpeechCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
-type ChatReply = { urgent: boolean; reply: { text: string } };
-type ChatMsg = { role: "user" | "assistant"; text: string; urgent?: boolean };
-const ANSWER_MS = 5000; // every reply takes this long, so the mascot gets its moment to think
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-/**
- * The hero's search: answers appear above the bar (replacing the greeting) and the mascot beside the bar acts it
- * out — waves when the section comes into view, meditates while nothing happens, opens its eyes and smiles while
- * you type, thinks (hand at chin) while the answer is on its way, then talks and presents with its hand while the
- * answer types out letter by letter.
- */
-function HeroAssistantStage({ active = true, still = false }: { active?: boolean; still?: boolean }) {
+function HeroAssistantStage() {
   const [text, setText] = useState("");
-  const [focused, setFocused] = useState(false);
   const [listening, setListening] = useState(false);
-  const [phase, setPhase] = useState<"idle" | "thinking" | "answering" | "done">("idle");
-  // the conversation, WhatsApp-style: the newest assistant message types out while phase === "answering"
-  const [msgs, setMsgs] = useState<ChatMsg[]>([]);
-  const [shown, setShown] = useState(0);
-  const [offer, setOffer] = useState(false); // "Need more help..?", 2 s after an answer finishes
-  const ask = useRef(0); // id of the latest question; closing the chat or asking again drops older replies
-  const list = useRef<HTMLDivElement>(null);
   const rec = useRef<InstanceType<SpeechCtor> | null>(null);
   const voice = useSyncExternalStore(noop, () => getSpeech() !== null, () => false);
-  const last = msgs[msgs.length - 1];
 
-  // wave each time the section comes into view (a fresh object each time `active` turns true replays it)
-  const wave = useMemo(() => (active ? { name: "Wave", id: 1 } : null), [active]);
-
-  // type the newest answer out letter by letter (long answers speed up so it never drags past ~6 s)
-  useEffect(() => {
-    if (phase !== "answering" || last?.role !== "assistant") return;
-    const len = last.text.length;
-    const step = Math.max(1, Math.ceil(len / 240));
-    const t = setInterval(() => {
-      setShown((n) => {
-        const next = Math.min(len, n + step);
-        if (next >= len) setPhase("done");
-        return next;
-      });
-    }, 25);
-    return () => clearInterval(t);
-  }, [phase, last]);
-
-  useEffect(() => {
-    if (phase !== "done") return;
-    const t = setTimeout(() => setOffer(true), 2000);
-    return () => clearTimeout(t);
-  }, [phase]);
-
-  // keep the newest message in view
-  useEffect(() => {
-    list.current?.scrollTo({ top: list.current.scrollHeight });
-  }, [msgs, shown, phase]);
-
-  const close = () => {
-    ask.current++;
-    setPhase("idle");
-    setMsgs([]);
-    setShown(0);
-    setOffer(false);
-  };
-
-  const send = async (q: string) => {
-    const message = q.trim();
-    if (!message || phase === "thinking" || phase === "answering") return;
-    const id = ++ask.current;
-    const history = msgs.slice(-10).map(({ role, text }) => ({ role, text }));
+  const send = (q: string) => {
+    if (!q.trim()) return;
+    openAssistant(q.trim());
     setText("");
-    setMsgs((m) => [...m, { role: "user", text: message }]);
-    setShown(0);
-    setOffer(false);
-    setPhase("thinking");
-    const wait = sleep(ANSWER_MS);
-    let reply: ChatMsg = { role: "assistant", text: "Sorry, I couldn't reach FMD AI just now. Please try again in a moment." };
-    try {
-      const r = await api<ChatReply>("/api/assistant", { method: "POST", body: { message, conversationId: null, history } });
-      reply = { role: "assistant", text: r.reply.text, urgent: r.urgent };
-    } catch {
-      // keep the apology; the wait below still applies
-    }
-    await wait;
-    if (id !== ask.current) return; // closed or replaced meanwhile
-    setMsgs((m) => [...m, reply]);
-    setPhase("answering");
   };
 
   const toggleVoice = () => {
@@ -483,191 +346,59 @@ function HeroAssistantStage({ active = true, still = false }: { active?: boolean
     r.start();
   };
 
-  const mood =
-    phase === "thinking" ? "Think" : phase === "answering" ? "Explain" : offer || focused || text || listening ? "Idle" : "Meditate";
-  const hasAnswer = msgs.length > 0;
-
   return (
-    // chat mode: the chat box fills the screen down to the bar (bar, suggestions and note stay at the bottom)
-    <div
-      className={`relative mx-auto flex max-w-[760px] flex-col items-center text-center ${
-        hasAnswer ? "h-[calc(var(--stage)*0.97-24px)]" : ""
-      }`}
-    >
-      {hasAnswer ? (
-        <motion.div
-          layout
-          initial={{ opacity: 0, y: 40, scale: 0.97 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ type: "spring", stiffness: 170, damping: 24 }}
-          className="glass relative flex min-h-0 w-full flex-1 flex-col rounded-3xl border border-line-strong text-left shadow-[0_8px_32px_-8px_rgba(0,0,0,0.55)]"
-        >
-          <div className="flex items-center gap-2 border-b border-line px-4 py-2.5 text-[12.5px] text-ink-3">
-            <Sparkles className="size-3.5 shrink-0" strokeWidth={1.5} />
-            FMD AI
-            <button
-              type="button"
-              onClick={close}
-              aria-label="Close chat"
-              className="ml-auto grid size-8 place-items-center rounded-full text-ink-3 transition-colors hover:bg-white/10 hover:text-ink"
-            >
-              <X className="size-4" strokeWidth={1.75} />
-            </button>
-          </div>
-          {/* WhatsApp-style: your questions on the right, FMD AI's replies on the left */}
-          <div ref={list} aria-live="polite" className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto p-4">
-            {msgs.map((msg, i) => {
-              const typing = phase === "answering" && i === msgs.length - 1;
-              return (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 14, scale: 0.96 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ type: "spring", stiffness: 260, damping: 24 }}
-                  className={`max-w-[85%] whitespace-pre-line px-3.5 py-2 text-[14.5px] leading-relaxed shadow-[0_4px_14px_-6px_rgba(0,0,0,0.6)] ${
-                    msg.role === "user"
-                      ? "self-end rounded-2xl rounded-br-md bg-[#2f6bff] text-white"
-                      : "self-start rounded-2xl rounded-bl-md border border-line bg-white/10 text-ink"
-                  }`}
-                >
-                  {msg.urgent && <p className="mb-1 text-[12.5px] font-medium text-[#ffb4a8]">This may need prompt care — please contact a dentist soon.</p>}
-                  {typing ? msg.text.slice(0, shown) : msg.text}
-                  {typing && <span className="ml-0.5 inline-block h-[1.1em] w-[2px] translate-y-[3px] animate-pulse bg-ink" />}
-                  {msg.role === "assistant" && phase === "done" && i === msgs.length - 1 && (
-                    <button
-                      type="button"
-                      onClick={() => openAssistant(msgs[i - 1]?.text)}
-                      className="mt-1.5 block text-[12.5px] font-medium text-ink-2 underline-offset-4 hover:text-ink hover:underline"
-                    >
-                      Continue in chat →
-                    </button>
-                  )}
-                </motion.div>
-              );
-            })}
-            {phase === "thinking" && (
-              <motion.div
-                initial={{ opacity: 0, y: 14 }}
-                animate={{ opacity: 1, y: 0 }}
-                aria-label="FMD AI is thinking"
-                className="flex gap-1 self-start rounded-2xl rounded-bl-md border border-line bg-white/10 px-3.5 py-3"
-              >
-                {[0, 1, 2].map((i) => (
-                  <motion.span
-                    key={i}
-                    className="size-1.5 rounded-full bg-ink-2"
-                    animate={{ opacity: [0.25, 1, 0.25], y: [0, -3, 0] }}
-                    transition={{ duration: 1, repeat: Infinity, delay: i * 0.18 }}
-                  />
-                ))}
-              </motion.div>
-            )}
-          </div>
-        </motion.div>
-      ) : (
-        <>
-          <span className="icon-tile size-12">
-            <Sparkles className="size-5" strokeWidth={1.3} />
-          </span>
-          <p className="eyebrow mt-6" style={{ textShadow: "0 1px 12px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.6)" }}>FMD AI</p>
-          <h2
-            className="mt-4 text-[clamp(28px,4.2vw,48px)] font-light leading-[1.08] tracking-[-0.035em] text-ink"
-            style={{ textShadow: "0 2px 20px rgba(0,0,0,0.95), 0 0 60px rgba(0,0,0,0.7)" }}
-          >
-            Hi, I&apos;m FMD AI.
-            <br />
-            <span className="text-ink-2">How can I help with your dental care?</span>
-          </h2>
-        </>
-      )}
-
-      <motion.div
-        layout
-        transition={{ type: "spring", stiffness: 170, damping: 24 }}
-        className={`flex w-full items-end gap-2 sm:gap-4 ${hasAnswer ? "mt-4" : "mt-8"}`}
+    <div className="relative mx-auto flex max-w-[680px] flex-col items-center text-center">
+      <span className="icon-tile size-12">
+        <Sparkles className="size-5" strokeWidth={1.3} />
+      </span>
+      <p className="eyebrow mt-6" style={{ textShadow: "0 1px 12px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.6)" }}>FMD AI</p>
+      <h2
+        className="mt-4 text-[clamp(28px,4.2vw,48px)] font-light leading-[1.08] tracking-[-0.035em] text-ink"
+        style={{ textShadow: "0 2px 20px rgba(0,0,0,0.95), 0 0 60px rgba(0,0,0,0.7)" }}
       >
-        {!still && (
-          // the mascot beside the bar; its canvas is wider than the box so the presenting arm has room
-          <div className="relative h-[64px] w-[48px] shrink-0 sm:h-[84px] sm:w-[64px]">
-            <div aria-hidden className="absolute inset-y-0 left-1/2 w-[170%] -translate-x-1/2">
-              <Mascot3D active={active} base={mood} gesture={wave} />
-            </div>
-            {/* beside its head: thinking dots while it works, then an offer of more help after every answer */}
-            {phase === "thinking" && (
-              <motion.div
-                aria-hidden
-                initial={{ opacity: 0, scale: 0.6 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="absolute -top-3 left-[78%] flex origin-bottom-left items-center gap-1 rounded-full bg-white px-2.5 py-2 shadow-[0_6px_24px_rgba(120,160,255,0.35)]"
-              >
-                {[0, 1, 2, 3].map((i) => (
-                  <motion.span
-                    key={i}
-                    className="size-1.5 rounded-full bg-slate-700"
-                    animate={{ opacity: [0.25, 1, 0.25], y: [0, -3, 0] }}
-                    transition={{ duration: 1, repeat: Infinity, delay: i * 0.15 }}
-                  />
-                ))}
-              </motion.div>
-            )}
-            {offer && phase === "done" && !text && (
-              <motion.p
-                initial={{ opacity: 0, scale: 0.6 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ type: "spring", stiffness: 260, damping: 18 }}
-                className="absolute -top-4 left-[78%] origin-bottom-left whitespace-nowrap rounded-2xl rounded-bl-sm bg-white px-3 py-1.5 text-[12.5px] font-semibold text-slate-900 shadow-[0_6px_24px_rgba(120,160,255,0.35)]"
-              >
-                Need more help..?
-              </motion.p>
-            )}
-          </div>
-        )}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            send(text);
-          }}
-          className="glass flex min-w-0 flex-1 items-center gap-2 rounded-full border border-line-strong p-1.5 pl-5 shadow-[inset_0_1px_0_var(--inner-hi),0_8px_32px_-8px_rgba(0,0,0,0.55)] focus-within:border-[rgba(255,255,255,0.22)] focus-within:shadow-[inset_0_1px_0_var(--inner-hi),0_0_0_1px_rgb(var(--accent-rgb)/0.18),0_0_60px_-10px_var(--accent-glow)]"
-        >
-          <label htmlFor="hero-ai" className="sr-only">
-            Ask FMD AI
-          </label>
-          <input
-            id="hero-ai"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            placeholder="Describe a symptom or ask a question…"
-            autoComplete="off"
-            className="h-11 min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink-3 sm:h-12"
-          />
-          {voice && (
-            <button
-              type="button"
-              onClick={toggleVoice}
-              aria-pressed={listening}
-              aria-label={listening ? "Stop voice input" : "Speak your question"}
-              className={`grid size-11 shrink-0 place-items-center rounded-full border transition-colors sm:size-12 ${
-                listening ? "border-line-strong bg-[var(--accent-soft)] text-ink" : "border-transparent text-ink-2 hover:text-ink"
-              }`}
-            >
-              <Mic className="size-[18px]" strokeWidth={1.5} />
-              {listening && <span className="sr-only">Listening</span>}
-            </button>
-          )}
-          <button
-            type="submit"
-            aria-label="Send"
-            disabled={!text.trim() || phase === "thinking" || phase === "answering"}
-            className="btn-primary size-11 shrink-0 disabled:opacity-50 sm:size-12"
-          >
-            <ArrowUp className="size-[18px]" strokeWidth={1.75} />
-          </button>
-        </form>
-      </motion.div>
+        Hi, I&apos;m FMD AI.
+        <br />
+        <span className="text-ink-2">How can I help with your dental care?</span>
+      </h2>
 
-      <div className={`flex flex-wrap justify-center gap-2 ${hasAnswer ? "mt-3" : "mt-5"}`}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          send(text);
+        }}
+        className="glass mt-8 flex w-full items-center gap-2 rounded-full border border-line-strong p-1.5 pl-5 shadow-[inset_0_1px_0_var(--inner-hi),0_8px_32px_-8px_rgba(0,0,0,0.55)] focus-within:border-[rgba(255,255,255,0.22)] focus-within:shadow-[inset_0_1px_0_var(--inner-hi),0_0_0_1px_rgb(var(--accent-rgb)/0.18),0_0_60px_-10px_var(--accent-glow)]"
+      >
+        <label htmlFor="hero-ai" className="sr-only">
+          Ask FMD AI
+        </label>
+        <input
+          id="hero-ai"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Describe a symptom or ask a question…"
+          autoComplete="off"
+          className="h-11 min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink-3 sm:h-12"
+        />
+        {voice && (
+          <button
+            type="button"
+            onClick={toggleVoice}
+            aria-pressed={listening}
+            aria-label={listening ? "Stop voice input" : "Speak your question"}
+            className={`grid size-11 shrink-0 place-items-center rounded-full border transition-colors sm:size-12 ${
+              listening ? "border-line-strong bg-[var(--accent-soft)] text-ink" : "border-transparent text-ink-2 hover:text-ink"
+            }`}
+          >
+            <Mic className="size-[18px]" strokeWidth={1.5} />
+            {listening && <span className="sr-only">Listening</span>}
+          </button>
+        )}
+        <button type="submit" aria-label="Send" disabled={!text.trim()} className="btn-primary size-11 shrink-0 disabled:opacity-50 sm:size-12">
+          <ArrowUp className="size-[18px]" strokeWidth={1.75} />
+        </button>
+      </form>
+
+      <div className="mt-5 flex flex-wrap justify-center gap-2">
         {PROMPTS.map((q) => (
           <button
             key={q}
@@ -680,15 +411,13 @@ function HeroAssistantStage({ active = true, still = false }: { active?: boolean
         ))}
       </div>
 
-      <motion.p
-        layout="position"
-        transition={{ type: "spring", stiffness: 170, damping: 24 }}
-        className={`flex max-w-[520px] items-start gap-2 text-left text-[12.5px] leading-snug text-ink-3 ${hasAnswer ? "mt-3" : "mt-6"}`}
+      <p
+        className="mt-6 flex max-w-[520px] items-start gap-2 text-left text-[12.5px] leading-snug text-ink-3"
         style={{ textShadow: "0 1px 10px rgba(0,0,0,0.9)" }}
       >
         <ShieldCheck className="mt-px size-3.5 shrink-0" strokeWidth={1.5} />
         Guidance, not diagnosis. FMD AI explains and suggests; it never books, contacts clinics or pays on your behalf.
-      </motion.p>
+      </p>
     </div>
   );
 }
@@ -718,7 +447,7 @@ function HeroCtas() {
 function StaticHero() {
   const full = useMotionValue(1);
   return (
-    <section id="top" aria-label="FindMyDentist introduction" className="relative bg-black">
+    <section id="top" aria-label="FindMyDentist introduction" className="relative">
       <div className="relative h-svh min-h-[620px] overflow-hidden" style={stageVars("max(100svh, 620px)")}>
         <div aria-hidden className="hero-sky absolute inset-0 opacity-60" />
         <Earth spread={full} core={full} coreScale={full} />
@@ -742,7 +471,7 @@ function StaticHero() {
         </div>
       </div>
       <div className="py-16">
-        <HeroAssistantStage still />
+        <HeroAssistantStage />
       </div>
     </section>
   );
