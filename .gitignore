@@ -3,3 +3,7 @@
 /*.jpg
 /*.jpeg
 /*.webp
+#  all python cache files in all
+__pycache__/
+/*.pyc
+.tripo/
