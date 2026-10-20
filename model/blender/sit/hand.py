@@ -43,10 +43,10 @@ def _ellipsoid(loc, size):
     return o
 
 
-def build_hand(name="Hand"):
+def build_hand(name="Hand", wrist_r=0.032):
     parts = []
     # wrist (reaches 3.5 cm back into the sleeve cuff) and palm
-    parts += _capsule("wrist", (-0.034, 0, 0), (0.004, 0, 0), 0.032, None)  # fills the sleeve cuff (r≈0.04)
+    parts += _capsule("wrist", (-0.034, 0, 0), (0.004, 0, 0), wrist_r, None)  # fills the sleeve cuff (r≈0.04)
     parts.append(_ellipsoid((0.046, 0.0, 0.0), (0.050, 0.051, 0.024)))  # one egg-shaped palm: no seam
     bones = [("hand", Vector((0, 0, 0)), Vector((KNUCKLE_X, 0, 0)), None, (0, 0, 1))]
     for fname, by, splay, r, lens in FINGERS:

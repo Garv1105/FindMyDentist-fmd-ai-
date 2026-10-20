@@ -23,6 +23,19 @@ const SIT_URL = "/mascot-sitting.glb?v=11";
 const SIT_LOOPS = ["Meditate", "Fly", "Idle", "Talk", "Think", "Explain"];
 const SIT_BUTTONS = [...SIT_LOOPS, "Wake", "Wave", "PointLeft", "PointRight", "Present", "LookAround", "Nod", "Smile", "Happy"];
 
+// new standing mascot (model/blender/tripo): bump ?v= when the GLB is rebuilt
+const NEW_URL = "/mascot-tripo.glb?v=5";
+const NEW_LOOPS = ["Idle", "Walk", "Run", "Dance", "Talk", "Think", "Sit"];
+const NEW_BUTTONS = [...NEW_LOOPS, "Wave", "PointLeft", "PointRight", "Present", "ThumbsUp", "Clap", "Jump", "Celebrate",
+  "Bow", "Nod", "HeadShake", "LookAround", "Smile", "Surprised", "Sad", "SitDown", "StandUp"];
+const THEN: Record<string, string> = { SitDown: "Sit", StandUp: "Idle" }; // loop to settle into afterwards
+// new seated mascot (model/blender/tripo: prep_tripo.py sit, rig_tripo.py sit, anim_sit_tripo.py); bump ?v= on rebuild
+const NEW_SIT_URL = "/mascot-tripo-sit.glb?v=11";
+const NEW_SIT_LOOPS = ["Meditate", "Fly", "Idle", "Typing", "Talk", "Think", "Explain"];
+const NEW_SIT_BUTTONS = [...NEW_SIT_LOOPS, "Wake", "Wave", "PointLeft", "PointRight", "Present", "ThumbsUp", "Clap",
+  "Happy", "LookAround", "Brows", "Nod", "HeadShake", "Smile"];
+const SIT_THEN: Record<string, string> = { Wake: "Idle" };
+
 type Gesture = { name: string; id: number } | null;
 
 /** base loop + replayable one-shot gesture */
@@ -115,12 +128,67 @@ function Sitting() {
   );
 }
 
+function NewStanding() {
+  const { base, gesture, play, setBase } = useClips("Idle", NEW_LOOPS);
+  const pick = (c: string) => {
+    play(c);
+    if (THEN[c]) setBase(THEN[c]);
+  };
+  return (
+    <main className="h-screen bg-gradient-to-b from-[#0b1020] to-[#1a2a55]">
+      {/* the canvas ends above the clip buttons (they wrap to 3-4 rows), so the feet stay visible */}
+      <div className="h-[calc(100vh-13rem)] pt-16 md:h-[calc(100vh-9rem)]">
+        <Mascot url={NEW_URL} free base={base} gesture={gesture} />
+      </div>
+      <p className="fixed inset-x-0 top-28 text-center text-sm text-slate-300 md:top-16">Drag to rotate · scroll to zoom</p>
+      <ClipButtons clips={NEW_BUTTONS} active={base} onPick={pick} />
+    </main>
+  );
+}
+
+function NewSitting() {
+  const { base, gesture, play, setBase } = useClips("Meditate", NEW_SIT_LOOPS);
+  const pick = (c: string) => {
+    play(c);
+    if (SIT_THEN[c]) setBase(SIT_THEN[c]);
+  };
+  return (
+    <main className="h-screen bg-gradient-to-b from-[#0b1020] to-[#1a2a55]">
+      <div className="h-[calc(100vh-11rem)] pt-16 md:h-[calc(100vh-8rem)]">
+        <Mascot url={NEW_SIT_URL} free base={base} gesture={gesture} />
+      </div>
+      <p className="fixed inset-x-0 top-28 text-center text-sm text-slate-300 md:top-16">Drag to rotate · scroll to zoom</p>
+      <ClipButtons clips={NEW_SIT_BUTTONS} active={base} onPick={pick} />
+    </main>
+  );
+}
+
+// new Tripo exports (model/mascot/tooth character 3d model*.glb): no clips, so the motions are code-driven
+const TRIPO = {
+  "Tripo Rig": { url: "/tripo-rig.glb", lift: 0.277, motions: ["Float", "Spin", "Jump", "Wave"] },
+  "Tripo Raw": { url: "/tripo-raw.glb?v=2", lift: 0, motions: ["Float", "Spin", "Jump"] },
+  "Tripo Sit Rig": { url: "/tripo-sit-rig.glb", lift: 0.12, motions: ["Float", "Spin", "Jump", "Wave"] },
+  "Tripo Sit Raw": { url: "/tripo-sit-raw.glb", lift: 0, motions: ["Float", "Spin", "Jump"] },
+};
+const TABS = ["New Standing", "New Sitting", "Standing", "Sitting", "Tripo Rig", "Tripo Raw", "Tripo Sit Rig", "Tripo Sit Raw"] as const;
+
+function Tripo({ url, lift, motions }: (typeof TRIPO)[keyof typeof TRIPO]) {
+  const [motion, setMotion] = useState(motions[0]);
+  return (
+    <main className="h-screen bg-gradient-to-b from-[#0b1020] to-[#1a2a55]">
+      <Mascot url={url} free base="" lift={lift} motion={motion} />
+      <p className="fixed inset-x-0 top-16 text-center text-sm text-slate-300">Drag to rotate · scroll to zoom</p>
+      <ClipButtons clips={motions} active={motion} onPick={setMotion} />
+    </main>
+  );
+}
+
 export default function Home() {
-  const [tab, setTab] = useState<"Standing" | "Sitting">("Standing");
+  const [tab, setTab] = useState<(typeof TABS)[number]>("New Standing");
   return (
     <>
-      <nav className="fixed inset-x-0 top-4 z-20 mx-auto flex w-fit gap-1 rounded-2xl bg-white/80 p-1 shadow-lg backdrop-blur">
-        {(["Standing", "Sitting"] as const).map((t) => (
+      <nav className="fixed inset-x-0 top-4 z-20 mx-auto flex w-fit max-w-[95vw] flex-wrap justify-center gap-1 rounded-2xl bg-white/80 p-1 shadow-lg backdrop-blur">
+        {TABS.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -132,7 +200,7 @@ export default function Home() {
           </button>
         ))}
       </nav>
-      {tab === "Standing" ? <Standing /> : <Sitting />}
+      {tab === "New Standing" ? <NewStanding /> : tab === "New Sitting" ? <NewSitting /> : tab === "Standing" ? <Standing /> : tab === "Sitting" ? <Sitting /> : <Tripo key={tab} {...TRIPO[tab]} />}
     </>
   );
 }
