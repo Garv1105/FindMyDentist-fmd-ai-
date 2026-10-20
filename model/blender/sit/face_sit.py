@@ -21,7 +21,14 @@ LID_END_Z, LID_SAG, LID_HW = 0.164, 0.030, 0.054
 BROW_DZ, BROW_DX = 0.085, 0.010
 SMILE_END_Z, SMILE_SAG, SMILE_HW = 0.077, 0.015, 0.0415
 MOUTH_TOP_Z, MOUTH_RX, MOUTH_RZ = 0.080, 0.0425, 0.0275
+MOUTH_TOP_LINE = None   # set (fraction of MOUTH_RZ above the centre) for a straight top edge: a half-moon smile
+MOUTH_TOP_CURVE = 0.0   # with MOUTH_TOP_LINE: the top edge curves up toward the corners (+ this x (x/RX)^2), a smile
+BROW_HW, BROW_SAG = 0.036, 0.010
+STROKE_TAPER = 0.0      # lids, brows, smile: how much thinner the stroke ends are than its middle (0 = even tube)
 BLUSH_X, BLUSH_Z, BLUSH_RX, BLUSH_RZ = 0.200, 0.104, 0.040, 0.026
+BLUSH_ALPHA, BLUSH_FALLOFF = 0.55, 1.6   # peak opacity and edge softness of the blush discs
+BLUSH_RGB = (1.0, 0.55, 0.6)
+FACE_CX = 0.0           # x of the face's centre line (the seated Tripo head is turned: its face sits off its midline)
 SINK = 0.024            # how far hidden parts sit inside the head
 TUBE_LID, TUBE_BROW, TUBE_SMILE = 0.0062, 0.0056, 0.0056
 
@@ -88,8 +95,8 @@ def blush_texture(path):
     yy, xx = np.mgrid[0:S, 0:S]
     r = np.sqrt(((xx + 0.5) / S - 0.5) ** 2 + ((yy + 0.5) / S - 0.5) ** 2) / 0.5
     col = np.zeros((S, S, 4))
-    col[..., :3] = [1.0, 0.55, 0.6]
-    col[..., 3] = 0.55 * np.clip(1 - r, 0, 1) ** 1.6
+    col[..., :3] = BLUSH_RGB
+    col[..., 3] = BLUSH_ALPHA * np.clip(1 - r, 0, 1) ** BLUSH_FALLOFF
     return col
 
 
@@ -148,12 +155,15 @@ def disc_on_surface(name, surf, cx, cz, rx, rz, lift, mat, dome=0.0, rings=14, s
     return _new_obj(name, bm, mat)
 
 
-def tube_on_surface(name, surf, xz_points, radius, mat, lift=0.0015, sink=0.0):
-    """Round-capped tube hugging the face along (x, z) points; sink pushes it into the head (hidden at rest)."""
+def tube_on_surface(name, surf, xz_points, radius, mat, lift=0.0015, sink=0.0, taper=0.0):
+    """Round-capped tube hugging the face along (x, z) points; sink pushes it into the head (hidden at rest);
+    taper thins it toward both ends like a brush stroke."""
     pts = []
     for x, z in xz_points:
         hit, n = surf.at(x, z)
         pts.append(hit + n * (lift - sink))
+    k = np.linspace(0, 1, len(pts))
+    widths = 1 - taper * (1 - np.sin(np.pi * k) ** 0.6)
     cu = bpy.data.curves.new(name, "CURVE")
     cu.dimensions = "3D"
     cu.bevel_depth = radius
@@ -161,13 +171,14 @@ def tube_on_surface(name, surf, xz_points, radius, mat, lift=0.0015, sink=0.0):
     cu.use_fill_caps = True
     sp = cu.splines.new("POLY")
     sp.points.add(len(pts) - 1)
-    for p, q in zip(sp.points, pts):
+    for p, q, w in zip(sp.points, pts, widths):
         p.co = (q.x, q.y, q.z, 1)
+        p.radius = w
     obj = bpy.data.objects.new(name, cu)
     bpy.context.scene.collection.objects.link(obj)
     caps = []
     for end in (pts[0], pts[-1]):
-        bpy.ops.mesh.primitive_uv_sphere_add(radius=radius, segments=16, ring_count=8, location=end)
+        bpy.ops.mesh.primitive_uv_sphere_add(radius=radius * widths[0], segments=16, ring_count=8, location=end)
         caps.append(bpy.context.active_object)
     for o in bpy.context.scene.objects:
         o.select_set(o == obj or o in caps)
@@ -227,24 +238,24 @@ def build(head_obj, tmpdir):
 
     parts = {}
     for s, sx in (("L", 1), ("R", -1)):
-        cx = sx * EYE_X
+        cx = FACE_CX + sx * EYE_X
         o = disc_on_surface(f"Eye.{s}", surf, cx, EYE_Z, EYE_RX, EYE_RZ, 0.0006, eye_mat, dome=0.010)
         hit, n = surf.at(cx, EYE_Z)
         parts[f"Eye.{s}"] = (o, hit, n)
-        o = tube_on_surface(f"Lid.{s}", surf, arc(cx, LID_END_Z, LID_HW, LID_SAG), TUBE_LID, ink)
+        o = tube_on_surface(f"Lid.{s}", surf, arc(cx, LID_END_Z, LID_HW, LID_SAG), TUBE_LID, ink, taper=STROKE_TAPER)
         hit, n = surf.at(cx, LID_END_Z - LID_SAG)
         parts[f"Lid.{s}"] = (sunk(o, n), hit, n)
         bx, bz = cx + sx * BROW_DX, EYE_Z + BROW_DZ
-        brow_pts = [(bx + x, bz - 0.010 * (x / 0.036) ** 2) for x in np.linspace(-0.036, 0.036, 22)]
-        o = tube_on_surface(f"Brow.{s}", surf, brow_pts, TUBE_BROW, ink)
+        brow_pts = [(bx + x, bz - BROW_SAG * (x / BROW_HW) ** 2) for x in np.linspace(-BROW_HW, BROW_HW, 22)]
+        o = tube_on_surface(f"Brow.{s}", surf, brow_pts, TUBE_BROW, ink, taper=STROKE_TAPER)
         hit, n = surf.at(bx, bz)
         parts[f"Brow.{s}"] = (sunk(o, n), hit, n)
-        o = disc_on_surface(f"Blush.{s}", surf, sx * BLUSH_X, BLUSH_Z, BLUSH_RX, BLUSH_RZ, 0.0012, blush_mat)
-        hit, n = surf.at(sx * BLUSH_X, BLUSH_Z)
+        o = disc_on_surface(f"Blush.{s}", surf, FACE_CX + sx * BLUSH_X, BLUSH_Z, BLUSH_RX, BLUSH_RZ, 0.0012, blush_mat)
+        hit, n = surf.at(FACE_CX + sx * BLUSH_X, BLUSH_Z)
         parts[f"Blush.{s}"] = (o, hit, n)
 
-    smile = tube_on_surface("Smile", surf, arc(0.0, SMILE_END_Z, SMILE_HW, SMILE_SAG), TUBE_SMILE, ink)
-    hit, n = surf.at(0.0, SMILE_END_Z - SMILE_SAG)
+    smile = tube_on_surface("Smile", surf, arc(FACE_CX, SMILE_END_Z, SMILE_HW, SMILE_SAG), TUBE_SMILE, ink, taper=STROKE_TAPER)
+    hit, n = surf.at(FACE_CX, SMILE_END_Z - SMILE_SAG)
     parts["Smile"] = (smile, hit, n)
 
     # open mouth (result.png): a "D" - fairly flat smiling top edge, round bottom - with the tongue low inside
@@ -252,9 +263,17 @@ def build(head_obj, tmpdir):
 
     def d_outline(th):
         s_ = math.sin(th)
-        return 1.0 if s_ < 0 else 1.0 - 0.38 * s_  # upper half flattened toward the smile line
-    mouth = disc_on_surface("MouthOpen", surf, 0.0, mz, MOUTH_RX, MOUTH_RZ, 0.0009, mouth_mat, outline=d_outline)
-    tongue = disc_on_surface("Tongue", surf, 0.0, mz - MOUTH_RZ * 0.42, MOUTH_RX * 0.55, MOUTH_RZ * 0.42, 0.0017,
+        if s_ < 0:
+            return 1.0
+        if MOUTH_TOP_LINE is not None:  # the upper edge: z = c + k x^2 (straight when k = 0), in disc units
+            c, k, cs = MOUTH_TOP_LINE, MOUTH_TOP_CURVE, math.cos(th) ** 2
+            if k * cs < 1e-6:
+                return min(1.0, c / max(s_, 1e-3))
+            disc = s_ * s_ - 4 * k * c * cs
+            return 1.0 if disc < 0 else min(1.0, (s_ - math.sqrt(disc)) / (2 * k * cs))
+        return 1.0 - 0.38 * s_  # upper half flattened toward the smile line
+    mouth = disc_on_surface("MouthOpen", surf, FACE_CX, mz, MOUTH_RX, MOUTH_RZ, 0.0009, mouth_mat, outline=d_outline)
+    tongue = disc_on_surface("Tongue", surf, FACE_CX, mz - MOUTH_RZ * 0.42, MOUTH_RX * 0.55, MOUTH_RZ * 0.42, 0.0017,
                              tongue_mat)
     for o in bpy.context.scene.objects:
         o.select_set(o in (mouth, tongue))
@@ -262,6 +281,6 @@ def build(head_obj, tmpdir):
     bpy.ops.object.join()
     mouth = bpy.context.view_layer.objects.active
     mouth.name = mouth.data.name = "MouthOpen"
-    hit, n = surf.at(0.0, mz)
+    hit, n = surf.at(FACE_CX, mz)
     parts["MouthOpen"] = (sunk(mouth, n), hit, n)
     return parts
