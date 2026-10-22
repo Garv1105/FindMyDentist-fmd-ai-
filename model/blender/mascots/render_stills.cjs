@@ -25,7 +25,8 @@ const js = block
 const LOOKS = new Function(`${js}; return LOOKS;`)();
 const glassPatch = src.slice(src.indexOf("function glassify"), src.indexOf("\n}\n", src.indexOf("function glassify")) + 3);
 
-const SIZE = 900; // px tall; phones show the boxes at up to ~300 css px × 3
+const SIZE = 1200; // px tall; phones show the boxes at up to ~300 css px × 3
+const SS = 2; // rendered at SS× and downscaled: supersampled edges, as clean as the live canvases
 const jobs = Object.entries(LOOKS).map(([file, look]) => ({
   file,
   look,
@@ -40,7 +41,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 ${glassPatch.replace(/: THREE\.Object3D|: number|as THREE\.Mesh|as THREE\.Material|\(o as THREE\.Mesh\)/g, (m) => (m === "(o as THREE.Mesh)" ? "o" : ""))}
-const J = ${JSON.stringify(jobs)}, H = ${SIZE};
+const J = ${JSON.stringify(jobs)}, H = ${SIZE * SS}, OUT_H = ${SIZE};
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 for (const [ji, j] of J.entries()) {
   const L = j.look, W = Math.round(H * j.aspect);
@@ -80,7 +81,12 @@ for (const [ji, j] of J.entries()) {
   cc.update(gl, env);
   scene.environment = rt.texture;
   gl.render(scene, cam);
-  await fetch("/save?f=" + j.file.replace(".glb", ".webp"), { method: "POST", body: gl.domElement.toDataURL("image/webp", 0.9) });
+  const small = document.createElement("canvas");
+  small.width = Math.round(W * OUT_H / H); small.height = OUT_H;
+  const ctx = small.getContext("2d");
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(gl.domElement, 0, 0, small.width, small.height);
+  await fetch("/save?f=" + j.file.replace(".glb", ".webp"), { method: "POST", body: small.toDataURL("image/webp", 0.92) });
   gl.dispose();
 }
 window.DONE = 1;

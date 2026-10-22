@@ -12,7 +12,7 @@ const MascotModel = dynamic(() => import("./MascotModel"), { ssr: false });
  * motions are MascotModel's MOTIONS). public/models/compressed holds the same models unrigged (build_porcelain.sh).
  */
 // bump ?v= whenever the models are rebuilt, or browsers keep the cached old ones
-const M = (name: string) => `/models/rig/${name}.glb?v=3`;
+const M = (name: string) => `/models/rig/${name}.glb?v=4`;
 type Art = { model: string; overlay?: { src: string; style: React.CSSProperties } };
 const MODELS: Record<string, Art> = {
   "/img/mascots/mascot-guide-1024.webp": { model: M("guide") },
@@ -36,7 +36,7 @@ const MODELS: Record<string, Art> = {
  * its 3D model instead (public/models/stills, rendered by model/blender/mascots/render_stills.cjs: same look, pose and
  * framing, transparent). Bump STILL_V when they are re-rendered.
  */
-const STILL_V = 1;
+const STILL_V = 2;
 const TOUCH = "(hover: none) and (pointer: coarse)";
 export const isTouch = () => typeof window !== "undefined" && window.matchMedia(TOUCH).matches;
 const stillOf = (model: string) => `/models/stills/${model.split("/").pop()!.split("?")[0].replace(".glb", ".webp")}?v=${STILL_V}`;
