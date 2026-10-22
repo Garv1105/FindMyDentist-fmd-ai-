@@ -9,7 +9,7 @@ const brandSans = Plus_Jakarta_Sans({ variable: "--font-brand", subsets: ["latin
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "FindMyDentist — AI-native dental care",
+  title: "FindMyDentist",
   description:
     "Find the right dentist, understand treatments, and organise your dental care — guided by FMD AI, with you in control of every decision.",
 };
