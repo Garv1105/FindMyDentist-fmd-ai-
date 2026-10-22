@@ -1,6 +1,7 @@
 import { DiscoveryProvider } from "@/components/discovery";
 import { AssistantPanel } from "@/components/hero/Assistant";
 import Hero from "@/components/hero/Hero";
+import ModelPreloader from "@/components/ModelPreloader";
 import Navbar from "@/components/nav/Navbar";
 import AiFeatures from "@/components/sections/AiFeatures";
 import ComingSoon from "@/components/sections/ComingSoon";
@@ -19,6 +20,7 @@ import Walkthrough from "@/components/sections/Walkthrough";
 export default function Home() {
   return (
     <DiscoveryProvider>
+      <ModelPreloader />
       <Navbar />
       <main>
         <Hero /> {/* 01 */}
