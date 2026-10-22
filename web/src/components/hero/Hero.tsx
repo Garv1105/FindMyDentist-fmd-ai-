@@ -12,9 +12,9 @@ import {
   useMotionValue,
   type MotionValue,
 } from "motion/react";
-import { ArrowRight, ArrowUp, Mic, ShieldCheck, Sparkles, X } from "lucide-react";
+import { ArrowUp, Mic, ShieldCheck } from "lucide-react";
 import dynamic from "next/dynamic";
-import { useCallback, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { openAssistant } from "./Assistant";
 import { MASCOT_KEYS, MASCOT_OPACITY, PHASES } from "./phases";
 import { RIM, RIM_APEX, RIM_H, RIM_W, rimPath, rimYAt } from "./rim";
@@ -72,7 +72,6 @@ function useReducedMotionSafe() {
 
 export default function Hero() {
   const reduced = useReducedMotionSafe();
-  // the dentist search (section 02) is its own component now: sections/Search.tsx
   return reduced ? <StaticHero /> : <CinematicHero />;
 }
 
@@ -181,16 +180,14 @@ function CinematicHero() {
           style={{ opacity: titleOpacity, y: titleY, pointerEvents: titlePointer }}
           className="absolute inset-x-0 top-[calc(68px+var(--stage)*0.1)] z-10 px-4 text-center"
         >
-          <p className="eyebrow">Redefining Dental Intelligence</p>
-          <h1 className="mx-auto mt-5 max-w-[900px] text-[clamp(40px,min(7vw,10.5svh),104px)] font-light leading-[0.98] tracking-[-0.045em]">
-            <span className="headline-silver">Dentistry,</span>
-            <br />
-            <span className="headline-silver">Reimagined </span>
-            <span className="font-normal" style={{ color: "var(--headline-accent)", textShadow: "0 0 40px var(--accent-glow)" }}>
-              with AI.
-            </span>
-          </h1>
-          <HeroCtas />
+          <p className="eyebrow mx-auto max-w-[640px] text-balance leading-relaxed">The World&apos;s First Dental Ecosystem Where AI Doesn&apos;t Just Answer. It Acts.</p>
+          <RotatingHeadline
+            glow
+            className="mx-auto mt-5 max-w-[1000px] text-[clamp(36px,min(5.6vw,8.5svh),88px)] font-light leading-[1.02] tracking-[-0.045em]"
+          />
+          <p aria-hidden className="mt-7 type-label tracking-[0.3em] text-ink-4">
+            Scroll
+          </p>
         </motion.div>
 
         {/* D — the assistant, its own state */}
@@ -208,6 +205,64 @@ function CinematicHero() {
 }
 
 /* ------------------------------------------------------------------------- */
+
+/** [silver lead, accent tail] */
+const HEADLINES: [string, string][] = [
+  ["Intelligence That Moves Dentistry", "Forward"],
+  ["One Ecosystem. A New Era of", "Dentistry"],
+  ["Connected Care and Autonomous Clinic", "Workflows."],
+];
+const HEADLINE_HOLD_MS = 3000;
+const HEADLINE_EASE = [0.22, 1, 0.36, 1] as const;
+
+/**
+ * Cycles HEADLINES with a crossfade. Every line sits in one grid cell (invisible copies reserve the tallest
+ * height), so the switch never shifts the layout. `still` = reduced motion: opacity only, no drift or blur.
+ */
+function RotatingHeadline({ className, glow, still }: { className: string; glow?: boolean; still?: boolean }) {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setI((n) => (n + 1) % HEADLINES.length), HEADLINE_HOLD_MS);
+    return () => clearInterval(t);
+  }, []);
+
+  const line = ([lead, accent]: [string, string]) => (
+    <>
+      <span className="headline-silver">{lead} </span>
+      <span
+        className="font-normal"
+        style={{ color: "var(--headline-accent)", textShadow: glow ? "0 0 40px var(--accent-glow)" : undefined }}
+      >
+        {accent}
+      </span>
+    </>
+  );
+  const hidden = still ? { opacity: 0 } : { opacity: 0, filter: "blur(10px)" };
+
+  return (
+    <h1 className={`grid text-balance ${className}`}>
+      <span className="sr-only">{HEADLINES.map((h) => h.join(" ")).join(". ")}</span>
+      {HEADLINES.map((h, n) => (
+        <span key={n} aria-hidden className="invisible [grid-area:1/1]">
+          {line(h)}
+        </span>
+      ))}
+      <AnimatePresence initial={false}>
+        <motion.span
+          key={i}
+          aria-hidden
+          className="[grid-area:1/1] self-center"
+          initial={{ ...hidden, y: still ? 0 : 18 }}
+          animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
+          exit={{ ...hidden, y: still ? 0 : -18 }}
+          transition={{ duration: 0.46, ease: HEADLINE_EASE }}
+        >
+          {line(HEADLINES[i])}
+        </motion.span>
+      </AnimatePresence>
+    </h1>
+  );
+}
 
 /** The Earth band's own box (aspect = source image) with the mascot's limb-shaped clip. */
 /** The mascot's line, in a bubble beside its head: typed out letter by letter, gone when it leaves. */
@@ -387,7 +442,8 @@ function HeroAssistantStage() {
   return (
     <div className="relative mx-auto flex max-w-[680px] flex-col items-center text-center">
       <span className="icon-tile size-12">
-        <Sparkles className="size-5" strokeWidth={1.3} />
+        {/* tooth from the brand logo, used as a mask so it takes the tile's text colour like the icon it replaced */}
+        <span aria-hidden className="size-6 bg-current [mask:url(/img/hero/tooth-mask.png)_center/contain_no-repeat]" />
       </span>
       <p className="eyebrow mt-6" style={{ textShadow: "0 1px 12px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.6)" }}>FMD AI</p>
       <h2
@@ -413,7 +469,7 @@ function HeroAssistantStage() {
           id="hero-ai"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Describe a symptom or ask a question…"
+          placeholder="Hi! I’m almost ready. FMD AI is coming soon…"
           autoComplete="off"
           className="h-11 min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink-3 sm:h-12"
         />
@@ -463,25 +519,6 @@ function HeroAssistantStage() {
 /* ------------------------------------------------------------------------- */
 
 /** Reduced motion: the same story as a still composition, no pinning. */
-/** PDF §1: a short introduction to FMD's vision and the two hero calls to action. */
-function HeroCtas() {
-  return (
-    <>
-      <p className="mx-auto mt-6 max-w-[560px] text-[clamp(15px,1.15vw,17.5px)] leading-relaxed text-ink-2 [text-shadow:0_1px_14px_rgba(0,0,0,0.9)]">
-        An AI-first dental technology ecosystem connecting patients, dentists and dental clinics — for clearer care and smarter clinics.
-      </p>
-      <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-        <a href="#ecosystem" className="btn-primary group h-12 px-6 text-[14px]">
-          Explore FMD <ArrowRight className="arrow-nudge size-4" strokeWidth={1.75} />
-        </a>
-        <a href="#clinic-os" className="btn-ghost h-12 px-6 text-[14px] backdrop-blur-md">
-          For Dental Clinics
-        </a>
-      </div>
-    </>
-  );
-}
-
 function StaticHero() {
   const full = useMotionValue(1);
   return (
@@ -496,16 +533,11 @@ function StaticHero() {
         </MascotStage>
         <div aria-hidden className="hero-rimfront absolute left-1/2 -translate-x-1/2 translate-y-1/2" />
         <div className="absolute inset-x-0 top-[calc(68px+var(--stage)*0.06)] z-10 px-4 text-center">
-          <p className="eyebrow">Redefining Dental Intelligence</p>
-          <h1 className="mx-auto mt-4 text-[clamp(34px,min(6vw,8.5svh),84px)] font-light leading-[0.98] tracking-[-0.045em]">
-            <span className="headline-silver">Dentistry,</span>
-            <br />
-            <span className="headline-silver">Reimagined </span>
-            <span className="font-normal" style={{ color: "var(--headline-accent)" }}>
-              with AI.
-            </span>
-          </h1>
-          <HeroCtas />
+          <p className="eyebrow mx-auto max-w-[640px] text-balance leading-relaxed">The World&apos;s First Dental Ecosystem Where AI Doesn&apos;t Just Answer. It Acts.</p>
+          <RotatingHeadline
+            still
+            className="mx-auto mt-4 max-w-[1000px] text-[clamp(30px,min(5vw,7.5svh),72px)] font-light leading-[1.02] tracking-[-0.045em]"
+          />
         </div>
       </div>
       <div className="py-16">

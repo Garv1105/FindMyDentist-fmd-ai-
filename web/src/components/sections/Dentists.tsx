@@ -288,9 +288,7 @@ export default function Dentists() {
               )}
             </div>
             <h2 className="type-h2">{`Dentists in ${city}`}</h2>
-            <p className="type-lede mt-4">
-              Verification shows the checks FMD has actually completed. Sponsored placements are always labelled, are never a clinical endorsement and don&apos;t change the order of other results.
-            </p>
+            <p className="type-lede mt-4">Explore dental professionals by speciality, experience, and location to find the right care for your needs.</p>
           </div>
           {/* the guide and his locator hub, tilting gently toward the cursor as one (data-tilt, CursorFx: the children let the
               pointer through, so the whole hub is the target). 270px box (lg) → ~227px visible: the pin is the focal point */}
