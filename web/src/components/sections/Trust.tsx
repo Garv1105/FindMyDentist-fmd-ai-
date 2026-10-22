@@ -2,7 +2,7 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import { BadgeCheck, BarChart3, Fingerprint, History, Orbit, Timer, UserCheck, type LucideIcon } from "lucide-react";
-import Image from "next/image";
+import MascotArt from "@/components/MascotArt";
 import type { ReactNode } from "react";
 import { Container, Reveal } from "../ui";
 import { Atmosphere } from "./LowerWorld";
@@ -203,7 +203,7 @@ function Guardian({ reduced }: { reduced: boolean | null }) {
         animate={reduced ? undefined : { y: [0, -8, 0] }}
         transition={{ duration: 5, ease: "easeInOut", repeat: Infinity }}
       >
-        <Image src="/img/mascots/mascot-shield-1024.webp" alt="" fill sizes="(min-width:1024px) 380px, 300px" className="object-contain object-bottom" />
+        <MascotArt src="/img/mascots/mascot-shield-1024.webp" sizes="(min-width:1024px) 380px, 300px" />
       </motion.div>
     </div>
   );
