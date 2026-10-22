@@ -3,7 +3,7 @@
 
 import { CircleCheck, Clock3, FileText, History, Image as ImageIcon, KeyRound, Lock, Pill, ScanLine, Share2, ClipboardList } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useState, useSyncExternalStore, type ReactNode } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Container, Reveal } from "../ui";
@@ -22,7 +22,7 @@ const DOCS: { icon: typeof FileText; name: string; meta: string; img: string; po
 const POINTS = [
   { icon: KeyRound, text: "Patient-controlled — you decide what's stored and who sees it." },
   { icon: Share2, text: "Share explicitly with a chosen provider through expiring links." },
-  { icon: Clock3, text: "Organised by date, clinic, provider and treatment episode." },
+  { icon: Clock3, text: "Organised by date, clinic, provider and treatment plan." },
 ];
 
 /*
@@ -277,8 +277,13 @@ export default function Records() {
                 <p className="text-[11px] text-ink-4">6 items · demo</p>
               </div>
               <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-                {DOCS.map(({ icon: Icon, name, meta, img, pos }) => (
-                  <div key={name} className="glass-interactive group relative rounded-[18px] border border-line bg-[var(--surface-glass)] p-2">
+                {DOCS.map(({ icon: Icon, name, meta, img, pos }, i) => (
+                  <div
+                    key={name}
+                    onPointerEnter={() => setHot(i)}
+                    onPointerLeave={() => setHot((h) => (h === i ? null : h))}
+                    className="glass-interactive group relative rounded-[18px] border border-line bg-[var(--surface-glass)] p-2"
+                  >
                     <div className="relative h-[104px] overflow-hidden rounded-[12px] border border-line bg-[var(--background-secondary)]">
                       <Image
                         src={img}
@@ -321,7 +326,7 @@ export default function Records() {
                 <span className="text-ink-3">in one private vault.</span>
               </h2>
               <p className="mt-6 max-w-md text-[15px] leading-relaxed text-ink-3">
-                X-rays, reports, photos, treatment plans and prescriptions — organised, private to you, and ready when your next dentist needs them.
+                Maintain your organized records, including X-Rays, reports, photographs and treatment plans for easy access during future visits.
               </p>
             </Reveal>
             <ul className="mt-9 space-y-4">

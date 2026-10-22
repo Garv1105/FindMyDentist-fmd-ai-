@@ -12,7 +12,6 @@ import Journey from "@/components/sections/Journey";
 import LowerWorld from "@/components/sections/LowerWorld";
 import Products from "@/components/sections/Products";
 import Records from "@/components/sections/Records";
-import Search from "@/components/sections/Search";
 import Trust from "@/components/sections/Trust";
 import Walkthrough from "@/components/sections/Walkthrough";
 
@@ -23,7 +22,6 @@ export default function Home() {
       <Navbar />
       <main>
         <Hero /> {/* 01 */}
-        <Search /> {/* 02 */}
         <LowerWorld>
           <AiFeatures /> {/* 03 */}
           <Walkthrough /> {/* 04 */}
