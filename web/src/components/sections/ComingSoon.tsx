@@ -43,7 +43,7 @@ const STARS = [
  * Closing scene: the title inside a glowing orbit in a starry sky, above the Earth's rim where the guide sits facing away
  * (coming-soon-scene.webp: the clean lower band of the approved artwork). Self-contained dark palette, so it reads the
  * same in any theme.
- * ponytail: no waitlist backend yet — a valid submit shows an honest "not saved" notice.
+ * ponytail: no waitlist backend yet - a valid submit shows an honest "not saved" notice.
  * Wire `onSubmit` to a real endpoint and swap the "pending" state for "sent" when one exists.
  */
 export default function ComingSoon() {
