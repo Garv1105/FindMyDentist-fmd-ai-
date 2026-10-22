@@ -8,15 +8,17 @@ import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 
 /**
- * The seated hero mascot (built by model/blender/sit/build_sit.sh, meshopt-compressed). Clips:
- *   loops     Fly (superman rise), Meditate, Idle, Talk, Think (hand at chin), Explain (talks while presenting)
- *   one-shots Wake, Wave, PointLeft, PointRight, Present, LookAround, Nod, Smile, Happy
- *             (each starts and ends in the Idle pose, so they chain)
+ * The seated hero mascot (the Tripo model, built by model/blender/tripo: prep_tripo.py … sit, rig_tripo.py … sit,
+ * anim_sit_tripo.py; meshopt-compressed). Clips:
+ *   loops     Fly (palms-up T-pose wing beats, back into the yoga pose), Meditate, Idle, Typing, Talk,
+ *             Think (hand at chin), Explain (talks while presenting)
+ *   one-shots Wake, Wave, PointLeft, PointRight, Present, ThumbsUp, Clap, Happy, LookAround, Brows, Nod, HeadShake,
+ *             Smile (each starts and ends in the Idle pose, so they chain)
  *   layer     Blink (eyes/lids only; played additively)
  * Point/Present directions are from the viewer: PointRight points to the viewer's right.
  */
 // bump ?v= whenever the GLB is rebuilt, or browsers keep the cached old model
-const MODEL_URL = "/mascot-sitting.glb?v=9";
+const MODEL_URL = "/mascot-sitting.glb?v=19";
 const FADE = 0.45;
 const AMBIENT = ["LookAround", "Smile", "Nod"];
 
@@ -82,7 +84,7 @@ class MascotAnimator {
   update(dt: number, time: number) {
     this.mixer.update(dt);
     const idle = !this.gesture && this.current === this.actions.get("Idle");
-    const eyesOpen = !this.gesture && ["Idle", "Talk", "Think", "Explain"].some((n) => this.current === this.actions.get(n));
+    const eyesOpen = !this.gesture && ["Idle", "Typing", "Talk", "Think", "Explain"].some((n) => this.current === this.actions.get(n));
     if (this.blink && time > this.nextBlink) {
       if (eyesOpen) this.blink.reset().play(); // only over open eyes: an additive blink would fight closed ones
       this.nextBlink = time + 2.5 + Math.random() * 3;
@@ -185,9 +187,12 @@ export default function Mascot3D({ active, ...props }: Props & { active: boolean
       {/* cool back/under light: the horizon glow the mascot rises out of */}
       <directionalLight position={[0, -1.5, -2.5]} intensity={1.6} color="#8fb4ff" />
       <Model {...props} />
-      <Environment resolution={128}>
-        <Lightformer form="rect" intensity={2} position={[0, 4, 4]} scale={[8, 4, 1]} />
-        <Lightformer form="rect" intensity={1} position={[-5, 1, 1]} rotation-y={Math.PI / 2} scale={[6, 3, 1]} color="#dbe6ff" />
+      {/* studio softboxes: the glassy tooth head shows them as crisp reflections */}
+      <Environment resolution={256}>
+        <Lightformer form="rect" intensity={2.6} position={[0, 4, 4]} scale={[8, 4, 1]} />
+        <Lightformer form="rect" intensity={1.4} position={[-5, 1, 1]} rotation-y={Math.PI / 2} scale={[6, 3, 1]} color="#dbe6ff" />
+        <Lightformer form="rect" intensity={1.2} position={[5, 1.5, 0]} rotation-y={-Math.PI / 2} scale={[4, 3, 1]} />
+        <Lightformer form="ring" intensity={2.2} position={[-2.5, 3, 3]} scale={1.2} />
         <Lightformer form="rect" intensity={1.4} position={[0, -3, -3]} scale={[8, 2, 1]} color="#7aa2ff" />
       </Environment>
     </Canvas>

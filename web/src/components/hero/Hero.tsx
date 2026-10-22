@@ -86,6 +86,8 @@ function CinematicHero() {
   // A — headline and centre light; both dim once the assistant takes over
   const titleOpacity = useTransform(p, PHASES.title, [1, 0]);
   const titleY = useTransform(p, PHASES.title, [0, -70]);
+  // the CTAs fade with the headline; stop catching clicks once they are mostly gone
+  const titlePointer = useTransform(titleOpacity, (o) => (o > 0.25 ? "auto" : "none"));
   const sky = useTransform(p, [c0, c1, a0, a1], [1, 0.45, 0.45, 0.02]);
   const earthFade = useTransform(p, [a0, a1], [1, 0.06]);
   const stageNavy = useTransform(p, [a0, a1], [0, 1]);
@@ -169,7 +171,7 @@ function CinematicHero() {
 
         {/* A — headline */}
         <motion.div
-          style={{ opacity: titleOpacity, y: titleY }}
+          style={{ opacity: titleOpacity, y: titleY, pointerEvents: titlePointer }}
           className="absolute inset-x-0 top-[calc(68px+var(--stage)*0.1)] z-10 px-4 text-center"
         >
           <p className="eyebrow mx-auto max-w-[640px] text-balance leading-relaxed">The World&apos;s First Dental Ecosystem Where AI Doesn&apos;t Just Answer. It Acts.</p>
