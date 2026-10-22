@@ -25,7 +25,7 @@ export default function Explore() {
           <Reveal className="lg:pb-4">
             <p className="eyebrow mb-3.5">Learn</p>
             <h2 className="type-h2-lg max-w-sm text-ink">Learn from verified dentists</h2>
-            <p className="type-lede mt-5 max-w-sm">Reviewed before publishing. Sponsored posts are always labelled.</p>
+            <p className="type-lede mt-5 max-w-sm">Explore expert dental advice and simple tips for a healthier, brighter smile.</p>
             <a href="/explore" className="group mt-7 inline-flex w-fit items-center gap-2 text-sm text-ink-2 transition-colors hover:text-ink">
               Open Explore <ArrowRight className="arrow-nudge size-4" strokeWidth={1.5} />
             </a>

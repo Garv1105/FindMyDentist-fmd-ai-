@@ -8,58 +8,71 @@ import Link from "next/link";
 import { Container, Reveal } from "../ui";
 import { Atmosphere } from "./LowerWorld";
 
-/* Abstract thumbnails — no real patient data is ever depicted. */
-const lines = (n: number, w = [90, 70, 82, 55, 76]) => (
-  <div className="space-y-1.5 p-3">
-    {Array.from({ length: n }, (_, i) => (
-      <div key={i} className="h-[3px] rounded-full bg-[var(--text-faint)] opacity-40" style={{ width: `${w[i % w.length]}%` }} />
-    ))}
+/*
+ * Thumbnails: two real sample images (Wikimedia Commons, credited under the vault card) and four document pages drawn
+ * here. The documents carry no names or data.
+ */
+const photo = (src: string) => <Image src={src} alt="" fill sizes="240px" className="object-cover" />;
+
+// a sheet of paper peeking out of the tile: clinic header bar, title, then the body
+const paper = (title: string, body: ReactNode) => (
+  <div className="absolute inset-x-3 top-2.5 bottom-0 rounded-t-[6px] bg-[#e8edf4] px-2.5 pt-2 shadow-[0_6px_18px_-6px_rgb(0_0_0/0.6)]">
+    <div className="flex items-center gap-1">
+      <span className="size-2 rounded-full bg-[#2f6fe0]" />
+      <span className="h-[3px] w-8 rounded-full bg-[#9aa7ba]" />
+      <span className="ml-auto h-[3px] w-5 rounded-full bg-[#c3ccd8]" />
+    </div>
+    <p className="mt-1.5 text-[7.5px] font-semibold uppercase tracking-[0.08em] text-[#1d2a3d]">{title}</p>
+    <div className="mt-1">{body}</div>
   </div>
 );
+const rules = (ws: number[]) => ws.map((w, k) => <div key={k} className="mt-[3px] h-[2.5px] rounded-full bg-[#b9c3d1]" style={{ width: `${w}%` }} />);
 
 const DOCS: { icon: typeof FileText; name: string; meta: string; thumb: ReactNode }[] = [
+  { icon: ScanLine, name: "Panoramic X-ray", meta: "Mar 2026 · Demo Clinic", thumb: photo("/img/vault/vault-xray.webp") },
+  { icon: FileText, name: "Consultation report", meta: "Mar 2026 · PDF", thumb: paper("Consultation report", rules([92, 78, 88, 60, 84, 70])) },
+  { icon: ImageIcon, name: "Intra-oral photos", meta: "4 images", thumb: photo("/img/vault/vault-intraoral.webp") },
   {
-    icon: ScanLine,
-    name: "Panoramic X-ray",
-    meta: "Mar 2026 · Demo Clinic",
-    thumb: (
-      <div
-        className="h-full w-full"
-        style={{
-          background:
-            "radial-gradient(14% 30% at 22% 58%, rgb(var(--horizon-rgb)/0.35), transparent), radial-gradient(14% 32% at 40% 55%, rgb(var(--horizon-rgb)/0.3), transparent), radial-gradient(14% 32% at 60% 55%, rgb(var(--horizon-rgb)/0.3), transparent), radial-gradient(14% 30% at 78% 58%, rgb(var(--horizon-rgb)/0.35), transparent), #0b0c0f",
-        }}
-      />
+    icon: ClipboardList,
+    name: "Treatment plan",
+    meta: "3 phases · estimate",
+    thumb: paper(
+      "Treatment plan",
+      [1, 2, 3].map((n) => (
+        <div key={n} className="mt-[3px] flex items-center gap-1">
+          <span className="grid size-[9px] place-items-center rounded-full bg-[#2f6fe0] text-[5.5px] font-bold text-white">{n}</span>
+          <span className="h-[2.5px] flex-1 rounded-full bg-[#b9c3d1]" />
+          <span className="h-[2.5px] w-4 rounded-full bg-[#8d9bb0]" />
+        </div>
+      )),
     ),
   },
-  { icon: FileText, name: "Consultation report", meta: "Mar 2026 · PDF", thumb: lines(6) },
   {
-    icon: ImageIcon,
-    name: "Intra-oral photos",
-    meta: "4 images",
-    thumb: (
-      <div className="grid h-full grid-cols-2 gap-1 p-2">
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="rounded-md" style={{ background: `linear-gradient(${140 + i * 30}deg, var(--surface-elevated), rgb(var(--accent-rgb)/0.12))` }} />
-        ))}
-      </div>
+    icon: Pill,
+    name: "Prescription",
+    meta: "Feb 2026",
+    thumb: paper(
+      "Prescription",
+      <div className="flex gap-1.5">
+        <span className="font-serif text-[15px] font-bold italic leading-none text-[#2f6fe0]">Rx</span>
+        <div className="flex-1">{rules([80, 62, 70])}</div>
+      </div>,
     ),
   },
-  { icon: ClipboardList, name: "Treatment plan", meta: "3 phases · estimate", thumb: lines(5, [60, 85, 85, 85, 40]) },
-  { icon: Pill, name: "Prescription", meta: "Feb 2026", thumb: lines(4, [40, 90, 70, 50]) },
   {
     icon: History,
     name: "Dental history",
     meta: "Since 2019",
-    thumb: (
-      <div className="flex h-full items-center gap-0 px-3">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className="flex flex-1 items-center">
-            <span className="size-1.5 rounded-full bg-[var(--text-muted)]" />
-            {i < 4 && <span className="h-px flex-1 bg-[var(--border-strong)]" />}
-          </div>
-        ))}
-      </div>
+    thumb: paper(
+      "Dental chart",
+      // two arches of 8 teeth, a few marked as treated
+      [0, 1].map((row) => (
+        <div key={row} className="mt-[3px] flex gap-[2px]">
+          {Array.from({ length: 8 }, (_, t) => (
+            <span key={t} className={`h-[7px] flex-1 rounded-[2px] border border-[#9aa7ba] ${(row * 8 + t) % 5 === 2 ? "bg-[#2f6fe0]/70" : ""}`} />
+          ))}
+        </div>
+      )),
     ),
   },
 ];
@@ -67,7 +80,7 @@ const DOCS: { icon: typeof FileText; name: string; meta: string; thumb: ReactNod
 const POINTS = [
   { icon: KeyRound, text: "Patient-controlled — you decide what's stored and who sees it." },
   { icon: Share2, text: "Share explicitly with a chosen provider through expiring links." },
-  { icon: Clock3, text: "Organised by date, clinic, provider and treatment episode." },
+  { icon: Clock3, text: "Organised by date, clinic, provider and treatment plan." },
 ];
 
 /*
@@ -330,7 +343,7 @@ export default function Records() {
                     onPointerLeave={() => setHot((h) => (h === i ? null : h))}
                     className="group relative rounded-[16px] bg-white/[0.025] p-2 transition-colors hover:bg-white/[0.045]"
                   >
-                    <div className="h-[84px] overflow-hidden rounded-[var(--sf-r-sm)] bg-[#050a14]">{thumb}</div>
+                    <div className="relative h-[84px] overflow-hidden rounded-[var(--sf-r-sm)] bg-[#050a14]">{thumb}</div>
                     <div className="flex items-start gap-2 px-1 pb-1 pt-2.5">
                       <Icon className="mt-0.5 size-3.5 shrink-0 text-ink-3" strokeWidth={1.5} />
                       <div className="min-w-0">
@@ -348,6 +361,18 @@ export default function Records() {
                 </p>
                 <p className="text-[11px] text-ink-4">Expires in 7 days · Revoke</p>
               </div>
+              {/* licence attribution for the two sample photos (CC BY / CC BY-SA require it) */}
+              <p className="mt-3 px-1 text-[10px] text-ink-4">
+                Sample images via Wikimedia Commons:{" "}
+                <a href="https://commons.wikimedia.org/wiki/File:Basic_panoramic_radiograph.jpg" target="_blank" rel="noopener noreferrer" className="underline-offset-2 hover:underline">
+                  Coronation Dental Specialty Group
+                </a>{" "}
+                (CC BY 3.0),{" "}
+                <a href="https://commons.wikimedia.org/wiki/File:Dentist_Examining_Patient%E2%80%99s_Teeth_with_Dental_Mirror.jpg" target="_blank" rel="noopener noreferrer" className="underline-offset-2 hover:underline">
+                  Jameswasswa
+                </a>{" "}
+                (CC BY-SA 4.0, cropped).
+              </p>
             </div>
             </div>
           </Reveal>
@@ -361,7 +386,7 @@ export default function Records() {
                 <span className="text-ink-3">in one private vault.</span>
               </h2>
               <p className="mt-6 max-w-md text-[15px] leading-relaxed text-ink-3">
-                X-rays, reports, photos, treatment plans and prescriptions — organised, private to you, and ready when your next dentist needs them.
+                Maintain your organized records, including X-Rays, reports, photographs and treatment plans for easy access during future visits.
               </p>
             </Reveal>
             <ul className="mt-9 space-y-4">
