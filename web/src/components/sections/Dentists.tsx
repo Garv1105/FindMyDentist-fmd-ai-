@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowRight, CalendarClock, ChevronLeft, ChevronRight, Clock3, MapPin, SlidersHorizontal, X } from "lucide-react";
+import MascotArt from "@/components/MascotArt";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { LANGUAGES, SERVICES } from "@/lib/catalog";
@@ -308,7 +309,7 @@ export default function Dentists() {
               <MapPin className="size-3.5 text-[rgb(var(--horizon-rgb))]" strokeWidth={1.6} /> {city}
             </span>
             <div className="absolute bottom-0 left-1/2 size-[230px] lg:size-[270px] -translate-x-1/2">
-              <Image src="/img/mascots/mascot-pin-1024.webp" alt="" fill sizes="(min-width:1024px) 270px, 230px" className="object-contain object-bottom" />
+              <MascotArt src="/img/mascots/mascot-pin-1024.webp" sizes="(min-width:1024px) 270px, 230px" />
             </div>
           </div>
         </Reveal>

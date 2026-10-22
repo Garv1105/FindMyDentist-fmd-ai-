@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion, useInView, useReducedMotion } from "motion/react";
 import { ArrowRight, BadgeCheck, EyeOff, History, LockKeyhole, Pause, Play, Scale, ShieldCheck } from "lucide-react";
-import Image from "next/image";
+import MascotArt from "@/components/MascotArt";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Container, Reveal } from "../ui";
 import { Atmosphere } from "./LowerWorld";
@@ -203,18 +203,9 @@ export default function Journey() {
               </svg>
             </motion.div>
 
-            {/* the hub: the guide in this step's pose (all mounted up front, the selected one crossfades in), then the anchor line */}
+            {/* the hub: the guide in this step's pose (its 3D model, the artwork while it loads), then the anchor line */}
             <div aria-hidden className="absolute -translate-x-1/2" style={{ left: pct(C.x, W), top: pct(262, H), width: pct(230, W), aspectRatio: "1" }}>
-              {STEPS.map((s, i) => (
-                <Image
-                  key={i}
-                  src={s.img}
-                  alt=""
-                  fill
-                  sizes="(min-width:1000px) 230px, 23vw"
-                  className={`object-contain object-bottom transition-opacity duration-500 ${i === active ? "opacity-100" : "opacity-0"}`}
-                />
-              ))}
+              <MascotArt src={STEPS[active].img} sizes="(min-width:1000px) 230px, 23vw" />
             </div>
             <p className="absolute inset-x-0 bottom-[2%] text-center text-[13px] font-semibold tracking-[-0.01em] text-ink sm:text-[18px] md:text-[24px]">
               6 safeguards, one standard

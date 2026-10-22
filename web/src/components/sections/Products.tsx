@@ -2,7 +2,7 @@
 
 import { ArrowRight, BadgeCheck, Bot, Building2, CalendarDays, CreditCard, GraduationCap, HeartPulse, LayoutDashboard, Search, Sparkles, Stethoscope, UsersRound } from "lucide-react";
 import { motion, useMotionValueEvent, useScroll } from "motion/react";
-import Image from "next/image";
+import MascotArt from "@/components/MascotArt";
 import Link from "next/link";
 import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { SPECIALTIES } from "@/lib/catalog";
@@ -206,7 +206,7 @@ function Scene({ mascot, children }: { mascot: string; children: ReactNode }) {
       <div className="relative z-10 -mb-6 ml-auto size-[170px] sm:absolute sm:-bottom-3 sm:-right-5 sm:mb-0 sm:size-[200px] xl:size-[240px]">
         <div className="absolute left-1/2 top-[10%] h-[75%] w-[90%] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,var(--bg-glow-focus),transparent_72%)]" />
         <div className="absolute bottom-[3%] left-1/2 h-5 w-[80%] -translate-x-1/2 rounded-[50%] bg-[radial-gradient(closest-side,rgb(var(--horizon-rgb)/0.2),transparent)]" />
-        <Image src={mascot} alt="" fill sizes="(min-width:1280px) 240px, (min-width:640px) 200px, 170px" className="object-contain object-bottom" />
+        <MascotArt src={mascot} sizes="(min-width:1280px) 240px, (min-width:640px) 200px, 170px" />
       </div>
       {children}
     </div>
@@ -322,7 +322,7 @@ function Nexus() {
           <div className="absolute inset-x-[16%] bottom-[3%] h-[8%] rounded-[50%] border border-blue-300/40" />
           <div className="absolute inset-[6%] rounded-full bg-[radial-gradient(circle,rgb(59_130_246/0.2),transparent_68%)]" />
           <motion.div className="absolute inset-0" animate={{ y: [0, -12, 0] }} transition={{ duration: 5.5, ease: "easeInOut", repeat: Infinity }}>
-            <Image src="/img/mascots/mascot-guide-1024.webp" alt="" fill sizes="400px" className="object-contain object-bottom" />
+            <MascotArt src="/img/mascots/mascot-guide-1024.webp" sizes="400px" />
           </motion.div>
         </div>
 
