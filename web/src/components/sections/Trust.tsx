@@ -24,7 +24,7 @@ const CONSENT = [
 ];
 
 const PILLARS = [
-  { icon: BadgeCheck, title: "Verification ≠ advertising", body: "Verified means credentials were checked. Paid placements are labelled separately — always." },
+  { icon: BadgeCheck, title: "Verification ≠ advertising", body: "Verified means credentials were checked. Paid placements are labelled separately - always." },
   { icon: Fingerprint, title: "Consent-first records", body: "Least-privilege access, explicit sharing and an audit trail for sensitive data." },
   { icon: Orbit, title: "AI with boundaries", body: "Educational and navigational. Clinical decisions stay with registered dentists." },
 ];
@@ -115,7 +115,7 @@ export default function Trust() {
                         <span className="headline-silver block text-[34px] font-light leading-none tracking-[-0.03em] tabular-nums">{s.value}</span>
                       ) : (
                         <span className="block text-[26px] font-light leading-none text-[var(--fmd-text-disabled)]">
-                          <span aria-hidden>—</span>
+                          <span aria-hidden>-</span>
                           <span className="mt-1.5 block text-[9.5px] uppercase tracking-[0.16em] text-ink-4">Published at launch</span>
                         </span>
                       )}

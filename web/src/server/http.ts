@@ -15,7 +15,7 @@ export const forbidden = () => new HttpError(403, "forbidden", "You don't have a
 export const notFound = (what = "Not found") => new HttpError(404, "not_found", what);
 
 /**
- * Wrap a handler: JSON errors, no stack traces to clients, and a CSRF guard —
+ * Wrap a handler: JSON errors, no stack traces to clients, and a CSRF guard -
  * mutating requests must be JSON (cross-site forms can't send that without a preflight)
  * and, when the browser sends Origin, it must match the host.
  */

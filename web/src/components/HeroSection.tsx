@@ -473,7 +473,7 @@ export default function HeroSection({
       data-in-view={inView ? "true" : "false"}
     >
       {/* 
-        Sticky viewport wrapper — this is the "screen" that stays pinned to
+        Sticky viewport wrapper - this is the "screen" that stays pinned to
         the top of the viewport while the section is being scrolled through.
         Once the section's bottom reaches the viewport bottom, this wrapper
         scrolls up and off with the section naturally.
@@ -493,7 +493,7 @@ export default function HeroSection({
           className="absolute inset-0 z-1 pointer-events-none bg-[radial-gradient(circle_at_50%_40%,transparent_45%,rgba(0,0,0,0.85)_90%)]"
         />
 
-        {/* Earth + mat — anchored to the bottom of the sticky viewport */}
+        {/* Earth + mat - anchored to the bottom of the sticky viewport */}
         <div
           ref={earthWrapperRef}
           aria-hidden
@@ -544,7 +544,7 @@ export default function HeroSection({
           </div>
         </div>
 
-        {/* Dialogue — anchored to the top of the sticky viewport */}
+        {/* Dialogue - anchored to the top of the sticky viewport */}
         <div
           className={`hero-chrome pointer-events-none absolute top-[12%] left-1/2 transition-all duration-700 ease-out ${
             dialogueVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
@@ -567,7 +567,7 @@ export default function HeroSection({
           </div>
         </div>
 
-        {/* Optional header — anchored to the top of the sticky viewport */}
+        {/* Optional header - anchored to the top of the sticky viewport */}
         {showHeader && (
           <header className="hero-chrome absolute top-0 inset-x-0 z-30 flex items-center justify-between px-4 py-4 sm:px-8 backdrop-blur-md bg-black/40 border-b border-white/[0.08]">
             <Link
@@ -623,7 +623,7 @@ export default function HeroSection({
           </header>
         )}
 
-        {/* Scrubber — anchored to the bottom of the sticky viewport */}
+        {/* Scrubber - anchored to the bottom of the sticky viewport */}
         <div className="hero-chrome absolute bottom-12 inset-x-0 z-30 pointer-events-none flex justify-center px-4">
           <div className="pointer-events-auto flex items-center gap-3 rounded-full border border-white/15 bg-black/70 px-4 py-2 backdrop-blur-xl shadow-2xl">
             <span className="text-[11px] font-mono text-white/60 uppercase tracking-wider">
@@ -655,7 +655,7 @@ export default function HeroSection({
           </div>
         </div>
 
-        {/* Buffer badge — anchored to the bottom-right of the sticky viewport */}
+        {/* Buffer badge - anchored to the bottom-right of the sticky viewport */}
         <div className="hero-chrome absolute bottom-4 right-4 z-30 pointer-events-none hidden md:block">
           <div className="rounded-full border border-white/10 bg-black/60 px-3 py-1 text-[10px] font-mono text-white/40 backdrop-blur-md">
             {loadedCount === TOTAL_FRAMES
