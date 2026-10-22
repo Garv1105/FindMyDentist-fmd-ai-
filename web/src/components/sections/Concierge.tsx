@@ -11,10 +11,10 @@ import { Container, Reveal } from "../ui";
 import { Atmosphere } from "./LowerWorld";
 
 const FLOW = [
-  { title: "You share what you need", body: "Your care need, area, timing and how you'd like us to reach you." },
-  { title: "A coordinator follows up personally", body: "A person from the FMD team contacts you to understand your situation." },
-  { title: "We coordinate options", body: "We work with participating clinics on suitable providers, timing and fees." },
-  { title: "You confirm before anything is arranged", body: "No clinic, time or fee is final until you've reviewed and agreed to it." },
+  { title: "You share what you need", body: "Your dental need, location and timing." },
+  { title: "A coordinator follows up", body: "A real person from our team reaches out." },
+  { title: "Explore tailored options", body: "Suitable clinics, appointments and fees." },
+  { title: "You proceed with assurance", body: "Approve the details before anything is booked." },
 ];
 
 type Config = {
@@ -277,41 +277,25 @@ export default function Concierge() {
                   {concierge("56%", "60vw")}
                 </div>
 
-                <ol className="mt-9 lg:mt-10">
+                {/* the four steps: a short title and one short line each, with room between them so the list reads at a glance */}
+                <ol className="mt-10 lg:mt-11">
                   {FLOW.map((s, i) => (
-                    <li key={s.title} className="relative flex gap-4 pb-6 last:pb-0">
-                      {i < FLOW.length - 1 && <span aria-hidden className="absolute left-[13.5px] top-7 h-[calc(100%-28px)] w-px bg-gradient-to-b from-[#D4AF37]/40 to-transparent" />}
-                      <span className="relative flex size-7 shrink-0 items-center justify-center rounded-full border border-[#D4AF37]/50 bg-[#120F09]/80 text-xs font-semibold tabular-nums text-[#D4AF37]">{i + 1}</span>
-                      <div>
-                        <h3 className="text-[15px] text-[#E8EAEE]">{s.title}</h3>
-                        <p className="mt-0.5 text-[13.5px] leading-relaxed text-[rgb(var(--edge-champagne-rgb)/0.85)]">{s.body}</p>
+                    <li key={s.title} className="relative flex gap-4 pb-7 last:pb-0">
+                      {i < FLOW.length - 1 && <span aria-hidden className="absolute left-[15.5px] top-9 h-[calc(100%-40px)] w-px bg-gradient-to-b from-[#D4AF37]/35 to-transparent" />}
+                      <span className="relative flex size-8 shrink-0 items-center justify-center rounded-full border border-[#D4AF37]/45 bg-[#120F09]/80 text-[13px] font-medium tabular-nums text-[#D4AF37]">{i + 1}</span>
+                      <div className="pt-[5px]">
+                        <h3 className="text-[16px] font-medium leading-snug tracking-[-0.01em] text-[#F5EEDF]">{s.title}</h3>
+                        <p className="mt-1 text-[14px] leading-normal text-[rgb(var(--edge-champagne-rgb)/0.62)]">{s.body}</p>
                       </div>
                     </li>
                   ))}
                 </ol>
-                <dl className="mt-8 space-y-3 border-t border-[rgb(var(--edge-gold-rgb)/0.14)] pt-5 text-[13px]">
-                  <div className="flex gap-3">
-                    <MapPin className="mt-0.5 size-4 shrink-0 text-[rgb(var(--edge-champagne-rgb)/0.7)]" strokeWidth={1.5} />
-                    <div>
-                      <dt className="text-ink-2">Where we can help</dt>
-                      <dd className="text-ink-4">
-                        {cfg?.serviceAreas.length
-                          ? cfg.serviceAreas.join(", ")
-                          : "Service areas are being finalised. Tell us your area and we'll let you know honestly whether we can help."}
-                      </dd>
-                    </div>
-                  </div>
-                  <div className="flex gap-3">
-                    <Info className="mt-0.5 size-4 shrink-0 text-[rgb(var(--edge-champagne-rgb)/0.7)]" strokeWidth={1.5} />
-                    <div>
-                      <dt className="text-ink-2">What to expect</dt>
-                      <dd className="text-ink-4">
-                        {cfg?.responseCommitment ?? "A coordinator will contact you using your preferred method. This is not a 24/7 or emergency service."}{" "}
-                        {cfg?.fees}
-                      </dd>
-                    </div>
-                  </div>
-                </dl>
+                <p className="mt-9 flex items-start gap-2.5 border-t border-[rgb(var(--edge-gold-rgb)/0.12)] pt-5 text-[12.5px] leading-relaxed text-ink-4">
+                  <Info className="mt-[3px] size-3.5 shrink-0 text-[rgb(var(--edge-champagne-rgb)/0.6)]" strokeWidth={1.5} />
+                  <span>
+                    {cfg?.responseCommitment ?? "A coordinator contacts you personally. Not a 24/7 or emergency service."} {cfg?.fees}
+                  </span>
+                </p>
               </div>
 
               <div aria-hidden className="hidden lg:block" />
@@ -407,23 +391,11 @@ export default function Concierge() {
                           </select>
                         </label>
                       </div>
-                      <label className="block">
-                        <span className="mb-1.5 block text-[12px] text-ink-3">Notes (optional)</span>
-                        <textarea
-                          rows={3}
-                          maxLength={1000}
-                          value={f.notes}
-                          onChange={(e) => set("notes", e.target.value)}
-                          placeholder="Only share what's needed to understand your request. You don't need to include medical details."
-                          className={`${field} resize-none`}
-                        />
-                      </label>
                       <label className="flex items-start gap-3 text-[12.5px] leading-relaxed text-ink-2">
                         {/* required: the button stays live and inviting; pressing it without consent, the browser points to this box */}
                         <input type="checkbox" required checked={f.consent} onChange={(e) => set("consent", e.target.checked)} className="mt-1 accent-[var(--edge-gold)]" />
                         <span>
-                          I agree that the FMD Edge team may contact me about this request using the method above. My details are used only to coordinate
-                          this request and are shared with a clinic only after I agree.
+                          I consent to FMD Edge contacting me about this request. My details will be shared with a clinic only with my approval.
                         </span>
                       </label>
                       <p className="flex items-start gap-2 text-[11.5px] leading-relaxed text-ink-4">

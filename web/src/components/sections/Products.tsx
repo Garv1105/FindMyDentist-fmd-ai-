@@ -306,7 +306,7 @@ function Nexus() {
           </Container>
         </div>
         {/* the word behind the stage */}
-        <p aria-hidden className="pointer-events-none absolute inset-x-0 top-[34%] select-none whitespace-nowrap bg-gradient-to-b from-white/[0.22] to-white/[0.07] bg-clip-text text-center text-[clamp(72px,11vw,190px)] font-bold leading-none tracking-[-0.015em] text-transparent [-webkit-text-stroke:1px_rgb(255_255_255/0.1)]">
+        <p aria-hidden className="pointer-events-none absolute inset-x-0 top-[34%] select-none whitespace-nowrap bg-gradient-to-b from-white/[0.22] to-white/[0.07] bg-clip-text text-center text-[clamp(72px,11vw,190px)] font-bold leading-none tracking-[-0.015em] text-transparent">
           ONE ECOSYSTEM
         </p>
 

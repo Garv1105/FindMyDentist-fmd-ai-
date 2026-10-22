@@ -927,13 +927,6 @@ html.theme-anim *::after {
      background list. Rules: every layer ends in transparent (fields overlap 6rem into neighbours, so no seams); veils
      darken a section only between soft ramps; sapphire ≤ 0.32, silver ≤ 0.06, warm ≤ 0.18; nothing animates. */
 
-  /* 02 Search: a cool pool under the search bar. Reaches down only: never up over the hero */
-  .fmd-atmosphere[data-scene="search"] {
-    inset: 0 0 -4rem;
-    background:
-      radial-gradient(38% 34% at 50% 22%, rgb(var(--sapphire-light-rgb) / 0.22), transparent 72%),
-      radial-gradient(60% 40% at 50% 70%, rgb(var(--sapphire-light-rgb) / 0.08), transparent 75%);
-  }
   /* 03 AI Features: a faint silver key light on the headline; the sapphire pool itself is drawn in the stage SVG,
      so here only a wide, low bed of light under it (no second competing glow) */
   /* two broad, shared fields where the capability panels sit (left and right of the stage; the right one also covers
