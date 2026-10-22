@@ -100,7 +100,7 @@ export default function Navbar() {
           </ul>
 
           <div className="ml-auto flex shrink-0 items-center gap-1 xl:ml-0">
-            <Link href="/#search" aria-label="Search" className="hidden size-9 place-items-center rounded-full text-ink-2 transition-colors hover:text-ink sm:grid">
+            <Link href="/#dentists" aria-label="Find dentists" className="hidden size-9 place-items-center rounded-full text-ink-2 transition-colors hover:text-ink sm:grid">
               <Search className="size-[18px]" strokeWidth={1.5} />
             </Link>
             <ThemeSwitcher />

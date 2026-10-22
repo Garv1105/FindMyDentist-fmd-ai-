@@ -23,7 +23,7 @@ export default function LowerWorld({ children }: { children: ReactNode }) {
  * each one is). Cool and quiet near the top; darker veils where a section needs to stand apart (journey, vault, edge);
  * precise local light for discovery and trust; three product pools for FMD OS.
  */
-export type Scene = "search" | "assistant" | "walkthrough" | "learn" | "journey" | "vault" | "edge" | "discovery" | "trust" | "os";
+export type Scene = "assistant" | "walkthrough" | "learn" | "journey" | "vault" | "edge" | "discovery" | "trust" | "os";
 
 /**
  * A section's light field. Sits behind the section's content (the section must be `relative isolate`) and reaches

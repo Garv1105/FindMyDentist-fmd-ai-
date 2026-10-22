@@ -24,13 +24,13 @@ const STEPS: Step[] = [
   {
     title: "Ask",
     line: "Start with a question",
-    detail: "Describe what you feel or what you want to know, in plain words and in your language.",
+    detail: "Describe what you feel or what you want to know, in simple words and in your own language.",
     action: <ActionButton onClick={ask()}>Ask FMD AI</ActionButton>,
   },
   {
     title: "Understand",
     line: "Get clear guidance",
-    detail: "FMD AI explains what it could mean and which kind of dentist helps. It never diagnoses.",
+    detail: "FMD AI explains what you would want to know and the kind of specialist you need.",
     action: <ActionButton onClick={ask("What kind of dentist should I see for tooth sensitivity?")}>Try an example</ActionButton>,
   },
   {
@@ -42,19 +42,19 @@ const STEPS: Step[] = [
   {
     title: "Find",
     line: "Choose a dentist",
-    detail: "Browse verified dentists and clinics. Sponsored placements are always labelled.",
+    detail: "Discover verified Dentists & Explore Trusted Dental Clinics",
     action: <ActionLink href="#dentists">Find dentists</ActionLink>,
   },
   {
     title: "Act",
     line: "Book on your terms",
-    detail: "Review the time, clinic and fee before anything is confirmed.",
+    detail: "Review your appointment time, clinic details and consultation fees before confirming your booking.",
     action: <ActionLink href="/appointments">My appointments</ActionLink>,
   },
   {
     title: "Follow up",
-    line: "Keep care continuous",
-    detail: "Records and next steps stay in one place, so the next visit builds on the last.",
+    line: "Continuity of patient care",
+    detail: "Ensure regular follow-ups, update records after each visit and plan the next appointment accordingly.",
     action: <ActionLink href="/records">Dental records</ActionLink>,
   },
 ];
@@ -299,12 +299,12 @@ export default function Walkthrough() {
               <defs>
                 {/* both ends rise out of the dark and sink back into it: everything on the line sits under this fade */}
                 <linearGradient id="wt-fade-g" gradientUnits="userSpaceOnUse" x1={X0} x2={X1}>
-                  {/* nothing until 100 units outside the container (the screen edge at 1440), full 110 units inside it */}
+                  {/* nothing at the container's edges, full by the first and last nodes, so both ends dissolve in view */}
                   {[
-                    [-100, 0],
-                    [110, 1],
-                    [W - 110, 1],
-                    [W + 100, 0],
+                    [0, 0],
+                    [150, 1],
+                    [W - 150, 1],
+                    [W, 0],
                   ].map(([x, o]) => (
                     <stop key={x} offset={(x - X0) / (X1 - X0)} stopColor="#fff" stopOpacity={o} />
                   ))}
