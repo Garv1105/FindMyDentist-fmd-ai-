@@ -1,7 +1,8 @@
 "use client";
 
 import { AnimatePresence, motion, useAnimate, useMotionValue, useReducedMotion, useSpring, useTransform, type MotionValue } from "motion/react";
-import { ArrowRight, Check, Info, Mail, MessageCircle, Phone, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Info, Mail, MapPin, MessageCircle, Phone, Sparkles } from "lucide-react";
+import MascotArt from "@/components/MascotArt";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
@@ -202,7 +203,7 @@ export default function Concierge() {
       <div aria-hidden className="absolute bottom-[5%] left-1/2 h-[4%] w-[32%] -translate-x-1/2 rounded-[50%] bg-[radial-gradient(closest-side,rgb(0_0_0/0.7),transparent)] blur-[3px]" />
       <motion.div whileHover={tap} className="absolute inset-0">
         <motion.div data-attend="" className="absolute inset-0">
-          <Image src="/img/mascots/mascot-edge-1024.webp" alt="" fill sizes={sizes} className="object-contain object-bottom" />
+          <MascotArt src="/img/mascots/mascot-edge-1024.webp" sizes={sizes} />
         </motion.div>
       </motion.div>
     </div>
