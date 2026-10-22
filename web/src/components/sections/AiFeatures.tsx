@@ -2,6 +2,7 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import { ArrowRight, BookOpenText, Compass, FileSearch, Route, Sparkles, Stethoscope, UserRound } from "lucide-react";
+import MascotArt from "@/components/MascotArt";
 import Image from "next/image";
 import { openAssistant } from "../hero/Assistant";
 import { Container, MOTION, Reveal } from "../ui";
@@ -128,7 +129,7 @@ export default function AiFeatures() {
             >
               <div className="absolute inset-[8%_0_0] rounded-full bg-[radial-gradient(closest-side,rgb(var(--sapphire-light-rgb)/0.5),transparent_75%)] xl:hidden" />
               <div className="relative size-full">
-                <Image src="/img/mascots/mascot-guide-1024.webp" alt="" fill sizes="(min-width:1280px) 400px, 300px" className="object-contain object-bottom" />
+                <MascotArt src="/img/mascots/mascot-guide-1024.webp" sizes="(min-width:1280px) 400px, 300px" />
               </div>
             </div>
 

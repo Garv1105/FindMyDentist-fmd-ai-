@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useInView, useReducedMotion } from "motion/react";
 import { ArrowRight, Calendar, CircleHelp, MessageCircleQuestion, Search } from "lucide-react";
+import MascotArt from "@/components/MascotArt";
 import Image from "next/image";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { openAssistant } from "../hero/Assistant";
@@ -180,10 +181,11 @@ function Scene({ s, className = "", children }: { s: SceneDef; className?: strin
           style={{ left: pct(s.guide.l + s.guide.w * 0.12, s.W), width: pct(s.guide.w * 0.76, s.W), top: pct(s.guide.t + s.guide.w * 0.88, s.H) }}
         />
         <div aria-hidden className="absolute" style={at(s.core)}>
-          <Image src="/img/walkthrough/care-core-v2.webp" alt="" fill sizes="(min-width:1280px) 436px, 280px" className="object-contain" />
+          <MascotArt src="/img/walkthrough/care-core-v2.webp" sizes="(min-width:1280px) 436px, 280px" className="object-contain" align="center" />
         </div>
-        <div aria-hidden className="absolute -scale-x-100" style={at(s.guide)}>
-          <Image src="/img/mascots/mascot-guide-1024.webp" alt="" fill sizes="(min-width:1280px) 400px, 200px" className="object-contain" />
+        {/* the artwork is mirrored to face the Care Core; the model is its own mirrored pose */}
+        <div aria-hidden className="absolute" style={at(s.guide)}>
+          <MascotArt src="/img/mascots/mascot-guide-1024.webp" model="/models/rig/guide-left.glb?v=3" sizes="(min-width:1280px) 400px, 200px" className="-scale-x-100 object-contain" />
         </div>
       </div>
       {children}
@@ -482,21 +484,12 @@ export default function Walkthrough() {
             <div className="absolute inset-x-[12%] top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
           </div>
           <div className="flex flex-col sm:flex-row sm:items-stretch">
-            {/* all six poses are mounted (and so loaded) up front; the selected one crossfades in, nothing travels */}
+            {/* the selected step's pose: its 3D model (one live canvas for the panel), the artwork while it loads */}
             <div aria-hidden className="relative h-[168px] shrink-0 sm:h-auto sm:min-h-[190px] sm:w-[220px] sm:border-r sm:border-white/10">
               <div className="absolute inset-0 bg-[radial-gradient(70%_60%_at_50%_80%,rgb(59_130_246/0.18),transparent_75%)]" />
               <div className="absolute bottom-2 left-1/2 h-5 w-[64%] -translate-x-1/2 rounded-[50%] bg-[radial-gradient(closest-side,rgba(157,184,255,0.24),transparent)]" />
               <div className="absolute bottom-0 left-1/2 size-[160px] -translate-x-1/2 sm:size-[176px]">
-                {POSES.map((src, i) => (
-                  <Image
-                    key={src}
-                    src={src}
-                    alt=""
-                    fill
-                    sizes="176px"
-                    className={`object-contain object-bottom transition-opacity duration-300 ${i === active ? "opacity-100" : "opacity-0"}`}
-                  />
-                ))}
+                <MascotArt src={POSES[active]} sizes="176px" />
               </div>
             </div>
           <div className="flex min-w-0 flex-1 flex-col items-start justify-between p-6 sm:p-8 md:flex-row md:items-center md:gap-8">

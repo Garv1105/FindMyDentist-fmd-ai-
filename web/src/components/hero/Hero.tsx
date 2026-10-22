@@ -2,7 +2,9 @@
 
 import Image from "next/image";
 import {
+  AnimatePresence,
   motion,
+  useReducedMotion,
   useMotionTemplate,
   useMotionValueEvent,
   useScroll,
@@ -113,6 +115,8 @@ function CinematicHero() {
   const [aiActive, setAiActive] = useState(false);
   // mascot: superman rise, then settles into meditation once it arrives; WebGL only runs while it is on screen
   const [settled, setSettled] = useState(false);
+  // once its spin has finished (facing the viewer, fully risen) it speaks, until it starts to leave
+  const [speaking, setSpeaking] = useState(false);
   const [mascotOn, setMascotOn] = useState(false);
   const [mascotReady, setMascotReady] = useState(false);
   const onMascotReady = useCallback(() => setMascotReady(true), []);
@@ -121,6 +125,8 @@ function CinematicHero() {
     if (on !== aiActive) setAiActive(on); // each flag flips only at its own threshold
     const s = v >= PHASES.rise[1] - 0.03;
     if (s !== settled) setSettled(s);
+    const sp = v >= PHASES.rise[1] && v < PHASES.mascotOut[0];
+    if (sp !== speaking) setSpeaking(sp);
     const m = v > MASCOT_KEYS[1] - 0.02 && v < PHASES.mascotOut[1] + 0.01;
     if (m !== mascotOn) setMascotOn(m);
   });
@@ -130,7 +136,7 @@ function CinematicHero() {
       id="top"
       ref={ref}
       aria-label="FindMyDentist introduction"
-      className="relative h-[250vh] md:h-[310vh]"
+      className="relative h-[295vh] md:h-[370vh]"
     >
       <div
         className="sticky top-0 h-svh overflow-hidden"
@@ -162,6 +168,7 @@ function CinematicHero() {
               <div className="absolute inset-y-0 left-1/2 w-[170%] -translate-x-1/2">
                 <Mascot3D active={mascotOn} base={settled ? "Meditate" : "Fly"} rotY={rotY} onReady={onMascotReady} />
               </div>
+              <SpeechBubble show={speaking} text="Let me take over…" />
             </div>
           </motion.div>
         </MascotStage>
@@ -203,6 +210,37 @@ function CinematicHero() {
 /* ------------------------------------------------------------------------- */
 
 /** The Earth band's own box (aspect = source image) with the mascot's limb-shaped clip. */
+/** The mascot's line, in a bubble beside its head: typed out letter by letter, gone when it leaves. */
+function SpeechBubble({ show, text }: { show: boolean; text: string }) {
+  const still = useReducedMotion();
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8, y: 8 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+          transition={{ type: "spring", stiffness: 380, damping: 26 }}
+          className="absolute left-[74%] top-[-6%] origin-bottom-left whitespace-nowrap rounded-2xl rounded-bl-md border border-white/70 bg-white px-5 py-3 text-[17px] font-semibold tracking-[-0.01em] text-[#0b1630] shadow-[0_10px_30px_-8px_rgb(59_130_246/0.55)] sm:text-[19px]"
+        >
+          {[...text].map((ch, i) => (
+            <motion.span
+              key={i}
+              initial={still ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.15 + i * 0.045, duration: 0.05 }}
+            >
+              {ch}
+            </motion.span>
+          ))}
+          {/* the tail, pointing down at the mouth */}
+          <span aria-hidden className="absolute -bottom-1.5 left-2 size-3 rotate-45 border-b border-r border-white/70 bg-white" />
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 function MascotStage({ children }: { children: React.ReactNode }) {
   return (
     <div

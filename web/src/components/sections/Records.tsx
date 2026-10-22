@@ -4,6 +4,7 @@
 import { CircleCheck, Clock3, FileText, History, Image as ImageIcon, KeyRound, Lock, Pill, ScanLine, Share2, ClipboardList } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useState, useSyncExternalStore, type ReactNode } from "react";
+import MascotArt from "@/components/MascotArt";
 import Image from "next/image";
 import Link from "next/link";
 import { Container, Reveal } from "../ui";
@@ -264,7 +265,9 @@ export default function Records() {
             <div aria-hidden className="relative size-[180px] shrink-0 lg:-mb-6 lg:-ml-14 lg:-mr-10 lg:size-[270px]">
               <div className="fmd-breathe absolute left-1/2 top-[8%] h-[70%] w-[80%] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,var(--bg-glow-focus),transparent_72%)]" />
               <div className="absolute bottom-[6%] left-1/2 h-5 w-[60%] -translate-x-1/2 rounded-[50%] bg-[radial-gradient(closest-side,rgb(var(--horizon-rgb)/0.2),transparent)]" />
-              <Image src="/img/mascots/mascot-vault-1024.webp" alt="" fill sizes="(min-width:1024px) 270px, 180px" className="z-[2] object-contain object-bottom" />
+              <div className="absolute inset-0 z-[2]">
+                <MascotArt src="/img/mascots/mascot-vault-1024.webp" sizes="(min-width:1024px) 270px, 180px" />
+              </div>
               <GuideHud hot={hot} />
             </div>
             <div className="relative w-full min-w-0 flex-1">

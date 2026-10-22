@@ -30,7 +30,7 @@ const NEW_BUTTONS = [...NEW_LOOPS, "Wave", "PointLeft", "PointRight", "Present",
   "Bow", "Nod", "HeadShake", "LookAround", "Smile", "Surprised", "Sad", "SitDown", "StandUp"];
 const THEN: Record<string, string> = { SitDown: "Sit", StandUp: "Idle" }; // loop to settle into afterwards
 // new seated mascot (model/blender/tripo: prep_tripo.py sit, rig_tripo.py sit, anim_sit_tripo.py); bump ?v= on rebuild
-const NEW_SIT_URL = "/mascot-tripo-sit.glb?v=11";
+const NEW_SIT_URL = "/mascot-tripo-sit.glb?v=12";
 const NEW_SIT_LOOPS = ["Meditate", "Fly", "Idle", "Typing", "Talk", "Think", "Explain"];
 const NEW_SIT_BUTTONS = [...NEW_SIT_LOOPS, "Wake", "Wave", "PointLeft", "PointRight", "Present", "ThumbsUp", "Clap",
   "Happy", "LookAround", "Brows", "Nod", "HeadShake", "Smile"];
