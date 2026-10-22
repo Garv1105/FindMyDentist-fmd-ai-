@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, BadgeCheck } from "lucide-react";
+import MascotArt from "@/components/MascotArt";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -47,7 +48,7 @@ export default function Explore() {
                 <div aria-hidden className="relative mx-auto -mt-2 mb-4 size-[190px] lg:absolute lg:bottom-0 lg:left-4 lg:m-0 lg:size-[270px]">
                   <div className="absolute left-1/2 top-[18%] h-[70%] w-[90%] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(157,184,255,0.14),transparent)]" />
                   <div className="absolute bottom-[5%] left-1/2 h-6 w-[80%] -translate-x-1/2 rounded-[50%] bg-[radial-gradient(closest-side,rgba(157,184,255,0.2),transparent)]" />
-                  <Image src="/img/mascots/mascot-read-1024.webp" alt="" fill sizes="(min-width:1024px) 270px, 190px" className="object-contain object-bottom" />
+                  <MascotArt src="/img/mascots/mascot-read-1024.webp" sizes="(min-width:1024px) 270px, 190px" />
                 </div>
                 <span aria-hidden className="pointer-events-none absolute bottom-[22px] left-0 hidden h-px w-[300px] bg-[linear-gradient(90deg,transparent,var(--fmd-border-strong),transparent)] lg:block" />
                 <Meta item={lead} />
