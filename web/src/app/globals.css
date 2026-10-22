@@ -2,7 +2,7 @@
 
 /* =========================================================================
    FMD design tokens
-   Every component reads these variables. Themes only redefine tokens —
+   Every component reads these variables. Themes only redefine tokens -
    layout, spacing, type and motion are identical across all of them.
    ========================================================================= */
 

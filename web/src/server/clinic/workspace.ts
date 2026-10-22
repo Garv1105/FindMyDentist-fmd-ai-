@@ -51,7 +51,7 @@ export function can(a: Auth, clinicId: string, perm: Permission) {
 
 /**
  * Every Clinic OS service starts here. Non-members get 404 (a clinic's existence and data are not
- * revealed to outsiders — tenant isolation); members without the permission get 403 and an audit entry.
+ * revealed to outsiders - tenant isolation); members without the permission get 403 and an audit entry.
  */
 export function requireClinic(a: Auth, clinicId: string, perm: Permission) {
   const roles = clinicRolesOf(a.user.id, clinicId);
@@ -93,7 +93,7 @@ const DEFAULT_TYPES: [string, number, number][] = [
 ];
 
 /**
- * A dentist account creates a clinic workspace — either for a new clinic or for the directory clinic
+ * A dentist account creates a clinic workspace - either for a new clinic or for the directory clinic
  * of a profile they have claimed. It starts in "setup"; FMD activates it after verification (Annex E).
  */
 export function createWorkspace(a: Auth, input: Record<string, unknown>) {
@@ -188,7 +188,7 @@ export function invite(a: Auth, clinicId: string, input: Record<string, unknown>
     id, clinicId, email, role, sha(token), Date.now() + 7 * 86400_000, a.user.id, Date.now(),
   );
   audit(a.user.id, "clinic.invite_sent", "clinic", clinicId, { role });
-  // OD-14: no email provider — the link is returned for the owner to share; nothing claims it was emailed
+  // OD-14: no email provider - the link is returned for the owner to share; nothing claims it was emailed
   return { inviteId: id, link: `/clinic/join?token=${token}`, delivered: false };
 }
 

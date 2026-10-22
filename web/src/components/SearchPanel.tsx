@@ -20,14 +20,14 @@ const SAMPLE_QUESTIONS: SampleQA[] = [
     question: "What is a root canal?",
     teaser: "A common tooth-saving procedure, explained simply.",
     answer:
-      "A root canal removes infected tissue from inside a tooth so the tooth can be saved instead of pulled. It's usually needed when decay or injury has reached the soft inner part of the tooth, allowing bacteria to cause pain, swelling, and infection. During the procedure the dentist numbs the area, cleans out the infected tissue, then seals the tooth — most cases finish in one or two visits. Mild soreness for a few days afterwards is normal, and it's best to avoid very hard foods on that tooth until your dentist says it's fine.",
+      "A root canal removes infected tissue from inside a tooth so the tooth can be saved instead of pulled. It's usually needed when decay or injury has reached the soft inner part of the tooth, allowing bacteria to cause pain, swelling, and infection. During the procedure the dentist numbs the area, cleans out the infected tissue, then seals the tooth - most cases finish in one or two visits. Mild soreness for a few days afterwards is normal, and it's best to avoid very hard foods on that tooth until your dentist says it's fine.",
   },
   {
     id: "whitening",
     question: "Is teeth whitening safe?",
     teaser: "What's safe, what's not, and what to expect.",
     answer:
-      "Yes — when done by a dentist or with a dentist-approved kit, whitening is considered safe for most people. The most common side effect is temporary sensitivity to cold, which usually fades within a few days. It's best to skip whitening if you have untreated cavities, gum disease, or very sensitive teeth, and talk to a dentist first. Most people see a noticeable change after one to two weeks, though results vary by starting shade and lifestyle habits like coffee, tea, or smoking.",
+      "Yes - when done by a dentist or with a dentist-approved kit, whitening is considered safe for most people. The most common side effect is temporary sensitivity to cold, which usually fades within a few days. It's best to skip whitening if you have untreated cavities, gum disease, or very sensitive teeth, and talk to a dentist first. Most people see a noticeable change after one to two weeks, though results vary by starting shade and lifestyle habits like coffee, tea, or smoking.",
   },
   {
     id: "bleeding-gums",
@@ -41,14 +41,14 @@ const SAMPLE_QUESTIONS: SampleQA[] = [
     question: "When should my child first see a dentist?",
     teaser: "Timing, what happens, and how to prepare.",
     answer:
-      "A child should see a dentist by their first birthday, or within six months of the first tooth appearing — whichever comes first. Early visits catch problems before they hurt and help your child get comfortable with the dentist. The appointment is usually a short, gentle check where the dentist counts teeth, looks for early decay, and shows you how to clean them. To prepare, keep the visit casual and positive, avoid words like 'pain' or 'shot', and let your child bring a favourite toy.",
+      "A child should see a dentist by their first birthday, or within six months of the first tooth appearing - whichever comes first. Early visits catch problems before they hurt and help your child get comfortable with the dentist. The appointment is usually a short, gentle check where the dentist counts teeth, looks for early decay, and shows you how to clean them. To prepare, keep the visit casual and positive, avoid words like 'pain' or 'shot', and let your child bring a favourite toy.",
   },
   {
     id: "cost",
     question: "How much does a dental check-up cost?",
     teaser: "What affects the price and how to compare.",
     answer:
-      "A standard check-up usually costs less than a filling or crown, though prices vary a lot depending on where you are and which clinic you visit. A typical visit includes an exam, a scale and polish, and basic X-rays if needed — some clinics bundle these, others charge separately. Location, clinic size, dentist experience, and whether you're paying privately or through insurance all affect the price. It's a good idea to ask for a written estimate before treatment, and many clinics offer a fixed-price new-patient package.",
+      "A standard check-up usually costs less than a filling or crown, though prices vary a lot depending on where you are and which clinic you visit. A typical visit includes an exam, a scale and polish, and basic X-rays if needed - some clinics bundle these, others charge separately. Location, clinic size, dentist experience, and whether you're paying privately or through insurance all affect the price. It's a good idea to ask for a written estimate before treatment, and many clinics offer a fixed-price new-patient package.",
   },
 ];
 
@@ -63,7 +63,7 @@ const QUICK_CHIPS: { id: string; label: string }[] = [
 const VIDEO_DURATION_MS = 10000;
 /** Start streaming the answer this many ms into the video. */
 const ANSWER_START_MS = 7000;
-/** Box side length in px — used by both the box and the video image sizing. */
+/** Box side length in px - used by both the box and the video image sizing. */
 const BOX_SIZE = 120;
 
 // ---------------------------------------------------------------------------
@@ -511,10 +511,10 @@ export default function SearchPanel() {
               style={{ width: BOX_SIZE, height: BOX_SIZE }}
               aria-hidden
             >
-              {/* Curved glass background — only mounted when framed */}
+              {/* Curved glass background - only mounted when framed */}
               {showFrame && <div className="media-box-bg absolute inset-0" />}
 
-              {/* Content layer — inset from the tray when framed, or flush
+              {/* Content layer - inset from the tray when framed, or flush
                   when bare (so the mascot uses the full box). */}
               <div
                 className={`absolute overflow-hidden transition-all duration-500 ${
@@ -533,7 +533,7 @@ export default function SearchPanel() {
                   }`}
                 />
 
-                {/* Idle — mascot.png, no frame, no backdrop */}
+                {/* Idle - mascot.png, no frame, no backdrop */}
                 {videoIdle && (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <Image
@@ -547,7 +547,7 @@ export default function SearchPanel() {
                   </div>
                 )}
 
-                {/* Inner highlight ring — only when framed */}
+                {/* Inner highlight ring - only when framed */}
                 {showFrame && (
                   <span
                     aria-hidden
@@ -669,7 +669,7 @@ export default function SearchPanel() {
         }
 
         /* ------------------------------------------------------------------
-           Media box — two visual states
+           Media box - two visual states
          ------------------------------------------------------------------ */
 
         /* Framed (video playing / paused on last frame) */
@@ -681,14 +681,14 @@ export default function SearchPanel() {
             0 8px 24px -12px rgb(0 0 0 / 0.5);
         }
 
-        /* Bare (mascot idle) — no frame, no shadow, no background */
+        /* Bare (mascot idle) - no frame, no shadow, no background */
         :global(.media-box-bare) {
           border-radius: 0;
           overflow: visible;
           box-shadow: none;
         }
 
-        /* Outer glass "tray" — layered gradient + inner light */
+        /* Outer glass "tray" - layered gradient + inner light */
         :global(.media-box-bg) {
           border-radius: inherit;
           background:

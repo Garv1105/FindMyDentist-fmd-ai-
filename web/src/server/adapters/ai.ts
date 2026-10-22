@@ -1,7 +1,7 @@
 /**
  * Provider-agnostic model interface (PRD §1, §7.5; OD-14 vendor not chosen).
  * Business rules (safety, escalation, allowed actions, storage) live in server/assistant.ts and
- * apply to every provider — a model is never trusted to enforce them.
+ * apply to every provider - a model is never trusted to enforce them.
  */
 export type ChatTurn = { role: "user" | "assistant"; text: string };
 export type NavAction = { type: "navigate"; label: string; target: "dentists" | "concierge" | "records" | "appointments"; specialty?: string };

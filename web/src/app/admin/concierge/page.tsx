@@ -94,7 +94,7 @@ function Queue() {
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Stat label="Open" value={q.metrics.open} />
           <Stat label="Overdue" value={q.metrics.overdue} hint={q.metrics.definitions.overdue} />
-          <Stat label="Median first contact" value={q.metrics.medianFirstContactHours === null ? "—" : `${q.metrics.medianFirstContactHours} h`} hint={q.metrics.definitions.medianFirstContactHours} />
+          <Stat label="Median first contact" value={q.metrics.medianFirstContactHours === null ? "-" : `${q.metrics.medianFirstContactHours} h`} hint={q.metrics.definitions.medianFirstContactHours} />
           <Stat label="Total received" value={q.metrics.total} />
         </dl>
       )}
@@ -342,7 +342,7 @@ const LABEL: Record<string, string> = {
 function describe(ev: Detail["events"][number], people: Detail["coordinators"]) {
   switch (ev.kind) {
     case "created": return "Request submitted";
-    case "status": return `Status: ${ev.from_status ? LABEL[ev.from_status] : "—"} → ${ev.to_status ? LABEL[ev.to_status] : "—"}`;
+    case "status": return `Status: ${ev.from_status ? LABEL[ev.from_status] : "-"} → ${ev.to_status ? LABEL[ev.to_status] : "-"}`;
     case "contact_attempt": return `Contact attempt by ${ev.channel}: ${ev.result?.replace("_", " ")}`;
     case "assigned": return `${ev.body} to ${people.find((p) => p.id === ev.result)?.name ?? "a coordinator"}`;
     case "next_action": return `Next action: ${ev.body} (due ${fmt(Number(ev.result))})`;

@@ -261,7 +261,7 @@ export function recordConsent(userId: string, purpose: ConsentPurpose, granted: 
   );
 }
 
-/** Latest decision per purpose (history is kept — consents are append-only). */
+/** Latest decision per purpose (history is kept - consents are append-only). */
 export function currentConsents(userId: string): Record<ConsentPurpose, boolean> {
   const rows = all<{ purpose: ConsentPurpose; granted: number }>(
     `SELECT c.purpose, c.granted FROM consents c

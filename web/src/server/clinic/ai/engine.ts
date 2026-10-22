@@ -91,7 +91,7 @@ export function answerClarification(a: Auth, clinicId: string, taskId: string, a
   const t = ownTask(a, clinicId, taskId);
   if (t.status !== "clarifying") throw new HttpError(409, "not_clarifying", "This task isn't waiting for an answer.");
   run("UPDATE ai_tasks SET status = 'cancelled', report = 'Replaced by a clarified task.', updated_at = ? WHERE id = ?", Date.now(), taskId);
-  return startTask(a, clinicId, `${t.instruction} — ${String(answer ?? "").slice(0, 300)}`);
+  return startTask(a, clinicId, `${t.instruction} - ${String(answer ?? "").slice(0, 300)}`);
 }
 
 function ownTask(a: Auth, clinicId: string, id: string) {

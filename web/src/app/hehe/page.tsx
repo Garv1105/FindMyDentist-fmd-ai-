@@ -41,7 +41,7 @@ export default function HehePage() {
   const phaseAccumRef = useRef<number>(0);
   const lastTickRef = useRef<number>(0);
 
-  // Mat visibility — flips on the first scroll, then never turns off
+  // Mat visibility - flips on the first scroll, then never turns off
   const [matVisible, setMatVisible] = useState<boolean>(false);
   const hasScrolledRef = useRef<boolean>(false);
 
@@ -317,7 +317,7 @@ export default function HehePage() {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      // Space toggles play — also counts as "user started" so reveal the mat
+      // Space toggles play - also counts as "user started" so reveal the mat
       if (e.key === " ") {
         e.preventDefault();
         if (!hasScrolledRef.current) {
@@ -435,7 +435,7 @@ export default function HehePage() {
         </div>
 
         {/* 
-          Mat — revealed on first scroll with a beautiful entrance:
+          Mat - revealed on first scroll with a beautiful entrance:
           fades in, scales up from 0.6, and drifts upward into place.
         */}
         <div
@@ -461,7 +461,7 @@ export default function HehePage() {
         }
 
         /* 
-          Colored reveal — now anchored at the CENTER of the earth and
+          Colored reveal - now anchored at the CENTER of the earth and
           expanding outward to left, right, and downward. Ellipse grows
           symmetrically from the middle. Origin at 50% horizontal, and
           vertically at ~65% so it starts at the visual center of the
@@ -506,7 +506,7 @@ export default function HehePage() {
           pointer-events: none;
         }
 
-        /* Mat wrapper — base (hidden) state */
+        /* Mat wrapper - base (hidden) state */
         .earth-mat-wrapper {
           top: 50px;
           z-index: 20;
@@ -521,7 +521,7 @@ export default function HehePage() {
             filter 800ms ease-out;
         }
 
-        /* Revealed state — fades in, scales up, settles into position */
+        /* Revealed state - fades in, scales up, settles into position */
         .earth-mat-wrapper.mat-visible {
           opacity: 1;
           transform: translate(-50%, -85%) scale(1);

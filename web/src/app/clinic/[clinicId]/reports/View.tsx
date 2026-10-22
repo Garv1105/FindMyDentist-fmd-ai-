@@ -26,7 +26,7 @@ export default function ReportsPage() {
   useEffect(() => {
     call<R>(`reports?from=${ms(from)}&to=${ms(to)}`).then(setR).catch((e) => setErr(e.message));
   }, [call, from, to]);
-  const pct = (v: number | null) => (v === null ? "—" : `${v}%`);
+  const pct = (v: number | null) => (v === null ? "-" : `${v}%`);
   return (
     <>
       <H title="Reports" desc="Operational figures from Clinic OS records, with their definitions. Not audited financial statements.">

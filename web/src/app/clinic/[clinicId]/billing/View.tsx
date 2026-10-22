@@ -65,7 +65,7 @@ export default function BillingPage() {
             ))}
             <div>
               <p className="text-ink-4">By mode</p>
-              <p className="text-ink-2">{Object.entries(sheet.byModeInr).filter(([, v]) => v).map(([m, v]) => `${m.toUpperCase()} ${inr(v)}`).join(" · ") || "—"}</p>
+              <p className="text-ink-2">{Object.entries(sheet.byModeInr).filter(([, v]) => v).map(([m, v]) => `${m.toUpperCase()} ${inr(v)}`).join(" · ") || "-"}</p>
             </div>
           </div>
           <p className="mt-2 text-[11.5px] text-ink-4">{sheet.note}</p>

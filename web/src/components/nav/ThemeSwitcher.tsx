@@ -129,7 +129,7 @@ export default function ThemeSwitcher() {
         onClick={() => setOpen((o) => !o)}
         className="grid size-9 place-items-center rounded-full border border-transparent text-ink-2 transition-colors hover:border-line hover:text-ink"
       >
-        {/* ◐ — half lit, half shadow, tinted with the active glow */}
+        {/* ◐ - half lit, half shadow, tinted with the active glow */}
         <span
           className="block size-[17px] rounded-full border border-current"
           style={{ background: `linear-gradient(90deg, transparent 50%, currentColor 50%)` }}

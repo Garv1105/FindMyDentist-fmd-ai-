@@ -1,6 +1,6 @@
 /** Ordered, append-only. Never edit a shipped migration; add a new one. */
 export const MIGRATIONS: string[] = [
-  /* 1 — identity, sessions, consent, audit (PRD §4.1, §10, §13) */ `
+  /* 1 - identity, sessions, consent, audit (PRD §4.1, §10, §13) */ `
   CREATE TABLE users (
     id TEXT PRIMARY KEY,
     email TEXT UNIQUE,
@@ -70,7 +70,7 @@ export const MIGRATIONS: string[] = [
   );
   CREATE INDEX audit_target ON audit_events(target_type, target_id);
   `,
-  /* 2 — Concierge enquiries and coordination history (PRD §5) */ `
+  /* 2 - Concierge enquiries and coordination history (PRD §5) */ `
   CREATE TABLE concierge_enquiries (
     id TEXT PRIMARY KEY,
     reference TEXT NOT NULL UNIQUE,
@@ -109,7 +109,7 @@ export const MIGRATIONS: string[] = [
   );
   CREATE INDEX concierge_events_enquiry ON concierge_events(enquiry_id, at);
   `,
-  /* 3 — provider directory, verification, claims, sponsored placements (PRD §4.4, §4.8) */ `
+  /* 3 - provider directory, verification, claims, sponsored placements (PRD §4.4, §4.8) */ `
   CREATE TABLE clinics (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -170,7 +170,7 @@ export const MIGRATIONS: string[] = [
     decided_at INTEGER
   );
   `,
-  /* 4 — booking: published slots, clinic policy, patient booking requests (PRD §4.5, §6.4) */ `
+  /* 4 - booking: published slots, clinic policy, patient booking requests (PRD §4.5, §6.4) */ `
   CREATE TABLE clinic_booking_policies (
     clinic_id TEXT PRIMARY KEY REFERENCES clinics(id),
     live_schedule INTEGER NOT NULL DEFAULT 0,      -- 1 = slots come from a connected schedule
@@ -219,7 +219,7 @@ export const MIGRATIONS: string[] = [
     note TEXT NOT NULL DEFAULT ''
   );
   `,
-  /* 5 — patient-controlled dental records, sharing grants, access log (PRD §4.6, §10, §13) */ `
+  /* 5 - patient-controlled dental records, sharing grants, access log (PRD §4.6, §10, §13) */ `
   CREATE TABLE records (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL REFERENCES users(id),
@@ -258,7 +258,7 @@ export const MIGRATIONS: string[] = [
   );
   CREATE INDEX record_access_record ON record_access_events(record_id, at);
   `,
-  /* 6 — public assistant conversations, stored only with ai_history consent (PRD §4.2) */ `
+  /* 6 - public assistant conversations, stored only with ai_history consent (PRD §4.2) */ `
   CREATE TABLE ai_conversations (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL REFERENCES users(id),
@@ -279,7 +279,7 @@ export const MIGRATIONS: string[] = [
   );
   CREATE INDEX ai_messages_conv ON ai_messages(conversation_id, created_at);
   `,
-  /* 7 — plan catalog (PRD §14 prices), subscriptions, usage counters, entitlements */ `
+  /* 7 - plan catalog (PRD §14 prices), subscriptions, usage counters, entitlements */ `
   CREATE TABLE plans (
     code TEXT PRIMARY KEY,
     product TEXT NOT NULL CHECK (product IN ('main_membership','clinic_os','scholar_upgrade')),
@@ -320,7 +320,7 @@ export const MIGRATIONS: string[] = [
   INSERT INTO plans (code, product, audience, name, price_paise, period, features, usage_limits, pending_decision) VALUES ('clinic_os', 'clinic_os', 'clinic', 'FMD Clinic OS', 200000, 'month', '["Clinic management","Agentic AI clinic manager (fair use)"]', '{}', 'Fair-use AI limits and add-ons are not yet defined.');
   INSERT INTO plans (code, product, audience, name, price_paise, period, features, usage_limits, pending_decision) VALUES ('scholar_upgrade', 'scholar_upgrade', 'student', 'Scholar upgrade', 35000, 'one_time', '["Additional Scholar usage after included limits"]', '{}', 'Tentative price; billing period and exact benefit pending confirmation.');
   `,
-  /* 8 — content hub, engagement, reports & moderation, explicit interests (PRD §4.7, Annex C, D) */ `
+  /* 8 - content hub, engagement, reports & moderation, explicit interests (PRD §4.7, Annex C, D) */ `
   CREATE TABLE posts (
     id TEXT PRIMARY KEY,
     author_user_id TEXT REFERENCES users(id),
@@ -369,7 +369,7 @@ export const MIGRATIONS: string[] = [
   );
   CREATE TABLE user_interests (user_id TEXT NOT NULL REFERENCES users(id), topic TEXT NOT NULL, PRIMARY KEY (user_id, topic));
   `,
-  /* 9 — jobs and professional opportunities (PRD §4.9) */ `
+  /* 9 - jobs and professional opportunities (PRD §4.9) */ `
   CREATE TABLE jobs (
     id TEXT PRIMARY KEY,
     poster_user_id TEXT NOT NULL REFERENCES users(id),
@@ -390,7 +390,7 @@ export const MIGRATIONS: string[] = [
   );
   CREATE INDEX jobs_active ON jobs(status, expires_at);
   `,
-  /* 10 — support tickets, thread, attachments (PRD §10 Support, Annex H) */ `
+  /* 10 - support tickets, thread, attachments (PRD §10 Support, Annex H) */ `
   CREATE TABLE tickets (
     id TEXT PRIMARY KEY,
     reference TEXT NOT NULL UNIQUE,
@@ -428,7 +428,7 @@ export const MIGRATIONS: string[] = [
     created_at INTEGER NOT NULL
   );
   `,
-  /* 11 — Clinic OS core: workspace, team, schedule, patients, clinical, billing, inventory, tasks (PRD §6) */ `
+  /* 11 - Clinic OS core: workspace, team, schedule, patients, clinical, billing, inventory, tasks (PRD §6) */ `
   CREATE TABLE clinic_workspaces (
     clinic_id TEXT PRIMARY KEY REFERENCES clinics(id),
     status TEXT NOT NULL CHECK (status IN ('setup','active','suspended')),
@@ -682,7 +682,7 @@ export const MIGRATIONS: string[] = [
     created_at INTEGER NOT NULL
   );
   `,
-  /* 12 — Clinic AI manager: tasks, steps, approvals, schedules, outbound messages, usage (PRD §7) */ `
+  /* 12 - Clinic AI manager: tasks, steps, approvals, schedules, outbound messages, usage (PRD §7) */ `
   CREATE TABLE ai_settings (
     clinic_id TEXT PRIMARY KEY REFERENCES clinics(id),
     enabled INTEGER NOT NULL DEFAULT 1,
@@ -764,7 +764,7 @@ export const MIGRATIONS: string[] = [
     at INTEGER NOT NULL
   );
   `,
-  /* 13 — product renamed: FMD Concierge → FMD Edge (user-facing text only; table and route names unchanged) */ `
+  /* 13 - product renamed: FMD Concierge → FMD Edge (user-facing text only; table and route names unchanged) */ `
   UPDATE plans SET features = REPLACE(features, 'Concierge requests', 'FMD Edge requests') WHERE features LIKE '%Concierge requests%';
   `,
 ];

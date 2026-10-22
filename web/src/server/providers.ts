@@ -40,7 +40,7 @@ export type ProviderCard = {
   clinic: { name: string; area: string; city: string } | null;
   verification: { status: Row["verification_status"]; checks: string };
   sponsored: { sponsor: string } | null;
-  /** No reviews system yet (Annex G) — never invent ratings. */
+  /** No reviews system yet (Annex G) - never invent ratings. */
   rating: null;
   /** Live availability only from a connected schedule (MAIN-26); filled by the booking slice. */
   nextAvailable: number | null;
@@ -147,7 +147,7 @@ export function searchProviders(input: SearchInput) {
   }
   const rows = all<Row>(`${BASE}${where.length ? ` WHERE ${where.join(" AND ")}` : ""}`, ...params);
 
-  // one card per dentist (first clinic) — multi-clinic dentists list all clinics on the profile
+  // one card per dentist (first clinic) - multi-clinic dentists list all clinics on the profile
   const seen = new Set<string>();
   const unique = rows.filter((r) => (seen.has(r.id) ? false : (seen.add(r.id), true)));
 
@@ -254,7 +254,7 @@ export function listClaims(a: Auth) {
 
 /**
  * Approve: link the profile to the dentist's account and mark verified, recording *what was checked*.
- * The badge text shown to patients is exactly `checks` — verification must reflect actual checks (MAIN-46).
+ * The badge text shown to patients is exactly `checks` - verification must reflect actual checks (MAIN-46).
  */
 export function decideClaim(a: Auth, claimId: string, input: Record<string, unknown>) {
   requireRole(a, "fmd_ops", "super_admin");

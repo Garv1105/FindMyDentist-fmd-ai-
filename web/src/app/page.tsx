@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { DiscoveryProvider } from "@/components/discovery";
 import { AssistantPanel } from "@/components/hero/Assistant";
 import Hero from "@/components/hero/Hero";
@@ -15,6 +16,9 @@ import Products from "@/components/sections/Products";
 import Records from "@/components/sections/Records";
 import Trust from "@/components/sections/Trust";
 import Walkthrough from "@/components/sections/Walkthrough";
+
+// the home page's own address (set here, not in the layout, so other pages don't inherit it)
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 // Homepage order (01–13) is fixed by the FMD homepage brief.
 export default function Home() {

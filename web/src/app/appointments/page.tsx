@@ -152,7 +152,7 @@ function Item({ b, onChange }: { b: Booking; onChange: () => void }) {
           {history.map((h, i) => (
             <li key={i}>
               {new Date(h.at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })} · {h.to_status.replaceAll("_", " ")}
-              {h.note && <span className="text-ink-4"> — {h.note}</span>}
+              {h.note && <span className="text-ink-4"> - {h.note}</span>}
             </li>
           ))}
         </ol>

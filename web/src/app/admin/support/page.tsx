@@ -45,8 +45,8 @@ function Queue() {
         <dl className="grid grid-cols-3 gap-3">
           {[
             ["Open", q.metrics.open],
-            ["Median first response", q.metrics.medianFirstResponseHours === null ? "—" : `${q.metrics.medianFirstResponseHours} h`],
-            ["Reopen rate", q.metrics.reopenRate === null ? "—" : `${q.metrics.reopenRate}%`],
+            ["Median first response", q.metrics.medianFirstResponseHours === null ? "-" : `${q.metrics.medianFirstResponseHours} h`],
+            ["Reopen rate", q.metrics.reopenRate === null ? "-" : `${q.metrics.reopenRate}%`],
           ].map(([l, val]) => (
             <div key={l as string} className="glass rounded-2xl p-4">
               <dt className="text-[12px] text-ink-4">{l}</dt>

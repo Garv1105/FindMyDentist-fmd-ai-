@@ -1,4 +1,4 @@
-/** Reference lists shared by the client UI and the server. Not demo data — controlled vocabularies. */
+/** Reference lists shared by the client UI and the server. Not demo data - controlled vocabularies. */
 export const SPECIALTIES = [
   "General Dentist",
   "Orthodontist",
