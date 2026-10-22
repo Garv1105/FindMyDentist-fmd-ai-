@@ -289,10 +289,20 @@ function Model({ url, align, active, onReady, onSnapshot }: Props) {
   const exposure = look?.exposure ?? 1.05;
   const frames = useRef(0);
   const spin = useRef<THREE.Group>(null);
+  const aniso = useThree((s) => s.gl.capabilities.getMaxAnisotropy());
   // each box gets its own copy (the same model can be on screen twice; skinned, so with its own skeleton); turned to
-  // its artwork's view, fitted to a 1-unit box once
+  // its artwork's view, fitted to a 1-unit box once; its textures filtered at full anisotropy (crisp where the surface
+  // turns away: the head's sides, the face's edges)
   const fitted = useMemo(() => {
     const s = cloneSkinned(scene);
+    s.traverse((o) => {
+      const m = (o as THREE.Mesh).isMesh ? ((o as THREE.Mesh).material as THREE.MeshPhysicalMaterial) : null;
+      for (const t of m ? [m.map, m.normalMap, m.roughnessMap, m.clearcoatNormalMap] : [])
+        if (t && t.anisotropy !== aniso) {
+          t.anisotropy = aniso;
+          t.needsUpdate = true;
+        }
+    });
     if (look?.glass) glassify(s, look.glass);
     if (look?.turn) {
       s.rotation.y = THREE.MathUtils.degToRad(look.turn);
@@ -306,7 +316,7 @@ function Model({ url, align, active, onReady, onSnapshot }: Props) {
     s.position.set(-c.x, align === "bottom" ? -0.5 - b.min.y * k : -c.y, -c.z);
     s.updateMatrixWorld(true);
     return s;
-  }, [scene, align, look]);
+  }, [scene, align, look, aniso]);
 
   // what moves: the bones, with their rest pose and their parent's turn in model space (to turn them about model-space
   // axes), and the glowing materials with their base glow
@@ -370,7 +380,8 @@ export default function MascotModel(props: Props) {
   return (
     <Canvas
       frameloop="demand"
-      dpr={[1, 1.5]}
+      // up to 2x: crisp on retina screens (only the boxes on screen animate, so the cost stays small)
+      dpr={[1, 2]}
       camera={{ position: [0, 0, dist], fov: FOV }}
       gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}
       onCreated={({ gl }) => {
