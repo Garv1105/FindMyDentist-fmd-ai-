@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { ChevronDown, Menu, Search, UserRound, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useMe } from "@/lib/me";
 import ThemeSwitcher from "./ThemeSwitcher";
@@ -23,12 +24,11 @@ const MORE = [
   { label: "Help", href: "/help" },
 ];
 
+/** The brand mark: public/logo.png (fmd + the meditating mascot + FindMyDentist), trimmed to public/img/logo-fmd.webp */
 export function Logo() {
   return (
-    <Link href="/" className="flex items-center gap-3" aria-label="FindMyDentist home">
-      <span className="headline-silver text-[24px] font-semibold leading-none tracking-[-0.06em]">FMD</span>
-      <span className="hidden h-4 w-px bg-line-strong sm:block" />
-      <span className="hidden text-[15px] font-normal tracking-[-0.012em] text-ink-2 sm:block">FindMyDentist</span>
+    <Link href="/" className="flex shrink-0 items-center" aria-label="FindMyDentist home">
+      <Image src="/img/logo-fmd.webp" alt="FindMyDentist" width={337} height={180} priority className="h-[52px] w-auto" />
     </Link>
   );
 }
