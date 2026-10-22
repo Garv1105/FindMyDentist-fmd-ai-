@@ -11,10 +11,10 @@ import { Atmosphere } from "./LowerWorld";
 const FEATURES = [
   { icon: BookOpenText, title: "Accurate information", body: "Plain-language explanations, with uncertainty stated honestly." },
   { icon: UserRound, title: "Personalised guidance", body: "Shaped by what you describe, in your language." },
-  { icon: FileSearch, title: "Symptom insights", body: "Helps you describe what you feel. Never a diagnosis." },
+  { icon: FileSearch, title: "Symptom insights", body: "Helps you describe what you feel. And makes you understand what's happening." },
   { icon: Stethoscope, title: "Treatment education", body: "What happens, how long it takes and what to ask." },
-  { icon: Compass, title: "Care recommendations", body: "The kind of dentist to see. Matching is informational." },
-  { icon: Route, title: "Next steps & referrals", body: "Points you to verified dentists. Nothing is booked without you." },
+  { icon: Compass, title: "Care recommendations", body: "Ease of finding a dental specialist according to your particular problem." },
+  { icon: Route, title: "Next steps & referrals", body: "Points you to verified dentists. Book at your convenience." },
 ];
 
 /*
