@@ -155,15 +155,16 @@ export default function AssistantMascot({ mood, active }: { mood: Mood; active: 
   const still = useReducedMotion();
   const [ready, setReady] = useState(false);
   const onReady = useMemo(() => () => setReady(true), []);
-  // frames the 1-unit-tall model with a little room above (a raised hand, a tilted head); the feet near the bottom edge
-  const dist = 0.56 / Math.tan(THREE.MathUtils.degToRad(FOV / 2));
+  // frames the 1-unit-tall model with room all round (the presenting hand reaches out to the side, the listening hand
+  // up by the head), so nothing is cut at the box's edges; the feet near the bottom edge
+  const dist = 0.68 / Math.tan(THREE.MathUtils.degToRad(FOV / 2));
   const look = PORCELAIN;
   return (
     <div aria-hidden className={`relative size-full transition-opacity duration-700 ${ready ? "opacity-100" : "opacity-0"}`}>
       <Canvas
         frameloop={active && !still ? "always" : "demand"}
         dpr={[1, 2]}
-        camera={{ position: [0, 0.04, dist], fov: FOV }}
+        camera={{ position: [0, 0.12, dist], fov: FOV }}
         gl={{ antialias: true, alpha: true }}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.NeutralToneMapping;
