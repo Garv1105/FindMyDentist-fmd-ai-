@@ -9,7 +9,7 @@ import { createTask, draftPurchaseOrder, inventoryAlerts, recallDue } from "../o
 import type { Permission } from "../workspace.ts";
 
 /**
- * Typed, permission-checked tools — the only way the AI manager touches clinic data (PRD §7.5).
+ * Typed, permission-checked tools - the only way the AI manager touches clinic data (PRD §7.5).
  * Risk tiers map to the autonomy matrix (§7.4):
  *   read      → may run automatically
  *   internal  → drafts/tasks inside FMD; may run automatically, staff are notified
@@ -132,7 +132,7 @@ const TOOLS: Tool[] = [
         recipients: msgs.length,
         sample: msgs.slice(0, 3).map((m) => ({ to: `${m.name} (${m.phone ? m.phone.slice(0, 6) + "••••" : "no phone"})`, message: m.body })),
         channel: "SMS",
-        provider: messaging.configured ? messaging.name : "No messaging provider configured — nothing will actually be delivered.",
+        provider: messaging.configured ? messaging.name : "No messaging provider configured - nothing will actually be delivered.",
       };
     },
     run: ({ clinicId, taskId }) => {

@@ -208,7 +208,7 @@ export default function Mascot3D({ active, ...props }: Props & { active: boolean
       }}
       style={{ pointerEvents: "none" }}
     >
-      {/* meditate.png's light (fitted to it colour for colour): a high-key studio — the white porcelain reads faintly
+      {/* meditate.png's light (fitted to it colour for colour): a high-key studio - the white porcelain reads faintly
           pink-white, its left side and left lobe sky-blue with a blue rim, the right warm with a peach rim, a lavender
           rim along the top and lavender underneath */}
       <ambientLight intensity={0.9} color="#fff3f3" />

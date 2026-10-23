@@ -6,9 +6,37 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { api, useMe } from "@/lib/me";
 import { useDiscovery } from "../discovery";
+import { PHASES } from "./phases";
 
 export function openAssistant(prompt?: string) {
   window.dispatchEvent(new CustomEvent("fmd:open-ai", { detail: prompt }));
+}
+
+/**
+ * Take the visitor up to the hero's own FMD AI box (the end of the hero's scroll story) and, given a question, type it
+ * there and send it, as if they had. The hero picks the question up from the "fmd:hero-ask" event once the scroll has
+ * arrived. Without the hero (another page), it opens the assistant directly.
+ */
+export function askInHero(prompt?: string) {
+  const hero = document.getElementById("top");
+  const box = document.getElementById("hero-ai");
+  if (!hero || !box) return openAssistant(prompt);
+  // the cinematic hero is pinned: its AI box is fully in once the scroll is past the "ai" phase. The still hero (reduced
+  // motion) is ordinary flow: bring the box to the middle of the screen
+  const pinned = hero.offsetHeight > window.innerHeight * 1.5;
+  const top = pinned
+    ? hero.offsetTop + (PHASES.ai[1] + 0.02) * (hero.offsetHeight - window.innerHeight)
+    : box.getBoundingClientRect().top + window.scrollY - window.innerHeight / 2;
+  // hand the question over once the page has actually arrived (a stray "scrollend" from an earlier scroll can't be
+  // trusted), and a beat later, when the box has switched on (it is inert until the hero reaches it)
+  const arrived = () => setTimeout(() => window.dispatchEvent(new CustomEvent("fmd:hero-ask", { detail: prompt })), 200);
+  const start = performance.now();
+  const wait = () => {
+    if (Math.abs(window.scrollY - top) < 2 || performance.now() - start > 3000) arrived();
+    else requestAnimationFrame(wait);
+  };
+  window.scrollTo({ top, behavior: "smooth" });
+  requestAnimationFrame(wait);
 }
 
 type Action = { type: "navigate"; label: string; target: "dentists" | "concierge" | "records" | "appointments"; specialty?: string };

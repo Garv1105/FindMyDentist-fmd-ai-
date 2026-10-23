@@ -10,7 +10,7 @@ import Link from "next/link";
 import { Container, Reveal } from "../ui";
 import { Atmosphere } from "./LowerWorld";
 
-/* Demo documents for a fictitious clinic and patient (public/img/records) — no real patient data is depicted. */
+/* Demo documents for a fictitious clinic and patient (public/img/records) - no real patient data is depicted. */
 const DOCS: { icon: typeof FileText; name: string; meta: string; img: string; pos: string }[] = [
   { icon: ScanLine, name: "Panoramic X-ray", meta: "Mar 2026 · Demo Clinic", img: "/img/records/xray.webp", pos: "50% 55%" },
   { icon: FileText, name: "Consultation report", meta: "Mar 2026 · PDF", img: "/img/records/consultation.webp", pos: "50% 0%" },
@@ -21,7 +21,7 @@ const DOCS: { icon: typeof FileText; name: string; meta: string; img: string; po
 ];
 
 const POINTS = [
-  { icon: KeyRound, text: "Patient-controlled — you decide what's stored and who sees it." },
+  { icon: KeyRound, text: "Patient-controlled - you decide what's stored and who sees it." },
   { icon: Share2, text: "Share explicitly with a chosen provider through expiring links." },
   { icon: Clock3, text: "Organised by date, clinic, provider and treatment plan." },
 ];

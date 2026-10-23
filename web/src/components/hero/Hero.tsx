@@ -84,7 +84,7 @@ function CinematicHero() {
   const [a0, a1] = PHASES.ai;
   const [c0, c1] = PHASES.core;
 
-  // A — headline and centre light; both dim once the assistant takes over
+  // A - headline and centre light; both dim once the assistant takes over
   const titleOpacity = useTransform(p, PHASES.title, [1, 0]);
   const titleY = useTransform(p, PHASES.title, [0, -70]);
   // the CTAs fade with the headline; stop catching clicks once they are mostly gone
@@ -95,10 +95,10 @@ function CinematicHero() {
   const core = useTransform(p, [0, c1, PHASES.spread[1], a0, a1], [0.55, 1, 0.9, 0.9, 0.05]);
   const coreScale = useTransform(p, [0, c1], [0.8, 1.15]);
 
-  // A→C — light travels along the rim; 0.06 = the focused starting span, 1 = full rim
+  // A→C - light travels along the rim; 0.06 = the focused starting span, 1 = full rim
   const spread = useTransform(p, PHASES.spread, [0.12, 1]);
 
-  // C/D/E — mascot. y is % of its own height, measured up from the rim apex: positive = below the horizon.
+  // C/D/E - mascot. y is % of its own height, measured up from the rim apex: positive = below the horizon.
   // Settled at -22% of --mh (≈9–10% of the stage height above the horizon); --mh is capped in globals.css so the
   // head stays below the nav at every viewport height.
   // It starts tiny and mostly behind the limb, rises out of the light while growing, then settles; it exits once.
@@ -108,7 +108,7 @@ function CinematicHero() {
   const rotY = useTransform(p, MASCOT_KEYS, [-720, -720, -470, -230, -60, 0, 0, 0, 0]);
   const mOpacity = useTransform(p, MASCOT_KEYS, MASCOT_OPACITY);
 
-  // F — the assistant fades in and stays until the pin releases, so the page flows straight into the next section
+  // F - the assistant fades in and stays until the pin releases, so the page flows straight into the next section
   const aiOpacity = useTransform(p, [a0, a1], [0, 1]);
   const aiY = useTransform(p, [a0, a1], [40, 0]);
   const [aiActive, setAiActive] = useState(false);
@@ -175,7 +175,7 @@ function CinematicHero() {
         {/* thin rim glow in front of the mascot, so it emerges from the light rather than a hard edge */}
         <motion.div aria-hidden style={{ opacity: core }} className="hero-rimfront pointer-events-none absolute left-1/2 -translate-x-1/2 translate-y-1/2" />
 
-        {/* A — headline */}
+        {/* A - headline */}
         <motion.div
           style={{ opacity: titleOpacity, y: titleY, pointerEvents: titlePointer }}
           className="absolute inset-x-0 top-[calc(68px+var(--stage)*0.1)] z-10 px-4 text-center"
@@ -190,7 +190,7 @@ function CinematicHero() {
           </p>
         </motion.div>
 
-        {/* D — the assistant, its own state */}
+        {/* D - the assistant, its own state */}
         <motion.div
           style={{ opacity: aiOpacity, y: aiY }}
           inert={!aiActive}
@@ -422,6 +422,35 @@ function HeroAssistantStage() {
     setText("");
   };
 
+  // askInHero(): another section brought the visitor here; type its question in, letter by letter, then send it
+  const input = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const on = (e: Event) => {
+      const q = ((e as CustomEvent<string | undefined>).detail ?? "").trim();
+      clearTimeout(timer);
+      input.current?.focus({ preventScroll: true });
+      if (!q) return;
+      let n = 0;
+      const type = () => {
+        n += 1;
+        setText(q.slice(0, n));
+        if (n < q.length) timer = setTimeout(type, 28);
+        else
+          timer = setTimeout(() => {
+            openAssistant(q);
+            setText("");
+          }, 450);
+      };
+      type();
+    };
+    window.addEventListener("fmd:hero-ask", on);
+    return () => {
+      window.removeEventListener("fmd:hero-ask", on);
+      clearTimeout(timer);
+    };
+  }, []);
+
   const toggleVoice = () => {
     const Ctor = getSpeech();
     if (!Ctor) return;
@@ -466,6 +495,7 @@ function HeroAssistantStage() {
           Ask FMD AI
         </label>
         <input
+          ref={input}
           id="hero-ai"
           value={text}
           onChange={(e) => setText(e.target.value)}

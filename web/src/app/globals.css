@@ -2,7 +2,7 @@
 
 /* =========================================================================
    FMD design tokens
-   Every component reads these variables. Themes only redefine tokens —
+   Every component reads these variables. Themes only redefine tokens -
    layout, spacing, type and motion are identical across all of them.
    ========================================================================= */
 
@@ -1172,4 +1172,43 @@ html.theme-anim *::after {
 .mascot-float { animation: mascot-float 5.2s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
   .mascot-float { animation: none; }
+}
+
+/* the navbar's "Early access" call to action: every 3s a quick double beat (scale up and back) with a blue ring that
+   flashes outwards, so it reads as "press me"; the arrow pushes forward on each beat. Still on hover, and for anyone
+   who prefers reduced motion */
+@keyframes cta-beat {
+  0%, 62%, 100% { transform: scale(1); }
+  70% { transform: scale(1.09); }
+  76% { transform: scale(0.98); }
+  84% { transform: scale(1.06); }
+  92% { transform: scale(1); }
+}
+@keyframes cta-ring {
+  0%, 62% { opacity: 0; transform: scale(1); }
+  70% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.35, 1.7); }
+}
+@keyframes cta-arrow {
+  0%, 62%, 100% { transform: translateX(0); }
+  72%, 86% { transform: translateX(4px); }
+  79% { transform: translateX(0); }
+}
+/* the ring is its own layer behind the button, so the button keeps its own shadow */
+.cta-pulse { position: relative; isolation: isolate; animation: cta-beat 3s ease-in-out infinite; }
+.cta-pulse::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  box-shadow: 0 0 0 2px rgb(110 160 255 / 0.85), 0 0 22px 4px rgb(80 140 255 / 0.6);
+  opacity: 0;
+  pointer-events: none;
+  animation: cta-ring 3s ease-out infinite;
+}
+.cta-pulse .cta-arrow { animation: cta-arrow 3s ease-in-out infinite; }
+.cta-pulse:hover, .cta-pulse:hover::before, .cta-pulse:hover .cta-arrow { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .cta-pulse, .cta-pulse::before, .cta-pulse .cta-arrow { animation: none; }
 }

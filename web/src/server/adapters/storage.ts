@@ -6,7 +6,7 @@ import { join } from "node:path";
  * Private object storage adapter (OD-14: cloud vendor not chosen).
  * DEV implementation: files under ./.data/objects, outside /public, addressed by opaque keys.
  * A production adapter (S3-compatible, encrypted at rest) keeps the same interface.
- * Malware scanning is not available in this adapter — see PLT-07.
+ * Malware scanning is not available in this adapter - see PLT-07.
  */
 const root = () => (process.env.FMD_DB === ":memory:" ? join(process.cwd(), ".data", "test-objects") : join(process.cwd(), ".data", "objects"));
 

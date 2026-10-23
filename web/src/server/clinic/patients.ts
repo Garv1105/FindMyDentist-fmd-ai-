@@ -168,7 +168,7 @@ export function patientDetail(a: Auth, clinicId: string, id: string) {
   };
 }
 
-/* ---------------- clinical notes (sign, then amend — never silently edit) ---------------- */
+/* ---------------- clinical notes (sign, then amend - never silently edit) ---------------- */
 
 type Note = {
   id: string;
