@@ -3,6 +3,7 @@
 import Image from "next/image";
 import {
   AnimatePresence,
+  MotionConfig,
   motion,
   useReducedMotion,
   useMotionTemplate,
@@ -12,10 +13,12 @@ import {
   useMotionValue,
   type MotionValue,
 } from "motion/react";
-import { ArrowUp, Mic, ShieldCheck } from "lucide-react";
+import { Lightbulb, Mic, Orbit, Send, ShieldCheck } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
+import Contain from "../Contain";
 import { ChatThread, useAssistant } from "./Assistant";
+import type { Mood } from "./AssistantMascot";
 import { MASCOT_KEYS, MASCOT_OPACITY, PHASES } from "./phases";
 import { RIM, RIM_APEX, RIM_H, RIM_W, rimPath, rimYAt } from "./rim";
 
@@ -55,6 +58,7 @@ const stageVars = (height: string) =>
 
 // WebGL can't render on the server; the sprite stays visible until the model has loaded
 const Mascot3D = dynamic(() => import("./Mascot3D"), { ssr: false });
+const AssistantMascot = dynamic(() => import("./AssistantMascot"), { ssr: false });
 
 const noop = () => () => {};
 function useReducedMotionSafe() {
@@ -165,7 +169,10 @@ function CinematicHero() {
               />
               {/* wider than the sprite box: room for the arms */}
               <div className="absolute inset-y-0 left-1/2 w-[170%] -translate-x-1/2">
-                <Mascot3D active={mascotOn} base={settled ? "Meditate" : "Fly"} rotY={rotY} onReady={onMascotReady} />
+                {/* a model that can't load leaves the sprite (it never reports ready) */}
+                <Contain>
+                  <Mascot3D active={mascotOn} base={settled ? "Meditate" : "Fly"} rotY={rotY} onReady={onMascotReady} />
+                </Contain>
               </div>
               <SpeechBubble show={speaking} text="Let me take over…" />
             </div>
@@ -197,7 +204,7 @@ function CinematicHero() {
           aria-hidden={!aiActive}
           className="absolute inset-x-0 top-[calc(68px+var(--stage)*0.03)] z-20 px-4"
         >
-          <HeroAssistantStage />
+          <HeroAssistantStage active={aiActive} />
         </motion.div>
       </div>
     </section>
@@ -390,6 +397,11 @@ function Earth({
 /* ------------------------------------------------------------------------- */
 
 const CHAT_EASE = [0.22, 1, 0.36, 1] as const;
+// FMD AI's mascot: how fast it glides between the greeting and the box (the share of the way left it covers per
+// second, exponentially: no overshoot at any frame rate), and its size and room beside the box while chatting
+const GLIDE = 5.5;
+const GREET = { w: 96, h: 128 };
+const DOCK = { ...GREET, gap: 12 }; // the same size beside the box: the box gives up the room
 
 const PROMPTS = [
   "Find a dentist near me",
@@ -412,7 +424,8 @@ function getSpeech(): SpeechCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
-function HeroAssistantStage() {
+/** `active`: on screen (the cinematic hero shows it only once its scroll story reaches the assistant) */
+function HeroAssistantStage({ active }: { active: boolean }) {
   const [text, setText] = useState("");
   const [listening, setListening] = useState(false);
   const rec = useRef<InstanceType<SpeechCtor> | null>(null);
@@ -421,11 +434,77 @@ function HeroAssistantStage() {
   const ask = chat.send;
   // once a question is asked, the conversation takes the greeting's place, right above the box
   const chatting = chat.msgs.length > 0;
+  // the mascot beside the box: thinks while the answer comes, explains while it types out, listens while the visitor
+  // types or speaks
+  const [focused, setFocused] = useState(false);
+  const mood: Mood = chat.typing ? "thinking" : chat.live ? "explaining" : listening || (focused && text.trim()) ? "listening" : "idle";
+
+  // one mascot (one canvas, so nothing reloads), floated over its place: above the greeting, or docked beside the box
+  // once a question is asked. It glides towards that place each frame, following it while the greeting folds away and
+  // the chat unfolds (so it comes down and shrinks into the room opening beside the box), and back up when the chat is
+  // closed; it rests once it has arrived (and moves again on a resize)
+  const reduced = useReducedMotion();
+  const column = useRef<HTMLDivElement>(null);
+  const greetSpot = useRef<HTMLDivElement>(null);
+  const dockSpot = useRef<HTMLDivElement>(null);
+  // sized from the start (a canvas is only set up once its box has a size): its model loads and its first frames
+  // render with the page, hidden until the stage shows and it is moved into place
+  const fx = useMotionValue(0);
+  const fy = useMotionValue(0);
+  const fw = useMotionValue(GREET.w);
+  const fh = useMotionValue(GREET.h);
+  const placed = useRef(false);
+  useEffect(() => {
+    if (!active) return;
+    let id = 0;
+    let last = performance.now();
+    const until = last + 1200; // the folds take 0.75 s: follow at least that long
+    const follow = (now: number) => {
+      const step = 1 - Math.exp(-GLIDE * Math.min((now - last) / 1000, 1 / 30));
+      last = now;
+      const c = column.current?.getBoundingClientRect();
+      const spot = (chatting ? dockSpot : greetSpot).current?.getBoundingClientRect();
+      let moving = now < until || !c || !spot;
+      if (c && spot) {
+        const to = chatting
+          ? [spot.left - c.left, spot.bottom - c.top - DOCK.h, DOCK.w, DOCK.h]
+          : [spot.left - c.left, spot.top - c.top, spot.width, spot.height];
+        [fx, fy, fw, fh].forEach((v, k) => {
+          const d = to[k] - v.get();
+          if (!placed.current || reduced || Math.abs(d) < 0.5) v.set(to[k]);
+          else {
+            v.set(v.get() + d * step);
+            moving = true;
+          }
+        });
+        placed.current = true;
+      }
+      if (moving) id = requestAnimationFrame(follow);
+    };
+    const start = () => {
+      cancelAnimationFrame(id);
+      last = performance.now();
+      follow(last); // the first step at once: placed the moment the stage shows, then frame by frame
+    };
+    start();
+    window.addEventListener("resize", start);
+    return () => {
+      cancelAnimationFrame(id);
+      window.removeEventListener("resize", start);
+    };
+  }, [active, chatting, reduced, fx, fy, fw, fh]);
 
   const send = (q: string) => {
     if (!q.trim()) return;
     ask(q);
     setText("");
+  };
+  // the bulb puts the suggestions into the box one after another, for the visitor to send or edit
+  const [tip, setTip] = useState(0);
+  const suggest = () => {
+    setText(PROMPTS[tip % PROMPTS.length]);
+    setTip(tip + 1);
+    input.current?.focus();
   };
 
   // askInHero(): another section brought the visitor here; type its question in, letter by letter, then send it
@@ -475,9 +554,23 @@ function HeroAssistantStage() {
   };
 
   return (
-    <div className="relative mx-auto flex max-w-[900px] flex-col items-center text-center">
+    // reduced motion: the chat's moves become fades
+    <MotionConfig reducedMotion="user">
+    {/* while greeting, it sits lower on the stage (the space below it would be empty); the chat uses the full height */}
+    <div
+      ref={column}
+      className={`relative mx-auto flex max-w-[960px] flex-col items-center text-center transition-[padding] duration-700 ${
+        chatting ? "" : "pt-[calc(var(--stage,0px)*0.07)]"
+      }`}
+    >
       {/* a soft accent glow behind the glass, so the frost has light to catch */}
       <div aria-hidden className="pointer-events-none absolute inset-x-[8%] top-[18%] -z-10 h-[64%] rounded-full bg-[rgb(var(--accent-rgb)/0.16)] blur-[100px]" />
+      {/* while chatting, the thread and the question box share one panel */}
+      <div
+        className={`w-full transition-[padding] duration-500 ${
+          chatting ? "chat-pane chat-box rounded-2xl p-3 shadow-[0_30px_80px_-30px_rgb(0_0_0/0.9)] sm:p-4" : ""
+        }`}
+      >
       {/* the greeting folds up while the chat box unfolds in its place, both at once, so the box below glides with them */}
       <AnimatePresence initial={false}>
         {chatting ? (
@@ -500,13 +593,11 @@ function HeroAssistantStage() {
             exit={{ height: 0, opacity: 0, filter: "blur(10px)" }}
             transition={{ height: { duration: 0.75, ease: CHAT_EASE }, opacity: { duration: 0.35 }, filter: { duration: 0.35 } }}
           >
-            <span className="icon-tile size-12">
-              {/* tooth from the brand logo, used as a mask so it takes the tile's text colour like the icon it replaced */}
-              <span aria-hidden className="size-6 bg-current [mask:url(/img/hero/tooth-mask.png)_center/contain_no-repeat]" />
-            </span>
-            <p className="eyebrow mt-6" style={{ textShadow: "0 1px 12px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.6)" }}>FMD AI</p>
+            {/* the mascot's place while greeting (it floats over it, see above) */}
+            <div ref={greetSpot} aria-hidden style={{ width: GREET.w, height: GREET.h }} />
+            <p className="eyebrow mt-5" style={{ textShadow: "0 1px 12px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.6)" }}>FMD AI</p>
             <h2
-              className="mt-4 text-[clamp(28px,4.2vw,48px)] font-light leading-[1.08] tracking-[-0.035em] text-ink"
+              className="mt-4 text-[clamp(32px,4.8vw,58px)] font-light leading-[1.08] tracking-[-0.035em] text-ink"
               style={{ textShadow: "0 2px 20px rgba(0,0,0,0.95), 0 0 60px rgba(0,0,0,0.7)" }}
             >
               Hi, I&apos;m FMD AI.
@@ -517,13 +608,30 @@ function HeroAssistantStage() {
         )}
       </AnimatePresence>
 
+      {/* the box, full width while greeting; once a question is asked, room for the mascot opens on its left (the box
+          narrows from that side as the mascot comes down into it) */}
+      <div className={`flex w-full items-end ${chatting ? "mt-3" : "mt-7"}`}>
+      <motion.div
+        ref={dockSpot}
+        aria-hidden
+        className="shrink-0"
+        initial={false}
+        animate={chatting ? { width: DOCK.w + DOCK.gap, height: DOCK.h } : { width: 0, height: 0 }}
+        transition={{ duration: 0.75, ease: CHAT_EASE }}
+      />
       <form
         onSubmit={(e) => {
           e.preventDefault();
           send(text);
         }}
-        className="glass-lux glass-glow mt-7 flex w-full items-center gap-2 rounded-full p-1.5 pl-5"
+        className="chat-pane flex w-full min-w-0 items-center gap-0.5 rounded-xl p-1.5 transition-[border-color,box-shadow] duration-300 focus-within:border-[color-mix(in_srgb,var(--accent)_40%,transparent)] focus-within:shadow-[0_0_40px_-12px_var(--accent-glow)]"
       >
+        <button type="button" aria-label="New chat" disabled={!chatting} onClick={() => chat.load(null, [])} className="grid size-11 shrink-0 place-items-center rounded-lg text-ink-3 transition-colors hover:text-ink disabled:opacity-40">
+          <Orbit className="size-[18px]" strokeWidth={1.5} />
+        </button>
+        <button type="button" aria-label="Suggest a question" onClick={suggest} className="grid size-11 shrink-0 place-items-center rounded-lg text-ink-3 transition-colors hover:text-ink disabled:opacity-40">
+          <Lightbulb className="size-[18px]" strokeWidth={1.5} />
+        </button>
         <label htmlFor="hero-ai" className="sr-only">
           Ask FMD AI
         </label>
@@ -532,9 +640,11 @@ function HeroAssistantStage() {
           id="hero-ai"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder={chatting ? "Ask a follow-up…" : "Hi! I’m almost ready. FMD AI is coming soon…"}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          placeholder={chatting ? "Ask me something" : "Hi! I’m almost ready. FMD AI is coming soon…"}
           autoComplete="off"
-          className="h-11 min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink-3 sm:h-12"
+          className="h-11 min-w-0 flex-1 bg-transparent px-2 text-[15px] text-ink outline-none placeholder:text-ink-4"
         />
         {voice && (
           <button
@@ -542,40 +652,59 @@ function HeroAssistantStage() {
             onClick={toggleVoice}
             aria-pressed={listening}
             aria-label={listening ? "Stop voice input" : "Speak your question"}
-            className={`grid size-11 shrink-0 place-items-center rounded-full border transition-colors sm:size-12 ${
-              listening ? "border-line-strong bg-[var(--accent-soft)] text-ink" : "border-transparent text-ink-2 hover:text-ink"
-            }`}
+            className={`grid size-11 shrink-0 place-items-center rounded-lg transition-colors ${listening ? "bg-[var(--accent-soft)] text-ink" : "text-ink-3 hover:text-ink"}`}
           >
             <Mic className="size-[18px]" strokeWidth={1.5} />
             {listening && <span className="sr-only">Listening</span>}
           </button>
         )}
-        <button type="submit" aria-label="Send" disabled={!text.trim() || chat.typing} className="btn-primary size-11 shrink-0 disabled:opacity-50 sm:size-12">
-          <ArrowUp className="size-[18px]" strokeWidth={1.75} />
+        <button
+          type="submit"
+          aria-label="Send"
+          disabled={!text.trim() || chat.typing}
+          className="grid size-11 shrink-0 place-items-center rounded-lg text-[var(--accent)] transition-[opacity,translate,scale] duration-200 active:scale-90 enabled:hover:translate-x-0.5 disabled:opacity-40"
+        >
+          <Send className="size-[18px]" strokeWidth={1.75} />
         </button>
       </form>
+      </div>
+      </div>
 
       <div className="flex flex-wrap justify-center gap-2 pt-5">
-        {PROMPTS.map((q) => (
-          <button
+        {/* the suggestions rise in one after another */}
+        {PROMPTS.map((q, i) => (
+          <motion.button
             key={q}
             type="button"
             onClick={() => send(q)}
-            className="glass-lux rounded-full px-4 py-2 text-[13px] text-ink-2 transition-[transform,color,box-shadow] duration-300 hover:-translate-y-0.5 hover:text-ink"
+            initial={{ opacity: 0, y: 12, scale: 0.95 }}
+            whileInView={{ opacity: 1, y: 0, scale: 1 }}
+            viewport={{ once: true }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ duration: 0.5, delay: 0.1 + i * 0.07, ease: CHAT_EASE }}
+            className="chat-pane rounded-full px-[18px] py-2.5 text-[14px] text-ink-2 transition-[translate,color,border-color] duration-300 hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--accent)_40%,transparent)] hover:text-ink"
           >
             {q}
-          </button>
+          </motion.button>
         ))}
       </div>
 
       <p
-        className="mt-6 flex max-w-[520px] items-start gap-2 text-left text-[12.5px] leading-snug text-ink-3"
+        className="mt-6 flex max-w-[580px] items-start gap-2 text-left text-[13px] leading-snug text-ink-3"
         style={{ textShadow: "0 1px 10px rgba(0,0,0,0.9)" }}
       >
         <ShieldCheck className="mt-px size-3.5 shrink-0" strokeWidth={1.5} />
         Guidance, not diagnosis. FMD AI explains and suggests; it never books, contacts clinics or pays on your behalf.
       </p>
+
+      {/* FMD AI's mascot, floated over its place (above); if its model can't load, the guide's picture stands in */}
+      <motion.div style={{ x: fx, y: fy, width: fw, height: fh }} className="pointer-events-none absolute left-0 top-0 z-20">
+        <Contain fallback={<Image src="/img/mascots/mascot-guide-1024.webp" alt="" width={96} height={128} className="size-full object-contain object-bottom" />}>
+          <AssistantMascot mood={mood} active={active} />
+        </Contain>
+      </motion.div>
     </div>
+    </MotionConfig>
   );
 }
 
@@ -604,7 +733,7 @@ function StaticHero() {
         </div>
       </div>
       <div className="py-16">
-        <HeroAssistantStage />
+        <HeroAssistantStage active />
       </div>
     </section>
   );
