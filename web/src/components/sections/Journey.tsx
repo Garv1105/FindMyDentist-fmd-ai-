@@ -235,10 +235,11 @@ export default function Journey() {
                     >
                       {/* counter-rotates against the wheel, so the node and its label stay upright */}
                       <motion.span className="relative block" initial={false} animate={{ rotate: offset(active) }} transition={turn}>
-                        {on && !reduced && (
+                        {/* hidden by CSS, not by `reduced`: the server can't know that preference, so the markup must not depend on it */}
+                        {on && (
                           <motion.span
                             aria-hidden
-                            className="absolute inset-0 rounded-full border border-blue-400"
+                            className="absolute inset-0 rounded-full border border-blue-400 motion-reduce:hidden"
                             initial={{ scale: 1, opacity: 0.6 }}
                             animate={{ scale: 1.9, opacity: 0 }}
                             transition={{ duration: 1.8, ease: "easeOut", repeat: Infinity }}
