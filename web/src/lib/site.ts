@@ -1,6 +1,6 @@
 /** The public site: its address and how it describes itself to search engines and social networks. */
 export const SITE = {
-  url: "https://findmydentist.io",
+  url: "https://www.findmydentist.io", // the live address: Vercel redirects the bare domain here
   name: "FindMyDentist",
   short: "FMD",
   tagline: "Find the right dentist, guided by AI",
@@ -10,6 +10,7 @@ export const SITE = {
   keywords: [
     "dentist near me",
     "find a dentist",
+    "find my dentist",
     "best dentist",
     "dental clinic near me",
     "verified dentists",

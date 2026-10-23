@@ -38,7 +38,7 @@ export default function Trust() {
   const reduced = useReducedMotion();
 
   return (
-    <section className="relative isolate overflow-x-clip pt-28 sm:pt-40">
+    <section id="trust" className="relative isolate scroll-mt-24 overflow-x-clip pt-28 sm:pt-40">
       <Atmosphere scene="trust" />
       <Container>
         <div className="relative">

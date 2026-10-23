@@ -45,9 +45,9 @@ export default function Footer() {
           </p>
         </div>
         {/* the maker's credit: quiet, last thing on the page */}
-        <p className="mt-8 text-center text-[13px] tracking-[0.04em] text-ink-3">
+        {/* <p className="mt-8 text-center text-[13px] tracking-[0.04em] text-ink-3">
           Made by <span className="font-medium text-ink-2">Garv Kumar Agarwal</span>
-        </p>
+        </p> */}
       </Container>
     </footer>
   );
