@@ -227,8 +227,8 @@ export function ChatThread({ chat }: { chat: Chat }) {
                   )}
                   {chat.live !== m && <MsgTools
                     text={m.text}
-                    // only the latest answer can be asked again, with the question that came right before it
-                    onRetry={i === chat.msgs.length - 1 && chat.msgs[i - 1]?.role === "user" && !chat.typing ? () => chat.send(chat.msgs[i - 1].text) : undefined}
+                    // asks the question that came right before it again (does nothing while an answer is on its way)
+                    onRetry={() => chat.msgs[i - 1]?.role === "user" && !chat.typing && chat.send(chat.msgs[i - 1].text)}
                   />}
                 </div>
               )}
@@ -294,8 +294,8 @@ function Typed({ text, live }: { text: string; live: boolean }) {
   );
 }
 
-/** Under each answer: copy, a thumbs up or down, read it aloud, and (latest answer only) ask again. */
-function MsgTools({ text, onRetry }: { text: string; onRetry?: () => void }) {
+/** Under each answer: copy, a thumbs up or down, read it aloud, ask again. */
+function MsgTools({ text, onRetry }: { text: string; onRetry: () => void }) {
   const [copied, setCopied] = useState(false);
   // ponytail: the vote stays on screen only; post it to the API once there is an endpoint for answer feedback
   const [vote, setVote] = useState<"up" | "down" | null>(null);
@@ -306,6 +306,7 @@ function MsgTools({ text, onRetry }: { text: string; onRetry?: () => void }) {
       setTimeout(() => setCopied(false), 1500);
     });
   const speak = () => {
+    if (!("speechSynthesis" in window)) return;
     speechSynthesis.cancel();
     speechSynthesis.speak(new SpeechSynthesisUtterance(text));
   };
@@ -320,16 +321,12 @@ function MsgTools({ text, onRetry }: { text: string; onRetry?: () => void }) {
       <button aria-label="Not helpful" aria-pressed={vote === "down"} onClick={() => setVote((v) => (v === "down" ? null : "down"))} className={tool(vote === "down")}>
         <ThumbsDown className="size-[15px]" strokeWidth={1.5} />
       </button>
-      {"speechSynthesis" in window && (
-        <button aria-label="Read aloud" onClick={speak} className={tool()}>
-          <Volume2 className="size-[15px]" strokeWidth={1.5} />
-        </button>
-      )}
-      {onRetry && (
-        <button aria-label="Ask again" onClick={onRetry} className={tool()}>
-          <RefreshCw className="size-[15px]" strokeWidth={1.5} />
-        </button>
-      )}
+      <button aria-label="Read aloud" onClick={speak} className={tool()}>
+        <Volume2 className="size-[15px]" strokeWidth={1.5} />
+      </button>
+      <button aria-label="Ask again" onClick={onRetry} className={tool()}>
+        <RefreshCw className="size-[15px]" strokeWidth={1.5} />
+      </button>
     </motion.div>
   );
 }
