@@ -8,7 +8,7 @@ import * as ws from "./workspace.ts";
 
 /**
  * Clinic OS API dispatch: one catch-all route maps "METHOD path" to a service call.
- * Authorisation is NOT done here — every service starts with requireClinic(), so a route can't
+ * Authorisation is NOT done here - every service starts with requireClinic(), so a route can't
  * forget it. Responses are JSON unless a handler returns a Response (files, CSV).
  */
 type Ctx = { a: Auth; clinicId: string; p: Record<string, string>; body: Record<string, unknown>; q: URLSearchParams };

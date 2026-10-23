@@ -359,7 +359,7 @@ function Nexus() {
 export default function Products() {
   const cinematic = useSyncExternalStore(subscribeLg, () => matchMedia(LG_MOTION).matches, () => false);
   return (
-    <section className="relative isolate pt-28 sm:pt-40">
+    <section id="products" className="relative isolate scroll-mt-24 pt-28 sm:pt-40">
       <Atmosphere scene="os" />
       {cinematic ? <Nexus /> : <Bento />}
       <Container>

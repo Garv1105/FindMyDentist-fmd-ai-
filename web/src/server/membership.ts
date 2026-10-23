@@ -23,7 +23,7 @@ type Sub = { id: string; plan_code: string; status: string; starts_at: number | 
 
 const GST_NOTE = "Prices exclude GST, which is added at checkout as applicable.";
 const TERMS_NOTE = "Cancellation and refund terms will be shown here before purchase once published.";
-// OD-05: grace period after expiry is undecided — provisional value, configurable
+// OD-05: grace period after expiry is undecided - provisional value, configurable
 const GRACE_DAYS = Number(process.env.FMD_MEMBERSHIP_GRACE_DAYS ?? 0);
 
 function planView(p: Plan) {
@@ -42,7 +42,7 @@ function planView(p: Plan) {
   };
 }
 
-/** Plans relevant to the signed-in account type. Clinic OS is listed separately — it is a different product. */
+/** Plans relevant to the signed-in account type. Clinic OS is listed separately - it is a different product. */
 export function catalogFor(a: Auth) {
   const plans = all<Plan>("SELECT * FROM plans WHERE active = 1");
   const membership = plans.find((p) => p.product === "main_membership" && p.audience === a.user.account_type)!;
