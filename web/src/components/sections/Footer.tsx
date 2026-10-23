@@ -44,10 +44,6 @@ export default function Footer() {
             FMD AI provides educational information and is not a substitute for a registered dental professional. FMD does not provide clinical treatment; care is delivered by qualified providers.
           </p>
         </div>
-        {/* the maker's credit: quiet, last thing on the page */}
-        <p className="mt-8 text-center text-[13px] tracking-[0.04em] text-ink-3">
-          Made by <span className="font-medium text-ink-2">Garv Kumar Agarwal</span>
-        </p>
       </Container>
     </footer>
   );
