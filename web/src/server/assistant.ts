@@ -8,7 +8,7 @@ import { SPECIALTIES } from "../lib/catalog.ts";
 /**
  * Public FMD AI: advises and navigates; it never acts (PRD §4.10).
  * The only thing a reply can carry is a navigation suggestion from an allow-list. There are no tools
- * that book, message, pay or submit — so no prompt can make it do those things.
+ * that book, message, pay or submit - so no prompt can make it do those things.
  */
 
 /* ---------------- escalation (SAF-04; wording to be clinically reviewed, SAF-01) ---------------- */

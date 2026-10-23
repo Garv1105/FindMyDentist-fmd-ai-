@@ -2,7 +2,7 @@ import { TOPICS } from "../../../lib/catalog.ts";
 
 /**
  * Provider-agnostic planner interface (PRD §7.5). A model-backed planner can replace the dev planner;
- * either way it can only choose tools from the registry, and the engine — not the planner — applies
+ * either way it can only choose tools from the registry, and the engine - not the planner - applies
  * permissions and approvals. The instruction is never allowed to change those rules.
  */
 export type PlanStep = { tool: string; input: Record<string, unknown> };

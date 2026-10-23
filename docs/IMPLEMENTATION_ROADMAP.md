@@ -1,4 +1,4 @@
-# FMD — Implementation Roadmap
+# FMD - Implementation Roadmap
 
 This roadmap sets **sequence**, not scope. Every requirement in `PRD_TRACEABILITY.md` stays in scope. Per PRD §20, any reduction must be agreed explicitly by FMD.
 
@@ -10,10 +10,10 @@ This roadmap sets **sequence**, not scope. Every requirement in `PRD_TRACEABILIT
 | M1 Cinematic hero | **Done** (asset upgrade pending OD-H1) | HERO-01…13; `npm test`, build, lint, screenshots |
 | M2 FMD Main | **Done** (external dependencies listed below) | Slices 2.1–2.8 in `PRD_TRACEABILITY.md` §13; 51 automated tests; production build |
 | M3 Clinic OS + Clinic AI | **Done** (dependencies in OPEN_DECISIONS) | Slices 3.1–3.7 in `PRD_TRACEABILITY.md` §13; 66 automated tests; production build |
-| M4 Scholar | Planned | — |
-| M5 Admin + Accountant | Planned | — |
-| M6 Annex completeness | Planned | — |
-| M7 E2E QA and handover | Planned | — |
+| M4 Scholar | Planned | - |
+| M5 Admin + Accountant | Planned | - |
+| M6 Annex completeness | Planned | - |
+| M7 E2E QA and handover | Planned | - |
 
 ## Architecture (applies from M2)
 
@@ -24,7 +24,7 @@ This roadmap sets **sequence**, not scope. Every requirement in `PRD_TRACEABILIT
 - **Audit:** an append-only `audit_events` table written by services for privileged, sensitive, finance and AI actions.
 - **Tests:** `node --test` with type stripping. No new framework. Each slice ships its service-level allowed/denied and failure tests.
 
-## M2 — FMD Main, in vertical slices
+## M2 - FMD Main, in vertical slices
 
 Each slice ends with: migrations, a service with authorization, API, UI states (loading, empty, error, success, recovery), tests, and traceability updated with evidence.
 

@@ -3,8 +3,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import { ArrowRight, BookOpenText, Compass, FileSearch, Route, Sparkles, Stethoscope, UserRound } from "lucide-react";
 import MascotArt from "@/components/MascotArt";
-import Image from "next/image";
-import { openAssistant } from "../hero/Assistant";
+import { askInHero } from "../hero/Assistant";
 import { Container, MOTION, Reveal } from "../ui";
 import { Atmosphere } from "./LowerWorld";
 
@@ -173,7 +172,7 @@ export default function AiFeatures() {
         </div>
 
         <Reveal delay={0.2} className="mt-12 flex flex-col items-center gap-4 sm:flex-row sm:justify-center xl:mt-8">
-          <button onClick={() => openAssistant()} className="btn-primary group h-12 px-6 text-[14px]">
+          <button onClick={() => askInHero()} className="btn-primary group h-12 px-6 text-[14px]">
             <Sparkles className="size-4" strokeWidth={1.5} /> Explore AI features <ArrowRight className="arrow-nudge size-4" strokeWidth={1.75} />
           </button>
           <p className="text-[12.5px] text-ink-4">English · हिन्दी · ಕನ್ನಡ · తెలుగు · தமிழ்</p>

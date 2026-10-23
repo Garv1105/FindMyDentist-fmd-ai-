@@ -119,7 +119,7 @@ web/src/
     booking.ts providers.ts records.ts assistant.ts content.ts jobs.ts support.ts membership.ts concierge.ts
     clinic/               workspace, calendar, patients, billing, operations, router, seed
     clinic/ai/            tools (registry), planner, engine (task lifecycle), routes
-    adapters/             otp, storage, ai, messaging — the vendor seams
+    adapters/             otp, storage, ai, messaging - the vendor seams
     seed.ts               labelled DEMO directory and posts
 ```
 
