@@ -1,4 +1,4 @@
-# FMD — PRD Traceability Matrix
+/# FMD — PRD Traceability Matrix
 
 **Sources:** `FMD_Master_PDR_Expanded_Revised.pdf` — Master PDR §1–21 (baseline 2 Oct 2026) + Expanded Product & Technical Annex A–N (4 Oct 2026).
 **Last audited:** 11 Oct 2026 against the `web/` Next.js 16 prototype.
@@ -30,9 +30,9 @@ The earlier plan is broadly faithful to the PRD. These items conflict with the P
 | R1 | Hero = realistic glass/porcelain molar; "Denti" visor mascot inside product | Hero uses the supplied **meditating tooth mascot** (lab coat, blue scrubs, mudra); the realistic molar is removed from the hero | Implemented in M1 (asset pending, see OD-H1) |
 | R2 | Default accent royal blue | Default theme is **Obsidian Silver**; royal blue is one of 7 themes | Kept Obsidian Silver as default |
 | R3 | Referral/loyalty, public reviews, content import "not in any phase until approved" | They must stay traceable and be built as **configurable, safely disabled** capabilities (Annex I, G, C) | Rows ANX-I/G/C kept, status PD with a safe-disable plan |
-| R4 | FMD Edge "free in beta, Bengaluru only, response within 1 business day" | PRD §5, §21: commercial terms, areas and response commitments are **undecided and must stay configurable** | Recorded as provisional only (OD-03); no promises in UI copy |
+| R4 | Concierge "free in beta, Bengaluru only, response within 1 business day" | PRD §5, §21: commercial terms, areas and response commitments are **undecided and must stay configurable** | Recorded as provisional only (OD-03); no promises in UI copy |
 | R5 | Phased V1→V6 plan presented as the delivery plan | PRD §20 Scope management: sequencing must be **explicitly agreed by FMD**; the PRD has no V1 split | Roadmap marks sequence as proposed, not a scope reduction |
-| R6 | FMD Edge statuses listed without Cancelled in some places | PRD §5 includes **Cancelled** plus reassignment and overdue escalation | CON-09 includes Cancelled |
+| R6 | Concierge statuses listed without Cancelled in some places | PRD §5 includes **Cancelled** plus reassignment and overdue escalation | CON-09 includes Cancelled |
 | R7 | Warranty "FMD verifies" | Annex A2: the **clinic is issuer**; FMD only verifies certificate authenticity, never interprets coverage | ANX-A-06 wording fixed |
 | R8 | Flutter mobile apps assumed in delivery | PRD §11.1 *suggests* Flutter; this repo is web-only | Logged as OD-15; web-first is responsive |
 
@@ -50,7 +50,7 @@ Nothing in the earlier plan was found to **omit** a PRD section. Its annex cover
 | PRN-04 | AI never presented as a substitute for a dentist | §1, §13 | Main | Assistant, hero chat stage | Safety copy component | Copy test on every AI surface | IP | — |
 | PRN-05 | Subscriptions, limits and sponsorship are transparent | §1, §14 | All | Membership, badges | Entitlement service | Purchase screen shows price/tax/renewal/limits | IP | — |
 | ECO-01 | Separate products: Main, Clinic OS, Scholar, Admin, Accountant | §2 | — | Route groups `/`, `/clinic`, `/scholar`, `/admin`, `/accounts` | Per-app roles | Route/role access tests | NS | — |
-| ECO-02 | **No FMD Campus; no standalone FMD Edge app** | §2 | — | Nav, IA | — | Grep/nav test: no "Campus" | IT | — |
+| ECO-02 | **No FMD Campus; no standalone Concierge app** | §2 | — | Nav, IA | — | Grep/nav test: no "Campus" | IT | — |
 | ECO-03 | Shared identity, app-specific roles and entitlements | §2, §10 | All | Auth module | `users`, `memberships`, `roles`, `entitlements` | Role matrix tests | IP (shared identity + roles IT; app entitlements NS) | — |
 | ECO-04 | Student membership grants Scholar access | §2, §8.1 | Student | Scholar gate | `entitlements(scholar.base)` | Expired membership → no access | IT (Scholar entitlement only via active student membership; expiry ends access) | OD-05 |
 | ECO-05 | Professional membership and Clinic OS are separate products and charges | §2, §14 | Dentist/Clinic | Plans, receipts | Separate `plans` rows | Receipt shows distinct line items | IT (Clinic OS listed as separate product) | — |
@@ -129,12 +129,12 @@ Nothing in the earlier plan was found to **omit** a PRD section. Its annex cover
 | MAIN-49 | Job report, moderation, expiry, renewal | §4.9 | Admin | Admin queue | — | — | IT (30-day expiry, renew, close, report → moderator removal) | — |
 | MAIN-50 | Don't imply employer verification | §4.9 | — | Job card copy | — | — | IT (employer-verified only by staff action; default label 'not verified by FMD') | — |
 
-## 4. FMD Edge (§5)
+## 4. Concierge (§5)
 
 | ID | Requirement | Src | Role | Surface | API / data / permission | Acceptance test | Status | Deps |
 |---|---|---|---|---|---|---|---|---|
 | CON-01 | Section shows service description, area, response process, terms | §5 | Patient | `#concierge` | Config-driven copy | — | IT (config-driven areas/terms; values PD OD-03) | OD-03 |
-| CON-02 | Enquiry: contact pref, area, need, timing, notes | §5 | Patient | FMD Edge form | `POST /concierge/enquiries` | Validation tests | IT | — |
+| CON-02 | Enquiry: contact pref, area, need, timing, notes | §5 | Patient | Concierge form | `POST /concierge/enquiries` | Validation tests | IT | — |
 | CON-03 | Minimum health data; explain use and who contacts | §5 | Patient | Form copy + consent | `consents(purpose=concierge)` | — | IT (minimal fields, per-request contact consent) | — |
 | CON-04 | Show reference; "received", not "confirmed" | §5 | Patient | Success state | Server-issued ref | Copy test | IT (server reference; 'not a confirmation' copy) | — |
 | CON-05 | Human follow-up and coordination | §5 | Ops | Admin queue | — | — | IT (coordinator queue) | — |
@@ -146,7 +146,7 @@ Nothing in the earlier plan was found to **omit** a PRD section. Its annex cover
 | CON-11 | Reports: response time, conversion, cancellations, quality | §5 | Admin | BI | — | — | IP (open/overdue/median first contact/by-status; conversion & quality NS) | — |
 | CON-12 | No 24/7 claim unless configured | §5 | — | Copy | Config flag | Copy test | IT | — |
 | CON-13 | Not a separate app; FMD doesn't provide treatment | §5 | — | Copy, IA | — | — | IT | — |
-| CON-14 | Theme-aware premium identity (brief §7) | Brief | Patient | FMD Edge section | Tokens | Visual check in 7 themes | IT (visual, 3 themes) | — |
+| CON-14 | Theme-aware premium identity (brief §7) | Brief | Patient | Concierge section | Tokens | Visual check in 7 themes | IT (visual, 3 themes) | — |
 
 ## 5. Clinic OS (§6)
 
@@ -266,15 +266,15 @@ Nothing in the earlier plan was found to **omit** a PRD section. Its annex cover
 
 | ID | Requirement | Src | Status | Deps |
 |---|---|---|---|---|
-| ADM-01 | Platform dashboard (users, clinics, subs, bookings, content, FMD Edge, ops) | §9.1 | NS | — |
+| ADM-01 | Platform dashboard (users, clinics, subs, bookings, content, Concierge, ops) | §9.1 | NS | — |
 | ADM-02 | Verification queues, account status controls | §9.1 | IP (claim verification queue IT; student/company verification NS) | OD-08 |
 | ADM-03 | Moderation queue, sponsored and ad management | §9.1 | IP (moderation queue IT; ads management NS) | — |
 | ADM-04 | Plan catalog, entitlements, renewals, payment exceptions, support | §9.1 | NS | — |
-| ADM-05 | FMD Edge oversight and assignment | §9.1 | IP (FMD Edge queue; full admin portal M5) | — |
+| ADM-05 | Concierge oversight and assignment | §9.1 | IP (Concierge queue; full admin portal M5) | — |
 | ADM-06 | Config, feature flags, service status, audit, alerts | §9.1 | NS | — |
 | ADM-07 | Role/access admin with privileged logging | §9.1 | NS | — |
 | ACC-01 | Independent routine accounting via self-service | §9.2 | NS | — |
-| ACC-02 | Income ledgers: memberships, Clinic OS, ads, FMD Edge receipts | §9.2 | NS | — |
+| ACC-02 | Income ledgers: memberships, Clinic OS, ads, Concierge receipts | §9.2 | NS | — |
 | ACC-03 | Expenses: vendor, freelancer, cloud, marketing, payroll, reimbursements | §9.2 | NS | — |
 | ACC-04 | Bank import, matching, reconciliation, unresolved queue | §9.2 | NS | — |
 | ACC-05 | AP/AR with due dates, status, documents | §9.2 | NS | — |
@@ -345,7 +345,7 @@ Nothing in the earlier plan was found to **omit** a PRD section. Its annex cover
 | SAF-04 | Risk tiers; never imply emergency monitoring | §13 | IP (copy) | — |
 | SAF-05 | AI threat controls: untrusted inputs, no permission expansion, confirmation, duplicate detection, override, minimal audit | §13 | IP (untrusted history text, no tools, rate limits IT; red-team suite NS) | — |
 | LEG-01 | Indian legal, tax, privacy and regulatory review before launch | §13 | BX | Counsel |
-| COM-01 | Price table (Free / ₹550 / ₹400 / ₹2,000 yr / ₹2,000 mo / Scholar ₹350 tentative / FMD Edge TBD) | §14 | IT (PRD §14 prices seeded; FMD Edge price not listed — undecided) | OD-05, OD-03 |
+| COM-01 | Price table (Free / ₹550 / ₹400 / ₹2,000 yr / ₹2,000 mo / Scholar ₹350 tentative / Concierge TBD) | §14 | IT (PRD §14 prices seeded; Concierge price not listed — undecided) | OD-05, OD-03 |
 | COM-02 | Show price, tax, renewal, features, limits, refund terms pre-purchase | §14 | IP (price, GST note, renewal, features, limits shown; refund terms BX legal) | — |
 | COM-03 | Distinct membership vs Clinic OS in catalog and receipts | §14 | IP (separate plan codes/products; receipts arrive with gateway) | — |
 | COM-04 | Admin plans, coupons, grace, renewal notices | §14 | NS | — |
@@ -353,7 +353,7 @@ Nothing in the earlier plan was found to **omit** a PRD section. Its annex cover
 | COM-06 | Webhooks are payment truth; reconcile exceptions | §14 | NS | — |
 | COM-07 | Treatment fees not FMD revenue unless contract says so | §14 | NS | OD-04 |
 | COM-08 | Scholar usage shown before limits; no surprise stops | §14 | IT (meter shown; refusal at limit with upgrade path, no silent charge) | OD-05 |
-| NOT-01 | Event matrix (appointment, change, renewal, FMD Edge, AI task, recall, security) | §15 | NS | OD-14 |
+| NOT-01 | Event matrix (appointment, change, renewal, Concierge, AI task, recall, security) | §15 | NS | OD-14 |
 | NOT-02 | Templates, localisation, delivery logs, retries, prefs | §15 | NS | — |
 | NOT-03 | No sensitive detail in previews or lock screen | §15 | NS | — |
 | ANL-01 | Main metrics (§16) | §16 | NS | — |
@@ -377,7 +377,7 @@ Nothing in the earlier plan was found to **omit** a PRD section. Its annex cover
 | ID | Journey / criterion | Src | Status |
 |---|---|---|---|
 | E2E-01 | Patient concern → guidance → discovery → slot → confirm → reminders → records | IP (discover → profile → slot → review → confirm → appointments IT; AI hand-off and reminders NS) | IP (demo UI path only) |
-| E2E-02 | FMD Edge request → reference → coordinator → patient confirms → closed | IP (submit → coordinate → confirm → close IT at service level; patient-facing confirmation UI NS) | IP (submit only) |
+| E2E-02 | Concierge request → reference → coordinator → patient confirms → closed | IP (submit → coordinate → confirm → close IT at service level; patient-facing confirmation UI NS) | IP (submit only) |
 | E2E-03 | Clinic AI recall → criteria → preview → approve batch → send → outcomes → summary | IT (ai.test: list → drafts → approval preview → honest not-sent report) | NS |
 | E2E-04 | Case post → consent check → AI de-identified draft → review → approve → publish → log | §18 | NS |
 | E2E-05 | Student pays → Scholar → doubts/viva → sources → deck → verify → export → meter | §18 | NS |
@@ -499,7 +499,7 @@ Evidence: `web/src/components/hero/Hero.tsx`, `hero/phases.ts`, `hero/phases.che
 | Slice | Evidence | Verified by |
 |---|---|---|
 | 2.1 Platform foundation | `web/src/server/{db,migrations,http,auth}.ts`, `server/adapters/otp.ts`, `app/api/auth/*`, `app/api/me/*`, `app/signin`, `app/account`, `lib/me.ts` | `server/auth.test.ts` (11 tests: normalisation, signup/sign-in, attempt lockout, expiry, rate limit, single-use ticket, no self-assigned internal roles, anonymous/forged/revoked denial, role denial audited, consent separation and history, deletion request); curl flow against dev server; headless-Chrome signup → `/account` |
-| 2.2 FMD Edge | `server/concierge.ts`, migration 2, `app/api/concierge/*`, `app/api/admin/concierge/*`, `components/sections/FMD Edge.tsx` (+ `.concierge-card` tokens), `app/admin/concierge`, account "Your FMD Edge requests" | `server/concierge.test.ts` (5 tests: consent/validation/reference, rate limit, patient vs coordinator access and own-data only, full lifecycle with illegal-jump/confirmation/outcome/terminal rules and audit, cancel/reassign/overdue ordering); headless-Chrome submit (CQ reference shown) and coordinator queue; screenshots in Silver, Amber and Pearl |
+| 2.2 Concierge | `server/concierge.ts`, migration 2, `app/api/concierge/*`, `app/api/admin/concierge/*`, `components/sections/Concierge.tsx` (+ `.concierge-card` tokens), `app/admin/concierge`, account "Your Concierge requests" | `server/concierge.test.ts` (5 tests: consent/validation/reference, rate limit, patient vs coordinator access and own-data only, full lifecycle with illegal-jump/confirmation/outcome/terminal rules and audit, cancel/reassign/overdue ordering); headless-Chrome submit (CQ reference shown) and coordinator queue; screenshots in Silver, Amber and Pearl |
 | 2.3 Discovery & profiles | migration 3, `server/providers.ts`, `server/seed.ts` (labelled demo directory), `lib/catalog.ts`, `app/api/providers/*`, `components/providers.tsx`, `sections/Dentists.tsx`, `sections/ProfileDrawer.tsx`, `app/dentists/[id]`, `app/admin/verification` | `server/providers.test.ts` (5 tests: filters + injection-safe allow-lists, verified-first ranking & no invented ratings, sponsorship never reorders organic, bounded pagination, claim → approval with recorded checks + denials); removed fabricated ratings, distances and dead Call/Directions buttons |
 | 2.4 Booking | migration 4, `server/booking.ts`, `app/api/bookings/*`, `app/api/providers/[id]/availability`, `components/booking/BookingPanel.tsx`, `app/appointments` | `server/booking.test.ts` (7 tests: live vs request-only availability, explicit confirmation + idempotency, DB-enforced no double-booking + duplicate refusal, min-notice, fee/terms snapshot, atomic reschedule + cancel + history + 404 for others, clinic-scoped confirm/decline); headless-Chrome signup → slot → review → confirm → /appointments; production build |
 | 2.5 Records | migration 5, `server/records.ts`, `server/adapters/storage.ts` (private dev store, HMAC links, content sniffing), `app/api/records/*`, `app/records`, homepage CTA (removed an untrue "encrypted" claim) | `server/records.test.ts` (5 tests: content/size/metadata validation and no storage keys to clients, session-bound expiring links incl. tamper and theft, explicit time-limited sharing with dentists on FMD only + revocation applying to issued links + access history, expired shares, delete + export); HTTP checks: disguised HTML refused, nosniff/no-store/sandbox CSP headers, cross-user link 403, form-encoded POST refused |
