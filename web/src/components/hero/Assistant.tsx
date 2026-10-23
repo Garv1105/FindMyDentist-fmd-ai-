@@ -1,7 +1,7 @@
 "use client";
 
-import { motion } from "motion/react";
-import { AlertTriangle, ArrowRight, History, Sparkles, Trash2, X } from "lucide-react";
+import { AnimatePresence, motion, type Variants } from "motion/react";
+import { AlertTriangle, ArrowRight, Check, Copy, History, RefreshCw, ThumbsDown, ThumbsUp, Trash2, Volume2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, useMe } from "@/lib/me";
@@ -41,10 +41,19 @@ type ChatRes = { conversationId: string | null; stored: boolean; urgent: boolean
 
 export type Chat = ReturnType<typeof useAssistant>;
 
-/** The conversation with FMD AI: its messages and how to add to them. The hero shows it. */
+/** FMD AI thinks this long at least before it answers (its mascot's thinking pose), however fast the answer comes */
+const MIN_THINK = 4500;
+/** then types the answer out, about CPS letters a second, never for more than MAX_TYPE seconds */
+const CPS = 45;
+const MAX_TYPE = 12;
+export const typeMs = (text: string) => (text.length / Math.max(CPS, text.length / MAX_TYPE)) * 1000;
+
+/** The conversation with FMD AI: its messages and how to add to them. The hero shows it. `typing` = it is thinking
+ *  (the answer is on its way); `live` = the answer it is typing out right now. */
 export function useAssistant() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [typing, setTyping] = useState(false);
+  const [live, setLive] = useState<Msg | null>(null);
   const [err, setErr] = useState("");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [stored, setStored] = useState<boolean | null>(null);
@@ -54,12 +63,17 @@ export function useAssistant() {
   useEffect(() => {
     state.current = { msgs, conversationId, typing };
   });
+  // bumped when the chat is closed or another one is opened: an answer still on its way to the old one is dropped
+  const gen = useRef(0);
 
   const send = useCallback(async (raw: string) => {
     const text = raw.trim();
     if (!text || state.current.typing) return;
     state.current.typing = true;
+    const g = gen.current;
+    const asked = performance.now();
     setErr("");
+    setLive(null); // an answer still typing out shows in full
     setMsgs((m) => [...m, { role: "user", text }]);
     setTyping(true);
     try {
@@ -68,26 +82,41 @@ export function useAssistant() {
         method: "POST",
         body: { message: text, conversationId: cid, history: prev.slice(-10).map(({ role, text }) => ({ role, text })) },
       });
+      await new Promise((done) => setTimeout(done, MIN_THINK - (performance.now() - asked)));
+      if (g !== gen.current) return;
       setConversationId(r.conversationId);
       setStored(r.stored);
       setDevProvider(!r.provider.configured);
-      setMsgs((m) => [...m, { role: "assistant", text: r.reply.text, actions: r.reply.actions, urgent: r.urgent }]);
+      const reply: Msg = { role: "assistant", text: r.reply.text, actions: r.reply.actions, urgent: r.urgent };
+      setMsgs((m) => [...m, reply]);
+      setLive(reply);
+      setTimeout(() => setLive((l) => (l === reply ? null : l)), typeMs(reply.text));
     } catch (e) {
-      setErr((e as Error).message);
+      if (g === gen.current) setErr((e as Error).message);
     } finally {
-      setTyping(false);
+      if (g === gen.current) setTyping(false);
     }
   }, []);
 
   const load = (id: string | null, messages: Msg[]) => {
+    gen.current += 1;
+    setTyping(false);
+    setLive(null);
     setConversationId(id);
     setMsgs(messages);
     setStored(id ? true : null);
     setErr("");
   };
 
-  return { msgs, typing, err, stored, devProvider, send, load };
+  return { msgs, typing, live, err, stored, devProvider, send, load };
 }
+
+// an answer builds in piece by piece: each paragraph, then its links, then its tools, rising out of a blur
+const answer: Variants = { hidden: {}, show: { transition: { staggerChildren: 0.12 } } };
+const piece: Variants = {
+  hidden: { opacity: 0, y: 10, filter: "blur(6px)" },
+  show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } },
+};
 
 /** The conversation itself, newest message at the bottom, right above the hero's question box. */
 export function ChatThread({ chat }: { chat: Chat }) {
@@ -96,10 +125,21 @@ export function ChatThread({ chat }: { chat: Chat }) {
   const router = useRouter();
   const me = useMe();
   const scroller = useRef<HTMLDivElement>(null);
+  const content = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
   }, [chat.msgs, chat.typing]);
+  // as an answer types out, keep its newest line in view (unless the visitor has scrolled up to read)
+  useEffect(() => {
+    const s = scroller.current;
+    if (!s || !content.current) return;
+    const ro = new ResizeObserver(() => {
+      if (s.scrollHeight - s.scrollTop - s.clientHeight < 160) s.scrollTop = s.scrollHeight;
+    });
+    ro.observe(content.current);
+    return () => ro.disconnect();
+  }, [showHistory]);
 
   /** Actions only navigate. The patient does everything else themselves. */
   const go = (a: Action) => {
@@ -115,20 +155,15 @@ export function ChatThread({ chat }: { chat: Chat }) {
 
   return (
     <div
-      // room left for the question box, the suggestions and the note below it (they wrap to more rows on phones)
-      className="glass-lux flex h-[clamp(220px,calc(100svh-440px),640px)] w-full flex-col overflow-hidden rounded-[30px] text-left sm:h-[clamp(240px,calc(100svh-370px),680px)]"
+      // room left for the question box (and the mascot beside it, a little taller), the suggestions and the note below
+      // it (they wrap to more rows on phones)
+      className="flex h-[clamp(200px,calc(100svh-564px),600px)] w-full flex-col overflow-hidden text-left sm:h-[clamp(220px,calc(100svh-494px),640px)]"
     >
-      <header className="relative flex items-center gap-3 px-5 py-3.5 after:absolute after:inset-x-5 after:bottom-0 after:h-px after:bg-[linear-gradient(90deg,transparent,rgb(255_255_255/0.14),transparent)]">
-        <span className="icon-tile size-8">
-          <Sparkles className="size-3.5" strokeWidth={1.4} />
-        </span>
-        <div className="flex-1">
-          <p className="text-[13.5px] font-medium text-ink">FMD AI</p>
-          <p className="text-[11px] text-ink-4">
-            {status}
-            {chat.devProvider && " · Development assistant: rule-based answers"}
-          </p>
-        </div>
+      <header className="flex items-center gap-3 px-2">
+        <p className="flex-1 text-[11.5px] text-ink-4">
+          FMD AI · {status}
+          {chat.devProvider && " · Development assistant: rule-based answers"}
+        </p>
         {me?.consents.ai_history && (
           <button aria-label="Conversation history" aria-pressed={showHistory} onClick={() => setShowHistory((s) => !s)} className="grid size-8 place-items-center rounded-full text-ink-3 hover:text-ink">
             <History className="size-4" strokeWidth={1.5} />
@@ -152,55 +187,150 @@ export function ChatThread({ chat }: { chat: Chat }) {
         />
       ) : (
         // overscroll-contain: reading back through the chat must not scroll the page out of the hero
-        <div ref={scroller} className="flex flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-5 py-5" aria-live="polite">
+        // aria-busy while an answer types out: read once it is all there, not letter by letter
+        <div ref={scroller} className="flex-1 overflow-y-auto overscroll-contain px-2 py-5" aria-live="polite" aria-busy={!!chat.live}>
+          <div ref={content} className="flex flex-col gap-6">
           {chat.msgs.map((m, i) => (
             <motion.div
               key={i}
-              initial={m.role === "user" ? { opacity: 0, y: 14, scale: 0.96 } : { opacity: 0, y: 10, filter: "blur(6px)" }}
-              animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-              // the first question waits for the box to open around it
-              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: i === 0 ? 0.35 : 0 }}
-              className={m.role === "user" ? "origin-bottom-right ml-auto max-w-[80%] rounded-[20px] rounded-br-md border border-[rgb(var(--accent-rgb)/0.28)] bg-[linear-gradient(135deg,rgb(var(--accent-rgb)/0.3),rgb(var(--accent-rgb)/0.1))] px-4 py-3 text-[14px] text-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_10px_30px_-12px_rgb(var(--accent-rgb)/0.5)] backdrop-blur-md" : "mr-8 rounded-[20px] rounded-bl-md border border-white/[0.07] bg-white/[0.035] px-4 py-3.5 shadow-[inset_0_1px_0_rgb(255_255_255/0.06)]"}
+              // the question springs up from the box below; the answer builds in (see `answer`). The first one waits
+              // for the box to open around it
+              {...(m.role === "user"
+                ? {
+                    initial: { opacity: 0, x: 24, y: 16, scale: 0.9 },
+                    animate: { opacity: 1, x: 0, y: 0, scale: 1 },
+                    transition: { type: "spring", stiffness: 360, damping: 26, delay: i === 0 ? 0.35 : 0 },
+                  }
+                : { variants: answer, initial: "hidden", animate: "show", transition: { delayChildren: i === 0 ? 0.35 : 0.05 } })}
+              className={m.role === "user" ? "chat-user origin-bottom-right ml-auto max-w-[75%] rounded-xl px-4 py-3 text-[14px] leading-relaxed text-ink" : "mr-6"}
             >
               {m.role === "user" ? (
                 m.text
               ) : (
                 <div className={m.urgent ? "rounded-2xl border border-line-strong p-3.5" : ""}>
                   {m.urgent && (
-                    <p className="mb-2 flex items-center gap-2 text-[12px] font-medium text-ink">
+                    <motion.p variants={piece} className="mb-2 flex items-center gap-2 text-[12px] font-medium text-ink">
                       <AlertTriangle className="size-4" strokeWidth={1.75} /> Urgent: please seek care
-                    </p>
+                    </motion.p>
                   )}
-                  <p className="whitespace-pre-line text-[14px] leading-relaxed text-ink-2">{m.text}</p>
-                  {m.actions && m.actions.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
+                  <Typed text={m.text} live={chat.live === m} />
+                  {/* its links and tools once it has finished typing */}
+                  {chat.live !== m && m.actions && m.actions.length > 0 && (
+                    <motion.div variants={piece} className="mt-3 flex flex-wrap gap-2">
                       {m.actions.map((a) => (
                         <button key={a.label} onClick={() => go(a)} className="btn-ghost group h-9 px-4 text-[12.5px]">
                           {a.label}
                           <ArrowRight className="arrow-nudge size-3.5" strokeWidth={1.5} />
                         </button>
                       ))}
-                    </div>
+                    </motion.div>
                   )}
+                  {chat.live !== m && <MsgTools
+                    text={m.text}
+                    // only the latest answer can be asked again, with the question that came right before it
+                    onRetry={i === chat.msgs.length - 1 && chat.msgs[i - 1]?.role === "user" && !chat.typing ? () => chat.send(chat.msgs[i - 1].text) : undefined}
+                  />}
                 </div>
               )}
             </motion.div>
           ))}
-          {chat.typing && (
-            <div className="flex gap-1 py-2" role="status" aria-label="FMD AI is typing">
-              {[0, 1, 2].map((i) => (
-                <motion.span key={i} className="size-1.5 rounded-full bg-[var(--text-muted)]" animate={{ opacity: [0.25, 1, 0.25] }} transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.18 }} />
-              ))}
-            </div>
-          )}
+          <AnimatePresence>
+            {chat.typing && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, transition: { duration: 0.15 } }}
+                className="flex gap-1.5 py-2"
+                role="status"
+                aria-label="FMD AI is typing"
+              >
+                {[0, 1, 2].map((i) => (
+                  <motion.span
+                    key={i}
+                    className="size-1.5 rounded-full bg-[var(--accent)]"
+                    animate={{ y: [0, -5, 0], opacity: [0.35, 1, 0.35] }}
+                    transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.15, ease: "easeInOut" }}
+                  />
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
           {chat.err && (
             <p role="alert" className="rounded-2xl border border-line-strong px-4 py-3 text-[13px] text-ink">
               <span className="font-medium">Error:</span> {chat.err}
             </p>
           )}
+          </div>
         </div>
       )}
     </div>
+  );
+}
+
+/** An answer's paragraphs; while `live`, typed out letter by letter (over typeMs) behind a caret. */
+function Typed({ text, live }: { text: string; live: boolean }) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    if (!live) return;
+    const start = performance.now();
+    const ms = typeMs(text);
+    let id = requestAnimationFrame(function tick(now) {
+      const k = Math.min(text.length, Math.ceil(((now - start) / ms) * text.length));
+      setN(k);
+      if (k < text.length) id = requestAnimationFrame(tick);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [live, text]);
+  const paras = (live ? text.slice(0, n) : text).split(/\n{2,}/);
+  return (
+    <div className="space-y-3">
+      {paras.map((para, j) => (
+        <motion.p key={j} variants={piece} className="whitespace-pre-line text-[14px] leading-relaxed text-ink">
+          {para}
+          {live && j === paras.length - 1 && <span aria-hidden className="type-caret" />}
+        </motion.p>
+      ))}
+    </div>
+  );
+}
+
+/** Under each answer: copy, a thumbs up or down, read it aloud, and (latest answer only) ask again. */
+function MsgTools({ text, onRetry }: { text: string; onRetry?: () => void }) {
+  const [copied, setCopied] = useState(false);
+  // ponytail: the vote stays on screen only; post it to the API once there is an endpoint for answer feedback
+  const [vote, setVote] = useState<"up" | "down" | null>(null);
+  const tool = (on = false) => `grid size-7 place-items-center rounded-md transition-colors hover:text-ink ${on ? "text-ink" : "text-ink-4"}`;
+  const copy = () =>
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  const speak = () => {
+    speechSynthesis.cancel();
+    speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+  };
+  return (
+    <motion.div variants={piece} className="mt-2.5 flex gap-0.5">
+      <button aria-label={copied ? "Copied" : "Copy answer"} onClick={copy} className={tool(copied)}>
+        {copied ? <Check className="size-[15px]" strokeWidth={1.5} /> : <Copy className="size-[15px]" strokeWidth={1.5} />}
+      </button>
+      <button aria-label="Helpful" aria-pressed={vote === "up"} onClick={() => setVote((v) => (v === "up" ? null : "up"))} className={tool(vote === "up")}>
+        <ThumbsUp className="size-[15px]" strokeWidth={1.5} />
+      </button>
+      <button aria-label="Not helpful" aria-pressed={vote === "down"} onClick={() => setVote((v) => (v === "down" ? null : "down"))} className={tool(vote === "down")}>
+        <ThumbsDown className="size-[15px]" strokeWidth={1.5} />
+      </button>
+      {"speechSynthesis" in window && (
+        <button aria-label="Read aloud" onClick={speak} className={tool()}>
+          <Volume2 className="size-[15px]" strokeWidth={1.5} />
+        </button>
+      )}
+      {onRetry && (
+        <button aria-label="Ask again" onClick={onRetry} className={tool()}>
+          <RefreshCw className="size-[15px]" strokeWidth={1.5} />
+        </button>
+      )}
+    </motion.div>
   );
 }
 
