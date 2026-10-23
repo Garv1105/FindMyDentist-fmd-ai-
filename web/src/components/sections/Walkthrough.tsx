@@ -5,7 +5,7 @@ import { ArrowRight, Calendar, CircleHelp, MessageCircleQuestion, Search } from 
 import MascotArt from "@/components/MascotArt";
 import Image from "next/image";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { openAssistant } from "../hero/Assistant";
+import { askInHero } from "../hero/Assistant";
 import { Container, Reveal } from "../ui";
 import { wavePath } from "./path";
 import { Atmosphere } from "./LowerWorld";
@@ -19,13 +19,15 @@ const TREATMENTS = [
 
 type Step = { title: string; line: string; detail: string; action: ReactNode };
 
-const ask = (p?: string) => () => openAssistant(p);
+const ask = (p?: string) => () => askInHero(p);
+// the question at the front of the stream right now: "Ask FMD AI" asks it
+const front = { q: "" };
 const STEPS: Step[] = [
   {
     title: "Ask",
     line: "Start with a question",
     detail: "Describe what you feel or what you want to know, in simple words and in your own language.",
-    action: <ActionButton onClick={ask()}>Ask FMD AI</ActionButton>,
+    action: <ActionButton onClick={() => askInHero(front.q)}>Ask FMD AI</ActionButton>,
   },
   {
     title: "Understand",
@@ -100,6 +102,9 @@ function QuestionStream() {
     return () => clearInterval(t);
   }, [paused]);
   const shown = SLOTS.map((_, k) => EXAMPLES[(head + k) % EXAMPLES.length]);
+  useEffect(() => {
+    front.q = EXAMPLES[head % EXAMPLES.length].q;
+  }, [head]);
   const back = SLOTS[SLOTS.length - 1];
 
   return (
@@ -118,7 +123,7 @@ function QuestionStream() {
           <motion.button
             key={q}
             type="button"
-            onClick={() => openAssistant(q)}
+            onClick={() => askInHero(q)}
             initial={{ y: back.y + 36, x: back.x, opacity: 0 }}
             animate={{ ...SLOTS[k], opacity: 1 }}
             exit={{ y: -36, opacity: 0 }}
@@ -518,7 +523,7 @@ export default function Walkthrough() {
               {TREATMENTS.map((t) => (
                 <button
                   key={t.title}
-                  onClick={() => openAssistant(`Tell me about ${t.title.toLowerCase()}`)}
+                  onClick={() => askInHero(`Tell me about ${t.title.toLowerCase()}`)}
                   aria-label={`Ask FMD AI about ${t.title}`}
                   className="group flex items-center gap-4 rounded-xl bg-white/[0.03] p-2.5 pr-4 text-left transition-colors hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#60A5FA]"
                 >

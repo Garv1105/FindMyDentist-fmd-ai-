@@ -422,6 +422,35 @@ function HeroAssistantStage() {
     setText("");
   };
 
+  // askInHero(): another section brought the visitor here; type its question in, letter by letter, then send it
+  const input = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const on = (e: Event) => {
+      const q = ((e as CustomEvent<string | undefined>).detail ?? "").trim();
+      clearTimeout(timer);
+      input.current?.focus({ preventScroll: true });
+      if (!q) return;
+      let n = 0;
+      const type = () => {
+        n += 1;
+        setText(q.slice(0, n));
+        if (n < q.length) timer = setTimeout(type, 28);
+        else
+          timer = setTimeout(() => {
+            openAssistant(q);
+            setText("");
+          }, 450);
+      };
+      type();
+    };
+    window.addEventListener("fmd:hero-ask", on);
+    return () => {
+      window.removeEventListener("fmd:hero-ask", on);
+      clearTimeout(timer);
+    };
+  }, []);
+
   const toggleVoice = () => {
     const Ctor = getSpeech();
     if (!Ctor) return;
@@ -466,6 +495,7 @@ function HeroAssistantStage() {
           Ask FMD AI
         </label>
         <input
+          ref={input}
           id="hero-ai"
           value={text}
           onChange={(e) => setText(e.target.value)}

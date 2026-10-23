@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useInView, useReducedMotion } from "motion/react";
-import { ArrowRight, BadgeCheck, EyeOff, History, LockKeyhole, Pause, Play, Scale, ShieldCheck } from "lucide-react";
+import { BadgeCheck, EyeOff, History, LockKeyhole, Pause, Play, Scale, ShieldCheck } from "lucide-react";
 import MascotArt from "@/components/MascotArt";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Container, Reveal } from "../ui";
@@ -15,8 +15,6 @@ const STEPS = [
     eyebrow: "AI safety protocols",
     heading: "Strict clinical boundaries for FMD AI.",
     body: "Our AI is engineered with hardcoded guardrails. It provides plain-language education and next steps, but it never diagnoses, prescribes, or replaces a verified dentist.",
-    cta: "Read AI Disclaimer",
-    href: "/help",
     img: "/img/mascots/mascot-trust-1024.webp",
   },
   {
@@ -26,8 +24,6 @@ const STEPS = [
     eyebrow: "Doctor authentication",
     heading: "Primary-source credential verification.",
     body: "Every dentist on FMD undergoes rigorous manual and technical checks. We verify state dental council registrations and clinical qualifications before issuing the Verified badge.",
-    cta: "How Verification Works",
-    href: "/help",
     img: "/img/mascots/mascot-scholar-1024.webp",
   },
   {
@@ -37,8 +33,6 @@ const STEPS = [
     eyebrow: "Search integrity",
     heading: "Algorithmic transparency in search.",
     body: "Our ranking algorithm prioritizes verified status, clinical rating, distance, and live availability. Sponsored placements are strictly capped and explicitly labeled. You cannot buy organic rank.",
-    cta: "View Search Policy",
-    href: "#dentists",
     img: "/img/mascots/mascot-guide-1024.webp",
   },
   {
@@ -48,8 +42,6 @@ const STEPS = [
     eyebrow: "Data architecture",
     heading: "Zero-trust architecture for patient data.",
     body: "Your Private Vault uses explicit, revokable sharing. You grant temporary, encrypted access to a specific verified dentist for a specific timeframe. You retain ultimate control.",
-    cta: "Explore Private Vault",
-    href: "#records",
     img: "/img/mascots/mascot-vault-1024.webp",
   },
   {
@@ -59,8 +51,6 @@ const STEPS = [
     eyebrow: "System transparency",
     heading: "Patient-visible cryptographic audit trails.",
     body: "Transparency isn't just a policy; it's a feature. Your account includes a real-time history showing exactly who accessed your reports, X-rays, or prescriptions, and precisely when.",
-    cta: "View Privacy Promise",
-    href: "/records",
     img: "/img/mascots/mascot-laptop-1024.webp",
   },
   {
@@ -70,8 +60,6 @@ const STEPS = [
     eyebrow: "Privacy compliance",
     heading: "Clinical-grade data sanitization.",
     body: "We enforce strict data sanitization protocols. No identifiable patient cases are ever used, displayed, or fed into AI models without documented consent and rigorous clinical review.",
-    cta: "Read Security Specs",
-    href: "/help",
     img: "/img/mascots/mascot-trust-1024.webp",
   },
 ];
@@ -145,7 +133,7 @@ export default function Journey() {
   };
 
   return (
-    <section className="relative isolate pt-28 sm:pt-40">
+    <section id="safety" className="relative isolate scroll-mt-24 pt-28 sm:pt-40">
       <Atmosphere scene="journey" />
       <Container>
         <Reveal className="max-w-3xl">
@@ -315,12 +303,6 @@ export default function Journey() {
                   <p className="max-w-lg text-[14px] leading-relaxed text-slate-400">{step.body}</p>
                 </motion.div>
               </AnimatePresence>
-              <a
-                href={step.href}
-                className="group mt-6 inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-blue-500 bg-blue-500/10 px-6 py-3 text-[14px] font-medium text-blue-400 transition-colors hover:bg-blue-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#60A5FA] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B101E] md:mt-0"
-              >
-                {step.cta} <ArrowRight className="arrow-nudge size-4" strokeWidth={1.75} />
-              </a>
             </div>
           </div>
         </div>
