@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
   images: { qualities: [75, 92] },
   devIndicators: false,
   partialPrefetching: true,
+  experimental: { agentUpgrade: "security" },
   turbopack: {
     rules: {
       "*.css": {
