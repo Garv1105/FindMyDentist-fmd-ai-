@@ -18,7 +18,13 @@ import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js
  * Point/Present directions are from the viewer: PointRight points to the viewer's right.
  */
 // bump ?v= whenever the GLB is rebuilt, or browsers keep the cached old model
-const MODEL_URL = "/mascot-sitting.glb?v=19";
+// the raw Tripo seated model, no rig (from "tooth character 3d model sitting.glb": Blender decimate to 400k tris,
+// gltf-transform center, the head's sculpted seam/pit faired off with the face pinned, meshopt + WebP 2048 → 2.5 MB);
+// it floats, bobs its hands and flutters its coat tails (forearm + coat bones, arms_raw.py); the clips below need the
+// rigged one
+const MODEL_URL = "/mascot-sitting-raw.glb?v=5";
+// const MODEL_URL = "/mascot-sitting.glb?v=20"; // rigged + animated (Fly, Meditate, face)
+// const MODEL_URL = "/mascot-sitting-org.glb?v=20";
 const FADE = 0.45;
 const AMBIENT = ["LookAround", "Smile", "Nod"];
 
@@ -119,6 +125,8 @@ type Props = {
 
 const _mouth = new THREE.Vector3();
 const _head = new THREE.Vector3();
+const _bob = new THREE.Quaternion();
+const _axisY = new THREE.Vector3(0, 1, 0);
 
 function Model({ base, gesture, rotY, onReady, onMouth }: Props) {
   const gltf = useGLTF(MODEL_URL);
@@ -127,6 +135,16 @@ function Model({ base, gesture, rotY, onReady, onMouth }: Props) {
   const animations = gltf.animations;
   const animator = useMemo(() => new MascotAnimator(scene, animations), [scene, animations]);
   const group = useRef<THREE.Group>(null);
+  // the raw model's forearm and coat-tail bones (bone axis points forward, so turning about it raises/lowers what hangs
+  // off it), each with its rest pose and side sign (+ for the left bone, so both sides rise together)
+  const swing = useMemo(
+    () =>
+      ["handL", "handR", "coatL", "coatR"].flatMap((name) => {
+        const bone = scene.getObjectByName(name);
+        return bone ? [{ bone, rest: bone.quaternion.clone(), sign: name.endsWith("L") ? 1 : -1, coat: name.startsWith("coat") }] : [];
+      }),
+    [scene],
+  );
 
   useEffect(() => {
     scene.traverse((o) => {
@@ -144,6 +162,14 @@ function Model({ base, gesture, rotY, onReady, onMouth }: Props) {
   useFrame((state, dt) => {
     animator.update(Math.min(dt, 0.1), state.clock.elapsedTime);
     if (group.current && rotY) group.current.rotation.y = THREE.MathUtils.degToRad(rotY.get());
+    // a model without clips (the raw one) gets a gentle float so it doesn't sit frozen
+    if (group.current && animations.length === 0) group.current.position.y = 0.01 * Math.sin(state.clock.elapsedTime * 1.2);
+    // …its hands bob a few degrees about the elbows, and its coat tails flutter about the hips, a bit faster
+    const t = state.clock.elapsedTime;
+    for (const { bone, rest, sign, coat } of swing) {
+      const a = coat ? 0.08 * Math.sin(t * 2.2) : 0.12 * Math.sin(t * 1.2);
+      bone.quaternion.copy(rest).multiply(_bob.setFromAxisAngle(_axisY, sign * a));
+    }
     const mouth = scene.getObjectByName("mouth");
     const head = scene.getObjectByName("head");
     if (onMouth && mouth && head) {
@@ -178,22 +204,32 @@ export default function Mascot3D({ active, ...props }: Props & { active: boolean
       gl={{ antialias: true, alpha: true }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.NeutralToneMapping;
-        gl.toneMappingExposure = 1.05;
+        gl.toneMappingExposure = 1;
       }}
       style={{ pointerEvents: "none" }}
     >
-      <ambientLight intensity={0.3} />
-      <directionalLight position={[1.5, 3, 3]} intensity={2.4} />
-      {/* cool back/under light: the horizon glow the mascot rises out of */}
-      <directionalLight position={[0, -1.5, -2.5]} intensity={1.6} color="#8fb4ff" />
+      {/* meditate.png's light (fitted to it colour for colour): a high-key studio — the white porcelain reads faintly
+          pink-white, its left side and left lobe sky-blue with a blue rim, the right warm with a peach rim, a lavender
+          rim along the top and lavender underneath */}
+      <ambientLight intensity={0.9} color="#fff3f3" />
+      <hemisphereLight args={["#000000", "#b4a8f0", 0.5]} />
+      <directionalLight position={[0, 0.3, 4]} intensity={1} color="#fff0f0" />
+      <directionalLight position={[2.6, 2.4, 3]} intensity={2} color="#ffe6dc" />
+      <directionalLight position={[-4, 0.3, 0.4]} intensity={2.6} color="#6fb1ff" />
+      <directionalLight position={[-3, -1.5, 1]} intensity={1.4} color="#6fb1ff" />
+      {/* rims from behind: blue on the left contours, peach on the right */}
+      <directionalLight position={[-2, 1, -3]} intensity={7} color="#6fb1ff" />
+      <directionalLight position={[-3, 0.5, -2]} intensity={5} color="#6fb1ff" />
+      <directionalLight position={[2, 1, -3]} intensity={5} color="#ffd6c2" />
       <Model {...props} />
-      {/* studio softboxes: the glassy tooth head shows them as crisp reflections */}
+      {/* softboxes the glossy, clear-coated head mirrors: streaks on the lobes and sides, the lavender top rim */}
       <Environment resolution={256}>
-        <Lightformer form="rect" intensity={2.6} position={[0, 4, 4]} scale={[8, 4, 1]} />
-        <Lightformer form="rect" intensity={1.4} position={[-5, 1, 1]} rotation-y={Math.PI / 2} scale={[6, 3, 1]} color="#dbe6ff" />
-        <Lightformer form="rect" intensity={1.2} position={[5, 1.5, 0]} rotation-y={-Math.PI / 2} scale={[4, 3, 1]} />
-        <Lightformer form="ring" intensity={2.2} position={[-2.5, 3, 3]} scale={1.2} />
-        <Lightformer form="rect" intensity={1.4} position={[0, -3, -3]} scale={[8, 2, 1]} color="#7aa2ff" />
+        <Lightformer form="rect" intensity={5} position={[0, 3.5, -3]} scale={[8, 3, 1]} color="#b4a8f0" />
+        <Lightformer form="rect" intensity={6} position={[3, 3.5, 1]} scale={[4, 2, 1]} />
+        <Lightformer form="rect" intensity={4} position={[-3, 3.5, 1]} scale={[4, 2, 1]} />
+        <Lightformer form="rect" intensity={4} position={[3, 0.6, 3]} scale={[1.2, 5, 1]} />
+        <Lightformer form="rect" intensity={2} position={[-3, 0.6, 3]} scale={[1.2, 5, 1]} />
+        <Lightformer form="rect" intensity={1.5} position={[-5, 0.5, 1.5]} scale={[6, 5, 1]} color="#6fb1ff" />
       </Environment>
     </Canvas>
   );

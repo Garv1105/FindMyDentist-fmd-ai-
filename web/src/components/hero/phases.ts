@@ -4,26 +4,26 @@
  *
  *   0 ─ title fades, light awakens ─ mascot rises & grows ─ hold ─ mascot fades ─ AI chat ─ 1 (pin releases)
  *
- * Once the assistant is fully in, only a short tail (~0.16 of the pin) remains before the pin releases: a long
+ * Once the assistant is fully in, only a short tail (~0.13 of the pin) remains before the pin releases: a long
  * pinned stretch where nothing moves reads as the page being stuck.
  */
 export const PHASES = {
-  title: [0.03, 0.16], // A: headline leaves
-  core: [0.03, 0.19], // A: centre light intensifies, sky darkens
-  spread: [0.04, 0.49], // A→C: light travels along the rim, still spreading as the mascot rises
-  rise: [0.08, 0.51], // C: mascot emerges small from behind the rim and grows into its pose
-  hold: [0.51, 0.62], // D: settled pose, held briefly
-  mascotOut: [0.62, 0.71], // E: fade + slight recede, once
-  ai: [0.71, 0.84], // F: assistant fades in the instant the mascot is gone; short tail, then the pin releases
+  title: [0.023, 0.124], // A: headline leaves
+  core: [0.023, 0.148], // A: centre light intensifies, sky darkens
+  spread: [0.031, 0.381], // A→C: light travels along the rim, still spreading as the mascot rises
+  rise: [0.062, 0.397], // C: mascot emerges small from behind the rim and grows into its pose
+  hold: [0.397, 0.704], // D: settled pose, held for a good while (about a screen of scrolling) while it meditates
+  mascotOut: [0.704, 0.774], // E: fade + slight recede, once
+  ai: [0.774, 0.874], // F: assistant fades in the instant the mascot is gone; short tail, then the pin releases
 };
 
 /** Keyframe inputs shared by every mascot transform (strictly increasing). */
 export const MASCOT_KEYS = [
   0,
   PHASES.rise[0],
-  0.16, // quarter of the way up: still small, mostly behind the rim
-  0.27,
-  0.39,
+  0.124, // quarter of the way up: still small, mostly behind the rim
+  0.21,
+  0.303,
   PHASES.rise[1],
   PHASES.mascotOut[0],
   PHASES.mascotOut[1],

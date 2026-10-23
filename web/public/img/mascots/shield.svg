@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 280" fill="none">
+  <defs>
+    <linearGradient id="glass" x1="40" y1="20" x2="200" y2="260" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#9fd8ff" stop-opacity="0.55"/>
+      <stop offset="0.5" stop-color="#3b82f6" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#1d4ed8" stop-opacity="0.45"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="20" y1="10" x2="220" y2="270" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#e0f4ff"/>
+      <stop offset="0.45" stop-color="#7cc8ff"/>
+      <stop offset="1" stop-color="#3b82f6"/>
+    </linearGradient>
+    <radialGradient id="core" cx="120" cy="150" r="70" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#c7ecff" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#60a5fa" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="12"/></filter>
+  </defs>
+  <!-- halo -->
+  <path d="M120 14 L214 46 V128 C214 196 172 240 120 266 C68 240 26 196 26 128 V46 Z" fill="#60a5fa" opacity="0.35" filter="url(#soft)"/>
+  <!-- glass body and rim -->
+  <path d="M120 14 L214 46 V128 C214 196 172 240 120 266 C68 240 26 196 26 128 V46 Z" fill="url(#glass)"/>
+  <path d="M120 14 L214 46 V128 C214 196 172 240 120 266 C68 240 26 196 26 128 V46 Z" stroke="url(#rim)" stroke-width="5" stroke-linejoin="round" filter="url(#glow)"/>
+  <path d="M120 34 L196 60 V128 C196 184 162 222 120 244 C78 222 44 184 44 128 V60 Z" stroke="#bfe6ff" stroke-opacity="0.55" stroke-width="2" stroke-linejoin="round"/>
+  <!-- circuit traces -->
+  <g stroke="#a5dcff" stroke-opacity="0.7" stroke-width="1.6" stroke-linecap="round" fill="none">
+    <path d="M60 86 H88 L98 96 H108"/><path d="M180 86 H152 L142 96 H132"/>
+    <path d="M58 170 H84 L96 158"/><path d="M182 170 H156 L144 158"/>
+    <path d="M120 64 V92"/><path d="M120 212 V236"/>
+    <path d="M70 128 H90"/><path d="M170 128 H150"/>
+  </g>
+  <g fill="#dff3ff">
+    <circle cx="60" cy="86" r="2.6"/><circle cx="180" cy="86" r="2.6"/><circle cx="58" cy="170" r="2.6"/>
+    <circle cx="182" cy="170" r="2.6"/><circle cx="120" cy="64" r="2.6"/><circle cx="120" cy="236" r="2.6"/>
+    <circle cx="70" cy="128" r="2.2"/><circle cx="170" cy="128" r="2.2"/>
+  </g>
+  <!-- the lock, glowing -->
+  <circle cx="120" cy="150" r="64" fill="url(#core)"/>
+  <circle cx="120" cy="150" r="46" stroke="#bfe6ff" stroke-opacity="0.6" stroke-width="2"/>
+  <g filter="url(#glow)">
+    <path d="M102 140 V128 a18 18 0 0 1 36 0 V140" stroke="#eaf8ff" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <rect x="94" y="138" width="52" height="42" rx="8" fill="#7cc8ff" fill-opacity="0.55" stroke="#eaf8ff" stroke-width="4"/>
+    <circle cx="120" cy="155" r="6" fill="#eaf8ff"/>
+    <path d="M120 158 V170" stroke="#eaf8ff" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <!-- gloss -->
+  <path d="M44 60 L120 34 V120 C96 122 70 112 44 96 Z" fill="#ffffff" opacity="0.12"/>
+</svg>
