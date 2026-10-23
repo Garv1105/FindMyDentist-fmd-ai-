@@ -15,7 +15,7 @@ import {
 import { ArrowUp, Mic, ShieldCheck } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
-import { openAssistant } from "./Assistant";
+import { ChatThread, useAssistant } from "./Assistant";
 import { MASCOT_KEYS, MASCOT_OPACITY, PHASES } from "./phases";
 import { RIM, RIM_APEX, RIM_H, RIM_W, rimPath, rimYAt } from "./rim";
 
@@ -389,6 +389,8 @@ function Earth({
 
 /* ------------------------------------------------------------------------- */
 
+const CHAT_EASE = [0.22, 1, 0.36, 1] as const;
+
 const PROMPTS = [
   "Find a dentist near me",
   "My tooth hurts with cold drinks",
@@ -415,10 +417,14 @@ function HeroAssistantStage() {
   const [listening, setListening] = useState(false);
   const rec = useRef<InstanceType<SpeechCtor> | null>(null);
   const voice = useSyncExternalStore(noop, () => getSpeech() !== null, () => false);
+  const chat = useAssistant();
+  const ask = chat.send;
+  // once a question is asked, the conversation takes the greeting's place, right above the box
+  const chatting = chat.msgs.length > 0;
 
   const send = (q: string) => {
     if (!q.trim()) return;
-    openAssistant(q.trim());
+    ask(q);
     setText("");
   };
 
@@ -438,7 +444,7 @@ function HeroAssistantStage() {
         if (n < q.length) timer = setTimeout(type, 28);
         else
           timer = setTimeout(() => {
-            openAssistant(q);
+            ask(q);
             setText("");
           }, 450);
       };
@@ -449,7 +455,7 @@ function HeroAssistantStage() {
       window.removeEventListener("fmd:hero-ask", on);
       clearTimeout(timer);
     };
-  }, []);
+  }, [ask]);
 
   const toggleVoice = () => {
     const Ctor = getSpeech();
@@ -469,27 +475,54 @@ function HeroAssistantStage() {
   };
 
   return (
-    <div className="relative mx-auto flex max-w-[680px] flex-col items-center text-center">
-      <span className="icon-tile size-12">
-        {/* tooth from the brand logo, used as a mask so it takes the tile's text colour like the icon it replaced */}
-        <span aria-hidden className="size-6 bg-current [mask:url(/img/hero/tooth-mask.png)_center/contain_no-repeat]" />
-      </span>
-      <p className="eyebrow mt-6" style={{ textShadow: "0 1px 12px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.6)" }}>FMD AI</p>
-      <h2
-        className="mt-4 text-[clamp(28px,4.2vw,48px)] font-light leading-[1.08] tracking-[-0.035em] text-ink"
-        style={{ textShadow: "0 2px 20px rgba(0,0,0,0.95), 0 0 60px rgba(0,0,0,0.7)" }}
-      >
-        Hi, I&apos;m FMD AI.
-        <br />
-        <span className="text-ink-2">How can I help with your dental care?</span>
-      </h2>
+    <div className="relative mx-auto flex max-w-[900px] flex-col items-center text-center">
+      {/* a soft accent glow behind the glass, so the frost has light to catch */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-[8%] top-[18%] -z-10 h-[64%] rounded-full bg-[rgb(var(--accent-rgb)/0.16)] blur-[100px]" />
+      {/* the greeting folds up while the chat box unfolds in its place, both at once, so the box below glides with them */}
+      <AnimatePresence initial={false}>
+        {chatting ? (
+          <motion.div
+            key="chat"
+            className="w-full origin-bottom overflow-hidden"
+            initial={{ height: 0, opacity: 0, scale: 0.97 }}
+            animate={{ height: "auto", opacity: 1, scale: 1 }}
+            exit={{ height: 0, opacity: 0, scale: 0.97 }}
+            transition={{ height: { duration: 0.75, ease: CHAT_EASE }, opacity: { duration: 0.45, delay: 0.1 }, scale: { duration: 0.75, ease: CHAT_EASE } }}
+          >
+            <ChatThread chat={chat} />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="intro"
+            className="flex flex-col items-center overflow-hidden"
+            initial={{ height: 0, opacity: 0, filter: "blur(8px)" }}
+            animate={{ height: "auto", opacity: 1, filter: "blur(0px)" }}
+            exit={{ height: 0, opacity: 0, filter: "blur(10px)" }}
+            transition={{ height: { duration: 0.75, ease: CHAT_EASE }, opacity: { duration: 0.35 }, filter: { duration: 0.35 } }}
+          >
+            <span className="icon-tile size-12">
+              {/* tooth from the brand logo, used as a mask so it takes the tile's text colour like the icon it replaced */}
+              <span aria-hidden className="size-6 bg-current [mask:url(/img/hero/tooth-mask.png)_center/contain_no-repeat]" />
+            </span>
+            <p className="eyebrow mt-6" style={{ textShadow: "0 1px 12px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.6)" }}>FMD AI</p>
+            <h2
+              className="mt-4 text-[clamp(28px,4.2vw,48px)] font-light leading-[1.08] tracking-[-0.035em] text-ink"
+              style={{ textShadow: "0 2px 20px rgba(0,0,0,0.95), 0 0 60px rgba(0,0,0,0.7)" }}
+            >
+              Hi, I&apos;m FMD AI.
+              <br />
+              <span className="text-ink-2">How can I help with your dental care?</span>
+            </h2>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <form
         onSubmit={(e) => {
           e.preventDefault();
           send(text);
         }}
-        className="glass mt-8 flex w-full items-center gap-2 rounded-full border border-line-strong p-1.5 pl-5 shadow-[inset_0_1px_0_var(--inner-hi),0_8px_32px_-8px_rgba(0,0,0,0.55)] focus-within:border-[rgba(255,255,255,0.22)] focus-within:shadow-[inset_0_1px_0_var(--inner-hi),0_0_0_1px_rgb(var(--accent-rgb)/0.18),0_0_60px_-10px_var(--accent-glow)]"
+        className="glass-lux glass-glow mt-7 flex w-full items-center gap-2 rounded-full p-1.5 pl-5"
       >
         <label htmlFor="hero-ai" className="sr-only">
           Ask FMD AI
@@ -499,7 +532,7 @@ function HeroAssistantStage() {
           id="hero-ai"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Hi! I’m almost ready. FMD AI is coming soon…"
+          placeholder={chatting ? "Ask a follow-up…" : "Hi! I’m almost ready. FMD AI is coming soon…"}
           autoComplete="off"
           className="h-11 min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink-3 sm:h-12"
         />
@@ -517,18 +550,18 @@ function HeroAssistantStage() {
             {listening && <span className="sr-only">Listening</span>}
           </button>
         )}
-        <button type="submit" aria-label="Send" disabled={!text.trim()} className="btn-primary size-11 shrink-0 disabled:opacity-50 sm:size-12">
+        <button type="submit" aria-label="Send" disabled={!text.trim() || chat.typing} className="btn-primary size-11 shrink-0 disabled:opacity-50 sm:size-12">
           <ArrowUp className="size-[18px]" strokeWidth={1.75} />
         </button>
       </form>
 
-      <div className="mt-5 flex flex-wrap justify-center gap-2">
+      <div className="flex flex-wrap justify-center gap-2 pt-5">
         {PROMPTS.map((q) => (
           <button
             key={q}
             type="button"
             onClick={() => send(q)}
-            className="glass glass-interactive rounded-full border border-line-strong px-4 py-2 text-[13px] text-ink shadow-[0_4px_16px_-4px_rgba(0,0,0,0.5)] transition-colors hover:text-ink"
+            className="glass-lux rounded-full px-4 py-2 text-[13px] text-ink-2 transition-[transform,color,box-shadow] duration-300 hover:-translate-y-0.5 hover:text-ink"
           >
             {q}
           </button>
