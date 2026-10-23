@@ -5,7 +5,7 @@ import { Fragment, useId, useState } from "react";
 import { Reveal } from "../ui";
 
 const PERKS = [
-  { icon: Crown, label: "Early access" },
+  { icon: Crown, label: "J" },
   { icon: Bell, label: "Product updates" },
   { icon: Users, label: "Exclusive insights" },
 ];
