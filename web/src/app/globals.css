@@ -333,7 +333,6 @@ html.theme-anim *::after {
     var(--surface-glass);
   background-color: var(--glass-tint);
   backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
   box-shadow:
     inset 0 1px 0 var(--inner-hi),
     0 24px 60px -28px var(--shadow);
@@ -659,7 +658,6 @@ html.theme-anim *::after {
 .fmd-glass {
   background: linear-gradient(180deg, rgba(20, 38, 62, 0.62), rgba(10, 18, 30, 0.7));
   backdrop-filter: blur(14px) saturate(120%);
-  -webkit-backdrop-filter: blur(14px) saturate(120%);
   box-shadow:
     inset 0 1px 0 rgba(230, 234, 242, 0.09),
     inset 0 0 0 1px rgb(var(--sapphire-soft-rgb) / 0.16),
@@ -676,7 +674,6 @@ html.theme-anim *::after {
     linear-gradient(180deg, rgb(var(--silver-rgb) / 0.055), rgb(var(--silver-rgb) / 0) 42%),
     rgb(var(--sapphire-light-rgb) / 0.14);
   backdrop-filter: blur(18px) saturate(140%);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
   box-shadow:
     inset 0 1px 0 rgb(var(--silver-rgb) / 0.1),
     inset 0 -1px 0 rgb(2 4 8 / 0.25),
@@ -699,7 +696,6 @@ html.theme-anim *::after {
 @media (max-width: 639px) {
   .fmd-glass-pane {
     backdrop-filter: blur(12px) saturate(130%);
-    -webkit-backdrop-filter: blur(12px) saturate(130%);
   }
 }
 /* VIP lounge: obsidian base, deep violet-blue pooling in the corners, a warm gold bloom where the concierge stands
@@ -736,7 +732,6 @@ html.theme-anim *::after {
     linear-gradient(180deg, rgb(var(--edge-champagne-rgb) / 0.07), transparent 40%),
     linear-gradient(180deg, rgb(16 12 9 / 0.72), rgb(9 8 7 / 0.82));
   backdrop-filter: blur(14px) saturate(120%);
-  -webkit-backdrop-filter: blur(14px) saturate(120%);
   box-shadow:
     inset 0 1px 0 rgb(var(--edge-gold-rgb) / 0.12),
     0 1px 2px rgb(0 0 0 / 0.4),
@@ -1174,9 +1169,8 @@ html.theme-anim *::after {
   .mascot-float { animation: none; }
 }
 
-/* the navbar's "Early access" call to action: every 3s a quick double beat (scale up and back) with a blue ring that
-   flashes outwards, so it reads as "press me"; the arrow pushes forward on each beat. Still on hover, and for anyone
-   who prefers reduced motion */
+/* the navbar's " acEarlycess" call to action: every 3s a quick double beat (scale up and back), so it reads as
+   "press me"; the arrow pushes forward on each beat. Still on hover, and for anyone who prefers reduced motion */
 @keyframes cta-beat {
   0%, 62%, 100% { transform: scale(1); }
   70% { transform: scale(1.09); }
@@ -1184,31 +1178,64 @@ html.theme-anim *::after {
   84% { transform: scale(1.06); }
   92% { transform: scale(1); }
 }
-@keyframes cta-ring {
-  0%, 62% { opacity: 0; transform: scale(1); }
-  70% { opacity: 1; transform: scale(1); }
-  100% { opacity: 0; transform: scale(1.35, 1.7); }
-}
 @keyframes cta-arrow {
   0%, 62%, 100% { transform: translateX(0); }
   72%, 86% { transform: translateX(4px); }
   79% { transform: translateX(0); }
 }
-/* the ring is its own layer behind the button, so the button keeps its own shadow */
-.cta-pulse { position: relative; isolation: isolate; animation: cta-beat 3s ease-in-out infinite; }
-.cta-pulse::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  box-shadow: 0 0 0 2px rgb(110 160 255 / 0.85), 0 0 22px 4px rgb(80 140 255 / 0.6);
-  opacity: 0;
-  pointer-events: none;
-  animation: cta-ring 3s ease-out infinite;
-}
+.cta-pulse { animation: cta-beat 3s ease-in-out infinite; }
 .cta-pulse .cta-arrow { animation: cta-arrow 3s ease-in-out infinite; }
-.cta-pulse:hover, .cta-pulse:hover::before, .cta-pulse:hover .cta-arrow { animation-play-state: paused; }
+.cta-pulse:hover, .cta-pulse:hover .cta-arrow { animation-play-state: paused; }
 @media (prefers-reduced-motion: reduce) {
-  .cta-pulse, .cta-pulse::before, .cta-pulse .cta-arrow { animation: none; }
+  .cta-pulse, .cta-pulse .cta-arrow { animation: none; }
+}
+
+/* FMD AI chat: semi-transparent panes in the theme's own colours (its surface, washed with its accent from the top
+   corner), frosted so the hero shows through */
+.chat-pane {
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%),
+    color-mix(in srgb, var(--surface) 55%, transparent);
+  backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid color-mix(in srgb, var(--accent) 16%, transparent);
+}
+/* the open chat box (thread and question box in one): a light hairline round it */
+.chat-pane.chat-box {
+  border-color: var(--edge-hi);
+}
+/* the caret an answer is typed out behind */
+.type-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 3px;
+  vertical-align: -0.18em;
+  border-radius: 1px;
+  background: var(--accent);
+  animation: type-caret 0.9s steps(1) infinite;
+}
+@keyframes type-caret {
+  50% {
+    opacity: 0;
+  }
+}
+/* the visitor's message: minimal, a faint accent tint and a hairline in the same accent */
+.chat-user {
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+/* the navbar: matte frosted glass. An even tint with a faint grain, a quiet hairline edge, and depth from shadow only
+   (the bar rolls off darker toward its lower edge, so it reads as a curved slab), with no gloss or highlights */
+.nav-matte {
+  position: relative;
+  background-color: color-mix(in srgb, var(--surface) 62%, transparent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.05'/%3E%3C/svg%3E");
+  backdrop-filter: blur(24px) saturate(115%);
+  border: 1px solid rgb(255 255 255 / 0.07);
+  box-shadow:
+    inset 0 -14px 24px -16px rgb(0 0 0 / 0.6),
+    inset 18px 0 24px -22px rgb(0 0 0 / 0.5),
+    inset -18px 0 24px -22px rgb(0 0 0 / 0.5),
+    0 14px 36px -18px rgb(0 0 0 / 0.85);
 }

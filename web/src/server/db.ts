@@ -19,7 +19,9 @@ export function db(): DatabaseSync {
     }
     return g.__fmdDb;
   }
-  const file = process.env.FMD_DB ?? join(process.cwd(), ".data", "fmd.db");
+  // ponytail: on Vercel only /tmp is writable, and it is per instance and wiped on restart (data doesn't last); move
+  // to a hosted database (the SQL is kept portable to PostgreSQL) once chats and accounts must persist
+  const file = process.env.FMD_DB ?? (process.env.VERCEL ? "/tmp/fmd.db" : join(process.cwd(), ".data", "fmd.db"));
   if (file !== ":memory:") mkdirSync(dirname(file), { recursive: true });
   const d = new DatabaseSync(file);
   d.exec("PRAGMA foreign_keys = ON;");
