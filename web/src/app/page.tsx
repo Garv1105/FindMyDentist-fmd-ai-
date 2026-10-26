@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { DiscoveryProvider } from "@/components/discovery";
-import { AssistantPanel } from "@/components/hero/Assistant";
 import Hero from "@/components/hero/Hero";
 import ModelPreloader from "@/components/ModelPreloader";
 import Navbar from "@/components/nav/Navbar";
@@ -42,7 +41,6 @@ export default function Home() {
         <ComingSoon /> {/* 12 */}
       </main>
       <Footer /> {/* 13 */}
-      <AssistantPanel />
     </DiscoveryProvider>
   );
 }

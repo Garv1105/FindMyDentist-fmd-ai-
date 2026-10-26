@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import Contain from "./Contain";
 
 const MascotModel = dynamic(() => import("./MascotModel"), { ssr: false });
 
@@ -228,6 +229,8 @@ export default function MascotArt({ src, model, sizes, className = "object-conta
       )}
       {url && mounted && (
         <div className={`absolute inset-0 ${still ? "" : "transition-opacity duration-500"} ${shown ? "opacity-100" : "opacity-0"}`}>
+          {/* a model that fails to load leaves its artwork showing (it never reports ready) */}
+          <Contain>
           <MascotModel
             url={url}
             align={align}
@@ -239,6 +242,7 @@ export default function MascotArt({ src, model, sizes, className = "object-conta
               warmTurn.current?.();
             }}
           />
+          </Contain>
           {art?.overlay && !model && (
             // eslint-disable-next-line @next/next/no-img-element -- a small SVG, nothing to optimise
             <img src={art.overlay.src} alt="" className="mascot-float absolute h-auto" style={art.overlay.style} />
