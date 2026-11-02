@@ -7,13 +7,16 @@ import AiFeatures from "@/components/sections/AiFeatures";
 import ComingSoon from "@/components/sections/ComingSoon";
 import Concierge from "@/components/sections/Concierge";
 import Dentists from "@/components/sections/Dentists";
+import Ecosystem from "@/components/sections/Ecosystem";
 import Explore from "@/components/sections/Explore";
 import Footer from "@/components/sections/Footer";
 import Journey from "@/components/sections/Journey";
 import LowerWorld from "@/components/sections/LowerWorld";
 import Products from "@/components/sections/Products";
 import Records from "@/components/sections/Records";
+import Ribbon from "@/components/sections/Ribbon";
 import Trust from "@/components/sections/Trust";
+import Universe from "@/components/sections/Universe";
 import Walkthrough from "@/components/sections/Walkthrough";
 
 // Homepage order (01–13) is fixed by the FMD homepage brief.
@@ -24,7 +27,9 @@ export default function Home() {
       <Navbar />
       <main>
         <Hero /> {/* 01 */}
+        <Ribbon /> {/* 02 */}
         <LowerWorld>
+          <Universe /> {/* 02b everything FMD offers */}
           <AiFeatures /> {/* 03 */}
           <Walkthrough /> {/* 04 */}
           <Explore /> {/* 05 */}
@@ -34,6 +39,7 @@ export default function Home() {
           <Dentists /> {/* 09 */}
           <Trust /> {/* 10 */}
           <Products /> {/* 11 */}
+          <Ecosystem /> {/* 11b */}
         </LowerWorld>
         <ComingSoon /> {/* 12 */}
       </main>
