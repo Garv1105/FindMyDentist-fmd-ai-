@@ -1,49 +1,65 @@
 "use client";
 
-import { AnimatePresence, motion } from "motion/react";
-import { LayoutGrid, Search, UserRound, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { ArrowRight, Menu, X } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
-import { useMe } from "@/lib/me";
-import ThemeSwitcher from "./ThemeSwitcher";
 
-const LINKS = [
-  { label: "Find Dentists", href: "/#dentists" },
-  { label: "Treatments", href: "/#treatments" },
-  { label: "AI Assistant", href: "/#assistant" },
-  { label: "For Clinics", href: "/clinic" },
-  { label: "For Students", href: "/#students" },
-];
-const MORE = [
-  { label: "Explore", href: "/explore" },
-  { label: "My Appointments", href: "/appointments" },
-  { label: "Dental Records", href: "/records" },
-  { label: "FMD Edge", href: "/#concierge" },
-  { label: "Jobs", href: "/jobs" },
-  { label: "Help", href: "/help" },
-];
-
-/** `bold`: the header's larger, heavier lockup; the footer keeps the quiet one. */
-export function Logo({ bold = false }: { bold?: boolean }) {
+/** The brand mark: public/logo.png (fmd + the meditating mascot + FindMyDentist), trimmed to public/img/logo-fmd.webp */
+export function Logo() {
   return (
-    <Link href="/" className="flex items-center gap-3" aria-label="FindMyDentist home">
-      <span className={`headline-silver font-semibold leading-none tracking-[-0.06em] ${bold ? "text-[27px] font-bold" : "text-[24px]"}`}>FMD</span>
-      <span className={`hidden w-px bg-line-strong sm:block ${bold ? "h-5" : "h-4"}`} />
-      <span
-        className={`hidden tracking-[-0.012em] sm:block ${bold ? "text-[16px] font-semibold text-ink" : "text-[15px] font-normal text-ink-2"}`}
-      >
-        FindMyDentist
-      </span>
+    <Link href="/" className="flex shrink-0 items-center" aria-label="FindMyDentist home">
+      <Image src="/img/logo-fmd.webp" alt="FindMyDentist" width={337} height={180} priority className="h-[44px] w-auto" />
     </Link>
   );
 }
 
+// the homepage's sections, in the order they appear on the page
+const LINKS = [
+  { label: "AI Assistant", href: "/#assistant" },
+  { label: "Treatments", href: "/#treatments" },
+  { label: "Explore", href: "/#explore" },
+  { label: "Safety", href: "/#safety" },
+  { label: "Records", href: "/#records" },
+  { label: "FMD Edge", href: "/#concierge" },
+  { label: "Dentists", href: "/#dentists" },
+  { label: "Trust", href: "/#trust" },
+  { label: "Products", href: "/#products" },
+];
+
+const EASE = [0.22, 1, 0.36, 1] as const;
+
+/** The section crossing the middle of the screen, by id: the bar marks it as where the visitor is. */
+function useCurrentSection() {
+  const [current, setCurrent] = useState("");
+  useEffect(() => {
+    const els = LINKS.map((l) => document.getElementById(l.href.slice(2))).filter((e): e is HTMLElement => !!e);
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) if (e.isIntersecting) setCurrent(e.target.id);
+      },
+      { rootMargin: "-50% 0px -50% 0px" },
+    );
+    els.forEach((e) => io.observe(e));
+    // above the first section (the hero) nothing is marked
+    const top = () => window.scrollY < (els[0]?.offsetTop ?? 0) - window.innerHeight / 2 && setCurrent("");
+    window.addEventListener("scroll", top, { passive: true });
+    return () => {
+      io.disconnect();
+      window.removeEventListener("scroll", top);
+    };
+  }, []);
+  return current;
+}
+
+/** The site bar: a floating matte-glass pill with the logo, the homepage's sections in page order, and the early-access
+ *  waitlist. Below xl the sections fold into a matte menu card. */
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
-  const [mobile, setMobile] = useState(false);
-  const [more, setMore] = useState(false);
-  const me = useMe();
-  const account = me ? { href: "/account", label: me.name.split(" ")[0] } : { href: "/signin", label: "Sign in" };
+  const [open, setOpen] = useState(false);
+  const [hover, setHover] = useState<string | null>(null);
+  const current = useCurrentSection();
 
   useEffect(() => {
     const on = () => setScrolled(window.scrollY > 24);
@@ -52,140 +68,106 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", on);
   }, []);
 
-  // the round button at the end of the bar (as in the reference): the "More" pages on desktop, the menu below that
-  const grid =
-    "grid size-12 shrink-0 place-items-center rounded-full bg-ink text-[var(--background)] shadow-[0_0_0_4px_rgb(255_255_255/0.06),0_8px_22px_-6px_rgb(0_0_0/0.7)] transition-transform duration-300 hover:scale-[1.06] active:scale-95";
-
   return (
-    // 12px gap + 64px bar: the hero's stage (laid out under 68px) clears it with room to spare
     <header className="fixed inset-x-0 top-0 z-40 px-3 pt-3 sm:px-5">
-      {/* the floating bar, solid like the reference: a dark glass that's a touch lighter at the top, a crisp rim, a
-          line of light along its top edge and a shadow that floats it off the page. Once the page scrolls it draws
-          in a little and firms up */}
-      <div
-        className={`relative mx-auto rounded-full border border-line-strong backdrop-blur-2xl transition-[max-width,box-shadow] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-          scrolled
-            ? "max-w-[1140px] shadow-[inset_0_1px_0_var(--inner-hi),0_22px_48px_-16px_rgb(0_0_0/0.85)]"
-            : "max-w-[1400px] shadow-[inset_0_1px_0_var(--inner-hi),0_14px_36px_-18px_rgb(0_0_0/0.7)]"
+      <nav
+        className={`nav-matte mx-auto flex items-center justify-between gap-4 rounded-full pl-6 pr-2 transition-[height,max-width,background-color,box-shadow] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+          scrolled || open ? "h-[56px] max-w-[1140px] !bg-[color-mix(in_srgb,var(--surface)_82%,transparent)]" : "h-[64px] max-w-[1400px]"
         }`}
-        style={{
-          backgroundImage:
-            "linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 92%, transparent), color-mix(in srgb, var(--surface) 88%, transparent))",
-        }}
       >
         <span aria-hidden className="pointer-events-none absolute inset-x-[12%] -top-px h-px bg-[linear-gradient(90deg,transparent,rgb(var(--horizon-rgb)/0.45),transparent)]" />
-        {/* long at the top of the page; once it scrolls, it draws in narrower and a little slimmer */}
-        <nav className={`flex items-center gap-4 pl-6 pr-2 transition-[height] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] sm:pl-7 ${scrolled ? "h-14" : "h-16"}`}>
-          <Logo bold />
-
-          <ul className="ml-auto hidden items-center gap-1 xl:flex">
-            {LINKS.map((l) => (
-              <li key={l.label}>
+        <Logo />
+        <ul className="hidden items-center xl:flex" onMouseLeave={() => setHover(null)}>
+          {LINKS.map((l) => {
+            const id = l.href.slice(2);
+            const on = current === id;
+            return (
+              <li key={l.href} className="relative">
                 <a
                   href={l.href}
-                  className="whitespace-nowrap rounded-full px-4 py-2.5 text-[14.5px] font-semibold tracking-[-0.01em] text-ink transition-colors hover:bg-[var(--surface-glass)]"
+                  onMouseEnter={() => setHover(id)}
+                  onFocus={() => setHover(id)}
+                  aria-current={on ? "location" : undefined}
+                  className={`relative z-10 block whitespace-nowrap rounded-full px-3.5 py-2 text-[14px] font-semibold tracking-[-0.01em] transition-colors duration-300 ${on || hover === id ? "text-ink" : "text-ink-2"}`}
                 >
                   {l.label}
                 </a>
-              </li>
-            ))}
-          </ul>
-
-          <div className="ml-auto flex shrink-0 items-center gap-1.5 xl:ml-3">
-            <Link href="/#dentists" aria-label="Find dentists" className="hidden size-10 place-items-center rounded-full text-ink transition-colors hover:bg-[var(--surface-glass)] sm:grid">
-              <Search className="size-[19px]" strokeWidth={1.75} />
-            </Link>
-            <ThemeSwitcher />
-            <Link
-              href={account.href}
-              aria-label={me ? "Your account" : "Sign in"}
-              className="mr-1 hidden items-center gap-2 whitespace-nowrap rounded-full border border-line-strong bg-[var(--surface-glass)] py-1.5 pl-1.5 pr-4 text-[14px] font-semibold text-ink transition-colors hover:border-[rgb(var(--horizon-rgb)/0.35)] sm:flex"
-            >
-              <span className="icon-tile size-8 !rounded-full">
-                <UserRound className="size-4" strokeWidth={1.75} />
-              </span>
-              {account.label}
-            </Link>
-
-            {/* desktop: the More pages, in a panel under the button */}
-            <div className="relative hidden xl:block" onMouseLeave={() => setMore(false)}>
-              <button
-                onClick={() => setMore((m) => !m)}
-                onMouseEnter={() => setMore(true)}
-                aria-expanded={more}
-                aria-label="More pages"
-                className={grid}
-              >
-                <LayoutGrid className={`size-5 transition-transform duration-500 ${more ? "rotate-90" : ""}`} strokeWidth={1.75} />
-              </button>
-              <AnimatePresence>
-                {more && (
-                  <motion.ul
-                    initial={{ opacity: 0, y: -6, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -6, scale: 0.97 }}
-                    transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                    className="absolute right-0 top-[calc(100%+12px)] w-56 origin-top-right rounded-3xl border border-line-strong p-1.5 shadow-[inset_0_1px_0_var(--inner-hi),0_24px_48px_-20px_rgb(0_0_0/0.8)] backdrop-blur-2xl before:absolute before:inset-x-0 before:-top-3 before:h-3"
-                    style={{ backgroundImage: "linear-gradient(180deg, var(--surface-elevated), var(--surface))" }}
-                  >
-                    {MORE.map((m) => (
-                      <li key={m.label}>
-                        <a href={m.href} className="block rounded-2xl px-3.5 py-2.5 text-[14px] font-medium text-ink-2 transition-colors hover:bg-[var(--accent-soft)] hover:text-ink">
-                          {m.label}
-                        </a>
-                      </li>
-                    ))}
-                  </motion.ul>
+                {/* a soft pane that slides from link to link under the pointer */}
+                {hover === id && (
+                  <motion.span
+                    layoutId="nav-hover"
+                    aria-hidden
+                    className="absolute inset-0 rounded-full bg-white/[0.06]"
+                    transition={{ duration: 0.35, ease: EASE }}
+                  />
                 )}
-              </AnimatePresence>
-            </div>
-
-            {/* below desktop: the full menu */}
-            <button aria-label="Open menu" onClick={() => setMobile(true)} className={`${grid} xl:hidden`}>
-              <LayoutGrid className="size-5" strokeWidth={1.9} />
-            </button>
-          </div>
-        </nav>
-      </div>
+                {/* the section on screen: a dot under its name */}
+                {on && (
+                  <motion.span
+                    layoutId="nav-current"
+                    aria-hidden
+                    className="absolute bottom-0.5 left-1/2 size-1 -translate-x-1/2 rounded-full bg-[rgb(var(--accent-rgb))]"
+                    transition={{ duration: 0.45, ease: EASE }}
+                  />
+                )}
+              </li>
+            );
+          })}
+        </ul>
+        <div className="flex items-center gap-1.5">
+          <Link
+            href="/#coming-soon"
+            onClick={() => setOpen(false)}
+            className="btn-primary cta-pulse h-11 gap-1.5 whitespace-nowrap pl-5 pr-4 text-[13.5px]"
+          >
+            Join Waitlist<ArrowRight className="cta-arrow size-4" strokeWidth={2} />
+          </Link>
+          <button
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+            onClick={() => setOpen((o) => !o)}
+            className="grid size-11 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-ink-2 transition-colors hover:text-ink xl:hidden"
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={open ? "x" : "menu"}
+                initial={{ opacity: 0, scale: 0.6 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.6 }}
+                transition={{ duration: 0.18 }}
+              >
+                {open ? <X className="size-5" strokeWidth={1.5} /> : <Menu className="size-5" strokeWidth={1.5} />}
+              </motion.span>
+            </AnimatePresence>
+          </button>
+        </div>
+      </nav>
 
       <AnimatePresence>
-        {mobile && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-[color-mix(in_srgb,var(--background)_88%,transparent)] backdrop-blur-2xl xl:hidden"
+        {open && (
+          <motion.ul
+            initial={{ opacity: 0, y: -12, scale: 0.97, filter: "blur(8px)" }}
+            animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+            exit={{ opacity: 0, y: -8, scale: 0.98, filter: "blur(6px)" }}
+            transition={{ duration: 0.35, ease: EASE }}
+            className="nav-matte mx-auto mt-2 max-w-[1280px] origin-top overflow-hidden rounded-[28px] !bg-[color-mix(in_srgb,var(--surface)_93%,transparent)] p-2 xl:hidden"
           >
-            <div className="flex h-[68px] items-center justify-between px-4 sm:px-6">
-              <Logo />
-              <button aria-label="Close menu" onClick={() => setMobile(false)} className="grid size-9 place-items-center text-ink-2">
-                <X className="size-5" strokeWidth={1.5} />
-              </button>
-            </div>
-            <ul className="px-6 pt-6">
-              {[...LINKS, ...MORE].map((l, i) => (
-                <motion.li
-                  key={l.label}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.04 * i, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                >
+            {LINKS.map((l, i) => {
+              const on = current === l.href.slice(2);
+              return (
+                <motion.li key={l.href} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.35, ease: EASE, delay: 0.04 * i }}>
                   <a
                     href={l.href}
-                    onClick={() => setMobile(false)}
-                    className="block border-b border-line py-4 text-[22px] font-light tracking-[-0.02em] text-ink"
+                    onClick={() => setOpen(false)}
+                    className={`flex items-center justify-between rounded-2xl px-4 py-3 text-[16px] transition-colors hover:bg-white/[0.06] ${on ? "bg-white/[0.06] text-ink" : "text-ink-2"}`}
                   >
                     {l.label}
+                    {on && <span aria-hidden className="size-1.5 rounded-full bg-[rgb(var(--accent-rgb))]" />}
                   </a>
                 </motion.li>
-              ))}
-            </ul>
-            <div className="px-6 pt-8">
-              <Link href={account.href} onClick={() => setMobile(false)} className="btn-primary h-12 w-full text-sm">
-                {me ? "Your account" : "Sign in"}
-              </Link>
-            </div>
-          </motion.div>
+              );
+            })}
+          </motion.ul>
         )}
       </AnimatePresence>
     </header>

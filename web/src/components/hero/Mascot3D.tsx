@@ -594,7 +594,7 @@ export default function Mascot3D({ active, ...props }: Props & { active: boolean
       // playable: presses reach it (its invisible shapes decide what's a hit); vertical swipes still scroll the page
       style={{ pointerEvents: props.playful ? "auto" : "none", touchAction: "pan-y" }}
     >
-      {/* meditate.png's light (fitted to it colour for colour): a high-key studio — the white porcelain reads faintly
+      {/* meditate.png's light (fitted to it colour for colour): a high-key studio - the white porcelain reads faintly
           pink-white, its left side and left lobe sky-blue with a blue rim, the right warm with a peach rim, a lavender
           rim along the top and lavender underneath */}
       <ambientLight intensity={0.9} color="#fff3f3" />

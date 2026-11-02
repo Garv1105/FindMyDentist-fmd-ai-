@@ -1,5 +1,5 @@
+import type { Metadata } from "next";
 import { DiscoveryProvider } from "@/components/discovery";
-import { AssistantPanel } from "@/components/hero/Assistant";
 import Hero from "@/components/hero/Hero";
 import ModelPreloader from "@/components/ModelPreloader";
 import Navbar from "@/components/nav/Navbar";
@@ -18,6 +18,9 @@ import Ribbon from "@/components/sections/Ribbon";
 import Trust from "@/components/sections/Trust";
 import Universe from "@/components/sections/Universe";
 import Walkthrough from "@/components/sections/Walkthrough";
+
+// the home page's own address (set here, not in the layout, so other pages don't inherit it)
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 // Homepage order (01–13) is fixed by the FMD homepage brief.
 export default function Home() {
@@ -44,7 +47,6 @@ export default function Home() {
         <ComingSoon /> {/* 12 */}
       </main>
       <Footer /> {/* 13 */}
-      <AssistantPanel />
     </DiscoveryProvider>
   );
 }

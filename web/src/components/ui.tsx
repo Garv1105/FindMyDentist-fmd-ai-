@@ -101,7 +101,7 @@ export function VerifiedBadge() {
 export function SponsoredBadge() {
   return (
     <span
-      title="Paid placement — not a clinical endorsement"
+      title="Paid placement - not a clinical endorsement"
       className="inline-flex w-fit items-center gap-1 rounded-full border border-dashed border-line-strong px-2 py-0.5 text-[10.5px] uppercase tracking-[0.12em] text-ink-3"
     >
       <Megaphone className="size-3" strokeWidth={1.5} />

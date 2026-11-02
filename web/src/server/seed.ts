@@ -6,7 +6,7 @@ import { all, one, run, tx } from "./db.ts";
  * labels it "Demo profile". Names, clinics and phone numbers are fictitious; verification text
  * says plainly that no real check was performed.
  */
-const DEMO_CHECK = "Demo data — no real verification has been performed.";
+const DEMO_CHECK = "Demo data - no real verification has been performed.";
 
 const CLINICS = [
   { key: "kor", name: "Demo Dental Studio", area: "Koramangala", address: "80 Feet Rd, Koramangala, Bengaluru (demo)", hours: "Mon–Sat · 10:00–19:30" },
