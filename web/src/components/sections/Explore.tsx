@@ -1,9 +1,7 @@
 "use client";
 
-import { ArrowRight, BadgeCheck } from "lucide-react";
+import { BadgeCheck } from "lucide-react";
 import MascotArt from "@/components/MascotArt";
-import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/me";
 import type { FeedItem } from "../content/FeedCard";
@@ -27,23 +25,17 @@ export default function Explore() {
             <p className="eyebrow mb-3.5">Learn</p>
             <h2 className="type-h2-lg max-w-sm text-ink">Learn from verified dentists</h2>
             <p className="type-lede mt-5 max-w-sm">Explore expert dental advice and simple tips for a healthier, brighter smile.</p>
-            <a href="/explore" className="group mt-7 inline-flex w-fit items-center gap-2 text-sm text-ink-2 transition-colors hover:text-ink">
-              Open Explore <ArrowRight className="arrow-nudge size-4" strokeWidth={1.5} />
-            </a>
           </Reveal>
 
           {!items && <p className="self-center p-6 text-[13px] text-ink-4">Loading…</p>}
           {items?.length === 0 && (
             <p className="self-start rounded-[var(--sf-r-md)] fmd-surface p-6 text-[13.5px] text-ink-3">
-              No posts to show right now. <Link href="/explore" className="underline underline-offset-4">Open Explore</Link>
+              No posts to show right now.
             </p>
           )}
           {lead && (
             <Reveal delay={0.06}>
-              <Link
-                href="/explore"
-                className="group relative flex min-h-[360px] flex-col overflow-hidden rounded-[var(--sf-r-lg)] fmd-surface-raised fmd-hover p-7 sm:p-9 lg:pl-[290px]"
-              >
+              <article className="relative flex min-h-[360px] flex-col overflow-hidden rounded-[var(--sf-r-lg)] fmd-surface-raised p-7 sm:p-9 lg:pl-[290px]">
                 {/* the reading corner: a lamp-like pool of light over the book; 270px box (lg) → ~227px visible, glasses and pages legible */}
                 <div aria-hidden className="relative mx-auto -mt-2 mb-4 size-[190px] lg:absolute lg:bottom-0 lg:left-4 lg:m-0 lg:size-[270px]">
                   <div className="absolute left-1/2 top-[18%] h-[70%] w-[90%] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(157,184,255,0.14),transparent)]" />
@@ -55,7 +47,7 @@ export default function Explore() {
                 <h3 className="relative mt-auto max-w-lg pt-8 text-[26px] font-normal leading-[1.15] tracking-[-0.024em] text-ink [text-wrap:balance] sm:text-[32px]">{lead.title}</h3>
                 <p className="relative mt-4 line-clamp-4 max-w-lg text-[14.5px] leading-relaxed text-ink-3">{lead.body}</p>
                 <Byline item={lead} />
-              </Link>
+              </article>
             </Reveal>
           )}
         </div>
@@ -66,12 +58,12 @@ export default function Explore() {
             {rest.map((i, n) => (
               <li key={i.id}>
                 <Reveal delay={0.06 * (n + 1)} className="h-full">
-                  <Link href="/explore" className="group fmd-divider flex h-full flex-col rounded-[2px] pt-5">
+                  <article className="fmd-divider flex h-full flex-col rounded-[2px] pt-5">
                     <Meta item={i} />
-                    <h3 className="type-h3 mt-3 transition-colors duration-300 group-hover:text-[var(--sapphire-hi)]">{i.title}</h3>
-                    <p className="mt-1.5 line-clamp-2 text-[14px] leading-relaxed text-ink-3 transition-colors duration-300 group-hover:text-ink-2">{i.body}</p>
+                    <h3 className="type-h3 mt-3">{i.title}</h3>
+                    <p className="mt-1.5 line-clamp-2 text-[14px] leading-relaxed text-ink-3">{i.body}</p>
                     <Byline item={i} />
-                  </Link>
+                  </article>
                 </Reveal>
               </li>
             ))}
@@ -97,7 +89,6 @@ function Byline({ item }: { item: FeedItem }) {
     <p className="relative mt-auto flex items-center gap-2 pt-5 text-[12.5px] text-ink-3">
       {item.author?.name ?? "FMD"}
       {item.author?.verified && <BadgeCheck className="size-3.5 text-ink-2" strokeWidth={1.75} aria-label="Verified dentist" />}
-      <ArrowRight className="arrow-nudge ml-auto size-4" strokeWidth={1.5} />
     </p>
   );
 }

@@ -1,4 +1,4 @@
-# FMD Hero — Performance Diagnosis, Cinematic Scroll Correction and Continuous Page Experience
+# FMD Hero - Performance Diagnosis, Cinematic Scroll Correction and Continuous Page Experience
 
 **Model:** Claude Opus  
 **Effort:** Medium  
@@ -14,7 +14,7 @@ The hero should remain premium and recognizable. The goal is to correct its anim
 
 ---
 
-## PHASE 1 — Establish a reliable performance baseline
+## PHASE 1 - Establish a reliable performance baseline
 
 Inspect the current implementation, including:
 
@@ -44,7 +44,7 @@ Do not invent profiling results, claim a rendering bottleneck without evidence o
 
 ---
 
-## PHASE 2 — Implement the correct hero choreography
+## PHASE 2 - Implement the correct hero choreography
 
 The current hero has an unwanted blank interval after the headline disappears and before the mascot becomes visible. The mascot also appears to float above the Earth instead of convincingly emerging from the horizon.
 
@@ -122,7 +122,7 @@ Once the AI chat stage completes:
 
 ---
 
-## PHASE 3 — Correct the horizon light geometry
+## PHASE 3 - Correct the horizon light geometry
 
 The current expanding light moves horizontally and vertically but does not follow the visible curve of the Earth.
 
@@ -149,7 +149,7 @@ The result should look like the horizon light itself is awakening and spreading 
 
 ---
 
-## PHASE 4 — Establish responsive animation phases
+## PHASE 4 - Establish responsive animation phases
 
 Inspect `phases.ts` and the current scroll-progress model before choosing the new boundaries.
 
@@ -172,7 +172,7 @@ Retain the existing test that prevents the mascot from overlapping the AI assist
 
 ---
 
-## PHASE 5 — Improve performance based on evidence
+## PHASE 5 - Improve performance based on evidence
 
 After the visual corrections, compare the implementation against the baseline.
 
@@ -188,7 +188,7 @@ Preserve an accessible reduced-motion experience: visitors who request reduced m
 
 ---
 
-## PHASE 6 — Make the homepage feel like one continuous visual experience
+## PHASE 6 - Make the homepage feel like one continuous visual experience
 
 The homepage contains independent functional sections, but they should feel like parts of the same carefully composed visual journey.
 
@@ -221,7 +221,7 @@ Do not compromise text readability or interactive accessibility for decorative e
 
 ---
 
-## PHASE 7 — Validate the actual result
+## PHASE 7 - Validate the actual result
 
 Inspect and test at meaningful scroll positions, including:
 
