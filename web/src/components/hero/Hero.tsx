@@ -11,11 +11,13 @@ import {
   useTransform,
   useMotionValue,
   type MotionValue,
+  type Variants,
 } from "motion/react";
 import { ArrowUp, Mic, ShieldCheck } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { openAssistant } from "./Assistant";
+import type { Spot } from "./Mascot3D";
 import { MASCOT_KEYS, MASCOT_OPACITY, PHASES } from "./phases";
 import { RIM, RIM_APEX, RIM_H, RIM_W, rimPath, rimYAt } from "./rim";
 
@@ -55,6 +57,17 @@ const stageVars = (height: string) =>
 
 // WebGL can't render on the server; the sprite stays visible until the model has loaded
 const Mascot3D = dynamic(() => import("./Mascot3D"), { ssr: false });
+// what it says, by where it was poked (and when a poke-flurry sends it spinning)
+const LINES: Record<Spot | "spin", string[]> = {
+  crown: ["Hey! Mind my crown.", "Ow, my enamel!", "Polished it this morning!", "That's my best cusp!"],
+  eyes: ["Eek, not the eyes!", "Hey, I can't see!", "Blink, blink!"],
+  face: ["Hehe, that tickles!", "You're making me blush!", "My cheeks!"],
+  head: ["Hey, who's there?", "Careful, I'm porcelain!", "Hehe, that tickles!"],
+  tummy: ["Hahaha, my tummy!", "Hehe, I'm ticklish there!", "Haha, stop it!"],
+  hands: ["Shh… I'm meditating.", "Om… namaste!", "Careful, perfect mudra!"],
+  legs: ["My legs fell asleep!", "Comfy here, thanks!", "Hey, my feet!"],
+  spin: ["Hahaha!", "Haha, I'm dizzy!", "Hahaha, stop it!", "Again! Again!"],
+};
 
 const noop = () => () => {};
 function useReducedMotionSafe() {
@@ -108,9 +121,8 @@ function CinematicHero() {
   const rotY = useTransform(p, MASCOT_KEYS, [-720, -720, -470, -230, -60, 0, 0, 0, 0]);
   const mOpacity = useTransform(p, MASCOT_KEYS, MASCOT_OPACITY);
 
-  // F — the assistant fades in and stays until the pin releases, so the page flows straight into the next section
-  const aiOpacity = useTransform(p, [a0, a1], [0, 1]);
-  const aiY = useTransform(p, [a0, a1], [40, 0]);
+  // F — the assistant plays its entrance once its threshold is crossed (reverses on the way back up) and stays until the
+  // pin releases, so the page flows straight into the next section
   const [aiActive, setAiActive] = useState(false);
   // mascot: superman rise, then settles into meditation once it arrives; WebGL only runs while it is on screen
   const [settled, setSettled] = useState(false);
@@ -119,11 +131,46 @@ function CinematicHero() {
   const [mascotOn, setMascotOn] = useState(false);
   const [mascotReady, setMascotReady] = useState(false);
   const onMascotReady = useCallback(() => setMascotReady(true), []);
+  // once "Let me take over…" has finished typing it opens its eyes (Wake), then stays awake, eyes on the cursor, until
+  // the page scrolls back up into the rise
+  const [wake, setWake] = useState<{ name: string; id: number } | null>(null);
+  // once awake it can be played with: each poke gets a line in its bubble for a moment, fitting where it was poked
+  const [quip, setQuip] = useState<{ text: string; id: number } | null>(null);
+  const [played, setPlayed] = useState(false); // once played with, its bubble only carries the replies
+  // a moment after it wakes, before anyone has played: a nudge that it can be played with
+  const [hint, setHint] = useState(false);
+  useEffect(() => {
+    if (!wake || played) return;
+    const t = setTimeout(() => setHint(true), 2600);
+    return () => clearTimeout(t);
+  }, [wake, played]);
+  const touch = typeof window !== "undefined" && matchMedia("(pointer: coarse)").matches;
+  useEffect(() => {
+    if (!quip) return;
+    const t = setTimeout(() => setQuip(null), 1800);
+    return () => clearTimeout(t);
+  }, [quip]);
+  const onPlay = useCallback(
+    (kind: Spot | "spin") => {
+      setPlayed(true);
+      setQuip((q) => {
+        const pool = LINES[kind].filter((s) => s !== q?.text);
+        return { text: pool[Math.floor(Math.random() * pool.length)], id: Date.now() };
+      });
+    },
+    [],
+  );
+  useEffect(() => {
+    if (!speaking || wake) return;
+    const t = setTimeout(() => setWake({ name: "Wake", id: Date.now() }), 1100);
+    return () => clearTimeout(t);
+  }, [speaking, wake]);
   useMotionValueEvent(p, "change", (v) => {
     const on = v > a0 + 0.02;
     if (on !== aiActive) setAiActive(on); // each flag flips only at its own threshold
     const s = v >= PHASES.rise[1] - 0.03;
     if (s !== settled) setSettled(s);
+    if (!s && wake) setWake(null);
     const sp = v >= PHASES.rise[1] && v < PHASES.mascotOut[0];
     if (sp !== speaking) setSpeaking(sp);
     const m = v > MASCOT_KEYS[1] - 0.02 && v < PHASES.mascotOut[1] + 0.01;
@@ -165,9 +212,23 @@ function CinematicHero() {
               />
               {/* wider than the sprite box: room for the arms */}
               <div className="absolute inset-y-0 left-1/2 w-[170%] -translate-x-1/2">
-                <Mascot3D active={mascotOn} base={settled ? "Meditate" : "Fly"} rotY={rotY} onReady={onMascotReady} />
+                <Mascot3D
+                  active={mascotOn}
+                  base={!settled ? "Fly" : wake ? "Idle" : "Meditate"}
+                  gesture={wake}
+                  lookAt={!!wake}
+                  playful={!!wake}
+                  onPlay={onPlay}
+                  rotY={rotY}
+                  onReady={onMascotReady}
+                />
               </div>
-              <SpeechBubble show={speaking} text="Let me take over…" />
+              {/* keyed by the line, so each new one types itself out afresh */}
+              <SpeechBubble
+                key={quip?.id ?? (hint && !played ? "hint" : "line")}
+                show={(speaking && !played) || !!quip}
+                text={quip?.text ?? (hint && wake ? (touch ? "Psst… try tapping me!" : "Psst… try clicking me!") : "Let me take over…")}
+              />
             </div>
           </motion.div>
         </MascotStage>
@@ -191,14 +252,13 @@ function CinematicHero() {
         </motion.div>
 
         {/* D — the assistant, its own state */}
-        <motion.div
-          style={{ opacity: aiOpacity, y: aiY }}
+        <div
           inert={!aiActive}
           aria-hidden={!aiActive}
           className="absolute inset-x-0 top-[calc(68px+var(--stage)*0.03)] z-20 px-4"
         >
-          <HeroAssistantStage />
-        </motion.div>
+          <HeroAssistantStage show={aiActive} />
+        </div>
       </div>
     </section>
   );
@@ -410,7 +470,31 @@ function getSpeech(): SpeechCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
-function HeroAssistantStage() {
+/*
+ * The assistant's entrance: a timed cascade (not scrubbed), ~2s. Icon → label → headline lines (blur to sharp) → the
+ * bar grows from a pill → chips one by one → disclaimer. Leaving plays it back quickly in reverse.
+ */
+const EASE = [0.16, 1, 0.3, 1] as const;
+const cascade: Variants = {
+  out: { transition: { staggerChildren: 0.03, staggerDirection: -1 } },
+  in: { transition: { staggerChildren: 0.16 } },
+};
+const rise: Variants = {
+  out: { opacity: 0, y: 14, filter: "blur(8px)", transition: { duration: 0.25 } },
+  in: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 1.1, ease: EASE } },
+};
+const pop: Variants = {
+  out: { opacity: 0, scale: 0.6, filter: "blur(6px)", transition: { duration: 0.25 } },
+  in: { opacity: 1, scale: 1, filter: "blur(0px)", transition: { duration: 0.9, ease: EASE } },
+};
+const grow: Variants = {
+  out: { opacity: 0, clipPath: "inset(0% 44% 0% 44% round 999px)", transition: { duration: 0.25 } },
+  in: { opacity: 1, clipPath: "inset(0% 0% 0% 0% round 999px)", transition: { duration: 1.2, ease: EASE } },
+};
+const chips: Variants = { out: {}, in: { transition: { staggerChildren: 0.12 } } };
+
+/** `show` drives the entrance; without it (static hero) everything is simply there. */
+function HeroAssistantStage({ show = true }: { show?: boolean }) {
   const [text, setText] = useState("");
   const [listening, setListening] = useState(false);
   const rec = useRef<InstanceType<SpeechCtor> | null>(null);
@@ -440,22 +524,33 @@ function HeroAssistantStage() {
   };
 
   return (
-    <div className="relative mx-auto flex max-w-[680px] flex-col items-center text-center">
-      <span className="icon-tile size-12">
+    <motion.div
+      variants={cascade}
+      initial={false}
+      animate={show ? "in" : "out"}
+      className="relative mx-auto flex max-w-[680px] flex-col items-center text-center"
+    >
+      <motion.span variants={pop} className="icon-tile size-12">
         {/* tooth from the brand logo, used as a mask so it takes the tile's text colour like the icon it replaced */}
         <span aria-hidden className="size-6 bg-current [mask:url(/img/hero/tooth-mask.png)_center/contain_no-repeat]" />
-      </span>
-      <p className="eyebrow mt-6" style={{ textShadow: "0 1px 12px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.6)" }}>FMD AI</p>
+      </motion.span>
+      <motion.p variants={rise} className="eyebrow mt-6" style={{ textShadow: "0 1px 12px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.6)" }}>
+        FMD AI
+      </motion.p>
       <h2
         className="mt-4 text-[clamp(28px,4.2vw,48px)] font-light leading-[1.08] tracking-[-0.035em] text-ink"
         style={{ textShadow: "0 2px 20px rgba(0,0,0,0.95), 0 0 60px rgba(0,0,0,0.7)" }}
       >
-        Hi, I&apos;m FMD AI.
-        <br />
-        <span className="text-ink-2">How can I help with your dental care?</span>
+        <motion.span variants={rise} className="block">
+          Hi, I&apos;m FMD AI.
+        </motion.span>
+        <motion.span variants={rise} className="block text-ink-2">
+          How can I help with your dental care?
+        </motion.span>
       </h2>
 
-      <form
+      <motion.form
+        variants={grow}
         onSubmit={(e) => {
           e.preventDefault();
           send(text);
@@ -490,29 +585,31 @@ function HeroAssistantStage() {
         <button type="submit" aria-label="Send" disabled={!text.trim()} className="btn-primary size-11 shrink-0 disabled:opacity-50 sm:size-12">
           <ArrowUp className="size-[18px]" strokeWidth={1.75} />
         </button>
-      </form>
+      </motion.form>
 
-      <div className="mt-5 flex flex-wrap justify-center gap-2">
+      <motion.div variants={chips} className="mt-5 flex flex-wrap justify-center gap-2">
         {PROMPTS.map((q) => (
-          <button
+          <motion.button
             key={q}
+            variants={rise}
             type="button"
             onClick={() => send(q)}
             className="glass glass-interactive rounded-full border border-line-strong px-4 py-2 text-[13px] text-ink shadow-[0_4px_16px_-4px_rgba(0,0,0,0.5)] transition-colors hover:text-ink"
           >
             {q}
-          </button>
+          </motion.button>
         ))}
-      </div>
+      </motion.div>
 
-      <p
+      <motion.p
+        variants={rise}
         className="mt-6 flex max-w-[520px] items-start gap-2 text-left text-[12.5px] leading-snug text-ink-3"
         style={{ textShadow: "0 1px 10px rgba(0,0,0,0.9)" }}
       >
         <ShieldCheck className="mt-px size-3.5 shrink-0" strokeWidth={1.5} />
         Guidance, not diagnosis. FMD AI explains and suggests; it never books, contacts clinics or pays on your behalf.
-      </p>
-    </div>
+      </motion.p>
+    </motion.div>
   );
 }
 

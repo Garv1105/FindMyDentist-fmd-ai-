@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { ChevronDown, Menu, Search, UserRound, X } from "lucide-react";
+import { LayoutGrid, Search, UserRound, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useMe } from "@/lib/me";
@@ -23,12 +23,17 @@ const MORE = [
   { label: "Help", href: "/help" },
 ];
 
-export function Logo() {
+/** `bold`: the header's larger, heavier lockup; the footer keeps the quiet one. */
+export function Logo({ bold = false }: { bold?: boolean }) {
   return (
     <Link href="/" className="flex items-center gap-3" aria-label="FindMyDentist home">
-      <span className="headline-silver text-[24px] font-semibold leading-none tracking-[-0.06em]">FMD</span>
-      <span className="hidden h-4 w-px bg-line-strong sm:block" />
-      <span className="hidden text-[15px] font-normal tracking-[-0.012em] text-ink-2 sm:block">FindMyDentist</span>
+      <span className={`headline-silver font-semibold leading-none tracking-[-0.06em] ${bold ? "text-[27px] font-bold" : "text-[24px]"}`}>FMD</span>
+      <span className={`hidden w-px bg-line-strong sm:block ${bold ? "h-5" : "h-4"}`} />
+      <span
+        className={`hidden tracking-[-0.012em] sm:block ${bold ? "text-[16px] font-semibold text-ink" : "text-[15px] font-normal text-ink-2"}`}
+      >
+        FindMyDentist
+      </span>
     </Link>
   );
 }
@@ -47,48 +52,85 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", on);
   }, []);
 
-  return (
-    <header className="fixed inset-x-0 top-0 z-40">
-      <div
-        className={`border-b transition-all duration-700 ${
-          scrolled
-            ? "border-line bg-[color-mix(in_srgb,var(--background)_72%,transparent)] backdrop-blur-xl"
-            : "border-transparent"
-        }`}
-      >
-        <nav className="mx-auto flex h-[68px] max-w-[1320px] items-center gap-6 px-4 sm:px-6 lg:px-10">
-          <Logo />
+  // the round button at the end of the bar (as in the reference): the "More" pages on desktop, the menu below that
+  const grid =
+    "grid size-12 shrink-0 place-items-center rounded-full bg-ink text-[var(--background)] shadow-[0_0_0_4px_rgb(255_255_255/0.06),0_8px_22px_-6px_rgb(0_0_0/0.7)] transition-transform duration-300 hover:scale-[1.06] active:scale-95";
 
-          <ul className="mx-auto hidden items-center gap-0.5 xl:flex">
+  return (
+    // 12px gap + 64px bar: the hero's stage (laid out under 68px) clears it with room to spare
+    <header className="fixed inset-x-0 top-0 z-40 px-3 pt-3 sm:px-5">
+      {/* the floating bar, solid like the reference: a dark glass that's a touch lighter at the top, a crisp rim, a
+          line of light along its top edge and a shadow that floats it off the page. Once the page scrolls it draws
+          in a little and firms up */}
+      <div
+        className={`relative mx-auto rounded-full border border-line-strong backdrop-blur-2xl transition-[max-width,box-shadow] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+          scrolled
+            ? "max-w-[1140px] shadow-[inset_0_1px_0_var(--inner-hi),0_22px_48px_-16px_rgb(0_0_0/0.85)]"
+            : "max-w-[1400px] shadow-[inset_0_1px_0_var(--inner-hi),0_14px_36px_-18px_rgb(0_0_0/0.7)]"
+        }`}
+        style={{
+          backgroundImage:
+            "linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 92%, transparent), color-mix(in srgb, var(--surface) 88%, transparent))",
+        }}
+      >
+        <span aria-hidden className="pointer-events-none absolute inset-x-[12%] -top-px h-px bg-[linear-gradient(90deg,transparent,rgb(var(--horizon-rgb)/0.45),transparent)]" />
+        {/* long at the top of the page; once it scrolls, it draws in narrower and a little slimmer */}
+        <nav className={`flex items-center gap-4 pl-6 pr-2 transition-[height] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] sm:pl-7 ${scrolled ? "h-14" : "h-16"}`}>
+          <Logo bold />
+
+          <ul className="ml-auto hidden items-center gap-1 xl:flex">
             {LINKS.map((l) => (
               <li key={l.label}>
-                <a href={l.href} className="whitespace-nowrap rounded-full px-3.5 py-2 text-[13.5px] text-ink-2 transition-colors hover:text-ink">
+                <a
+                  href={l.href}
+                  className="whitespace-nowrap rounded-full px-4 py-2.5 text-[14.5px] font-semibold tracking-[-0.01em] text-ink transition-colors hover:bg-[var(--surface-glass)]"
+                >
                   {l.label}
                 </a>
               </li>
             ))}
-            <li className="relative" onMouseLeave={() => setMore(false)}>
+          </ul>
+
+          <div className="ml-auto flex shrink-0 items-center gap-1.5 xl:ml-3">
+            <Link href="/#dentists" aria-label="Find dentists" className="hidden size-10 place-items-center rounded-full text-ink transition-colors hover:bg-[var(--surface-glass)] sm:grid">
+              <Search className="size-[19px]" strokeWidth={1.75} />
+            </Link>
+            <ThemeSwitcher />
+            <Link
+              href={account.href}
+              aria-label={me ? "Your account" : "Sign in"}
+              className="mr-1 hidden items-center gap-2 whitespace-nowrap rounded-full border border-line-strong bg-[var(--surface-glass)] py-1.5 pl-1.5 pr-4 text-[14px] font-semibold text-ink transition-colors hover:border-[rgb(var(--horizon-rgb)/0.35)] sm:flex"
+            >
+              <span className="icon-tile size-8 !rounded-full">
+                <UserRound className="size-4" strokeWidth={1.75} />
+              </span>
+              {account.label}
+            </Link>
+
+            {/* desktop: the More pages, in a panel under the button */}
+            <div className="relative hidden xl:block" onMouseLeave={() => setMore(false)}>
               <button
                 onClick={() => setMore((m) => !m)}
                 onMouseEnter={() => setMore(true)}
                 aria-expanded={more}
-                className="flex items-center gap-1 rounded-full px-3.5 py-2 text-[13.5px] text-ink-2 transition-colors hover:text-ink"
+                aria-label="More pages"
+                className={grid}
               >
-                More <ChevronDown className={`size-3.5 transition-transform duration-300 ${more ? "rotate-180" : ""}`} strokeWidth={1.5} />
+                <LayoutGrid className={`size-5 transition-transform duration-500 ${more ? "rotate-90" : ""}`} strokeWidth={1.75} />
               </button>
               <AnimatePresence>
                 {more && (
                   <motion.ul
-                    initial={{ opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -4 }}
-                    transition={{ duration: 0.25 }}
-                    className="glass absolute left-1/2 top-11 w-48 -translate-x-1/2 rounded-2xl p-1.5"
-                    style={{ backgroundColor: "var(--surface)" }}
+                    initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                    transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute right-0 top-[calc(100%+12px)] w-56 origin-top-right rounded-3xl border border-line-strong p-1.5 shadow-[inset_0_1px_0_var(--inner-hi),0_24px_48px_-20px_rgb(0_0_0/0.8)] backdrop-blur-2xl before:absolute before:inset-x-0 before:-top-3 before:h-3"
+                    style={{ backgroundImage: "linear-gradient(180deg, var(--surface-elevated), var(--surface))" }}
                   >
                     {MORE.map((m) => (
                       <li key={m.label}>
-                        <a href={m.href} className="block rounded-xl px-3 py-2 text-[13px] text-ink-2 hover:bg-[var(--accent-soft)] hover:text-ink">
+                        <a href={m.href} className="block rounded-2xl px-3.5 py-2.5 text-[14px] font-medium text-ink-2 transition-colors hover:bg-[var(--accent-soft)] hover:text-ink">
                           {m.label}
                         </a>
                       </li>
@@ -96,30 +138,11 @@ export default function Navbar() {
                   </motion.ul>
                 )}
               </AnimatePresence>
-            </li>
-          </ul>
+            </div>
 
-          <div className="ml-auto flex shrink-0 items-center gap-1 xl:ml-0">
-            <Link href="/#dentists" aria-label="Find dentists" className="hidden size-9 place-items-center rounded-full text-ink-2 transition-colors hover:text-ink sm:grid">
-              <Search className="size-[18px]" strokeWidth={1.5} />
-            </Link>
-            <ThemeSwitcher />
-            <Link
-              href={account.href}
-              aria-label={me ? "Your account" : "Sign in"}
-              className="ml-1 hidden items-center gap-2 whitespace-nowrap rounded-full border border-line py-1 pl-1 pr-3.5 text-[13px] text-ink-2 transition-colors hover:border-line-strong hover:text-ink sm:flex"
-            >
-              <span className="icon-tile size-7 !rounded-full">
-                <UserRound className="size-3.5" strokeWidth={1.5} />
-              </span>
-              {account.label}
-            </Link>
-            <button
-              aria-label="Open menu"
-              onClick={() => setMobile(true)}
-              className="grid size-9 place-items-center rounded-full text-ink-2 xl:hidden"
-            >
-              <Menu className="size-5" strokeWidth={1.5} />
+            {/* below desktop: the full menu */}
+            <button aria-label="Open menu" onClick={() => setMobile(true)} className={`${grid} xl:hidden`}>
+              <LayoutGrid className="size-5" strokeWidth={1.9} />
             </button>
           </div>
         </nav>
