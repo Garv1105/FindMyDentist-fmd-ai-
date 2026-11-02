@@ -37,7 +37,7 @@ type Look = {
 // fitted to the artwork (mascot-guide): warm-white porcelain face, the left lobe and edge sky-blue (rims from behind
 // and a blue softbox behind-left, which the clear coat mirrors), crisp softbox streaks on the right; nothing strong
 // from behind-right, which would light the inside of the mouth (no shadows here)
-const PORCELAIN: Look = {
+export const PORCELAIN: Look = {
   exposure: 1,
   // the shadows blue, as in the artworks: a cool fill and a blue bounce from below instead of a flat warm front light
   ambient: ["#aac0ff", 0.4],

@@ -44,7 +44,7 @@ export function addItem(a: Auth, clinicId: string, input: Record<string, unknown
   return id;
 }
 
-/** Stock is the sum of movements — never overwritten; adjustments require a note (CLN-30). */
+/** Stock is the sum of movements - never overwritten; adjustments require a note (CLN-30). */
 export function moveStock(a: Auth, clinicId: string, itemId: string, input: Record<string, unknown>) {
   requireClinic(a, clinicId, "inventory.write");
   const item = one<{ tracks_expiry: number }>("SELECT tracks_expiry FROM inventory_items WHERE id = ? AND clinic_id = ?", itemId, clinicId);

@@ -4,7 +4,7 @@ import { reopen, reply, staffUpdate, ticketDetail } from "@/server/support";
 
 export const GET = handler<RouteContext<"/api/support/tickets/[id]">>(async (req, ctx) => Response.json(ticketDetail(requireAuth(req), (await ctx.params).id)));
 
-/** { action: "reply" | "reopen" | "update", ... } — the service decides what each role may do. */
+/** { action: "reply" | "reopen" | "update", ... } - the service decides what each role may do. */
 export const POST = handler<RouteContext<"/api/support/tickets/[id]">>(async (req, ctx) => {
   const a = requireAuth(req);
   const id = (await ctx.params).id;
