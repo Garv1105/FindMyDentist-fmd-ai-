@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import Contain from "./Contain";
 
 const MascotModel = dynamic(() => import("./MascotModel"), { ssr: false });
@@ -33,26 +33,12 @@ const MODELS: Record<string, Art> = {
 };
 
 /*
- * Touch devices (phones, tablets) can't run ten live WebGL canvases smoothly: there each box shows a still picture of
- * its 3D model instead (public/models/stills, rendered by model/blender/mascots/render_stills.cjs: same look, pose and
- * framing, transparent). Bump STILL_V when they are re-rendered.
+ * The still pictures of the models (public/models/stills, rendered by model/blender/mascots/render_stills.cjs: same look,
+ * pose and framing, transparent) stand in on every device until a model's first frame has rendered. Bump STILL_V when
+ * they are re-rendered.
  */
 const STILL_V = 2;
-const TOUCH = "(hover: none) and (pointer: coarse)";
-export const isTouch = () => typeof window !== "undefined" && window.matchMedia(TOUCH).matches;
 const stillOf = (model: string) => `/models/stills/${model.split("/").pop()!.split("?")[0].replace(".glb", ".webp")}?v=${STILL_V}`;
-function useTouch() {
-  return useSyncExternalStore(
-    (on) => {
-      const mq = window.matchMedia(TOUCH);
-      mq.addEventListener("change", on);
-      return () => mq.removeEventListener("change", on);
-    },
-    isTouch,
-    () => false,
-  );
-}
-
 /** every model the page can show (and the walkthrough's mirrored guide): the loading screen fetches them up front */
 export const MODEL_URLS = [...new Set([...Object.values(MODELS).map((a) => a.model), M("guide-left")])];
 
@@ -61,7 +47,9 @@ export const MODEL_URLS = [...new Set([...Object.values(MODELS).map((a) => a.mod
  * Browsers cap a page at ~16 WebGL contexts (the hero takes some), so past LIVE the canvas scrolled away from longest ago
  * is released; its box then shows a snapshot of its own last frame until it is needed again (no visible change).
  */
-const LIVE = 9;
+// phones allow fewer WebGL contexts than desktops; a released canvas keeps showing a snapshot of its last frame, so
+// nothing visibly changes
+const LIVE = typeof window !== "undefined" && window.matchMedia("(hover: none) and (pointer: coarse)").matches ? 6 : 9;
 const live = new Map<number, { seen: number; visible: boolean; key: string; release: () => void }>();
 const snapshots = new Map<string, string>();
 let nextId = 0;
@@ -141,10 +129,9 @@ export default function MascotArt({ src, model, sizes, className = "object-conta
   const [ready, setReady] = useState<string | null>(null);
   const [, snapped] = useState(0); // re-render once a snapshot exists
   const warmTurn = useRef<(() => void) | null>(null); // set while this box is the one warming up
-  const touch = useTouch();
 
   useEffect(() => {
-    if (!url || !box.current || isTouch()) return; // touch devices: the still, no canvas
+    if (!url || !box.current) return;
     const id = nextId++;
     const el = box.current;
     let alive = true;
@@ -198,18 +185,6 @@ export default function MascotArt({ src, model, sizes, className = "object-conta
       warmTurn.current?.();
     };
   }, [url, key]);
-
-  if (touch && url)
-    return (
-      <div className="absolute inset-0">
-        {/* eslint-disable-next-line @next/next/no-img-element -- already sized, optimised WebP; versioned by a query */}
-        <img src={stillOf(url)} alt="" decoding="async" className="absolute inset-0 size-full object-contain" />
-        {art?.overlay && !model && (
-          // eslint-disable-next-line @next/next/no-img-element -- a small SVG, nothing to optimise
-          <img src={art.overlay.src} alt="" className="mascot-float absolute h-auto" style={art.overlay.style} />
-        )}
-      </div>
-    );
 
   const shown = ready === url;
   const still = snapshots.get(key); // this model's own frame, once it has rendered
