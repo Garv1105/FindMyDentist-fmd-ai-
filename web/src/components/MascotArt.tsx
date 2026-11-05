@@ -218,6 +218,9 @@ export default function MascotArt({ src, model, sizes, className = "object-conta
       {still && url ? (
         // eslint-disable-next-line @next/next/no-img-element -- a data URL snapshot of the canvas
         <img src={still} alt="" className={`absolute inset-0 size-full ${shown ? "opacity-0" : "opacity-100"}`} />
+      ) : url ? (
+        // eslint-disable-next-line @next/next/no-img-element -- already sized, optimised WebP; versioned by a query
+        <img src={stillOf(url)} alt="" decoding="async" className={`absolute inset-0 size-full object-contain transition-opacity duration-500 ${shown ? "opacity-0" : "opacity-100"}`} />
       ) : (
         <Image
           src={src}
@@ -249,7 +252,7 @@ export default function MascotArt({ src, model, sizes, className = "object-conta
           )}
         </div>
       )}
-      {art?.overlay && !model && !mounted && still && (
+      {art?.overlay && !model && !mounted && (
         // eslint-disable-next-line @next/next/no-img-element -- same prop over the snapshot
         <img src={art.overlay.src} alt="" className="mascot-float absolute h-auto" style={art.overlay.style} />
       )}
