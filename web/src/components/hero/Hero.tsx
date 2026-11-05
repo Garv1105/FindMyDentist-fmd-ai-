@@ -142,8 +142,10 @@ function CinematicHero() {
       className="relative h-[295vh] md:h-[370vh]"
     >
       <div
-        className="sticky top-0 h-svh overflow-hidden"
-        style={stageVars("100svh")}
+        // lvh, not svh: on phones the stage fills the screen even once the browser toolbar has slid away (svh left a blank
+        // strip under it); on desktop the two are the same
+        className="sticky top-0 h-lvh overflow-hidden"
+        style={stageVars("100lvh")}
       >
         {/* faint atmosphere above the planet; dims as the light gathers */}
         <motion.div aria-hidden style={{ opacity: sky }} className="hero-sky pointer-events-none absolute inset-0" />
@@ -717,7 +719,7 @@ function StaticHero() {
   const full = useMotionValue(1);
   return (
     <section id="top" aria-label="FindMyDentist introduction" className="relative">
-      <div className="relative h-svh min-h-[620px] overflow-hidden" style={stageVars("max(100svh, 620px)")}>
+      <div className="relative h-lvh min-h-[620px] overflow-hidden" style={stageVars("max(100lvh, 620px)")}>
         <div aria-hidden className="hero-sky absolute inset-0 opacity-60" />
         <Earth spread={full} core={full} coreScale={full} />
         <MascotStage>
