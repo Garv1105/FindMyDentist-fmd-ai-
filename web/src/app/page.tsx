@@ -32,7 +32,7 @@ export default function Home() {
         <Hero /> {/* 01 */}
         <Ribbon /> {/* 02 */}
         <LowerWorld>
-          <Universe /> {/* 02b everything FMD offers */}
+          <Universe /> {/* 02b */}
           <AiFeatures /> {/* 03 */}
           <Walkthrough /> {/* 04 */}
           <Explore /> {/* 05 */}

@@ -45,6 +45,3 @@ dev.log
 
 # local dev database
 /.data/
-
-.vercel
-.env*

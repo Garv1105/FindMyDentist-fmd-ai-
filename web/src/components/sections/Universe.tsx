@@ -526,7 +526,7 @@ export default function Universe() {
                   {/* the phone: rises into the tile once the grid has assembled */}
                   <motion.div
                     aria-hidden
-                    className="pointer-events-none absolute -bottom-24 right-6 [mask-image:linear-gradient(180deg,#000_60%,transparent_88%)] max-sm:hidden"
+                    className="pointer-events-none absolute -bottom-24 right-6 pt-6 [mask-image:linear-gradient(180deg,#000_60%,transparent_88%)] max-sm:hidden"
                     style={reduced ? undefined : { y: phoneY, opacity: phoneO }}
                   >
                     <div className="absolute -inset-12 -z-10 rounded-full bg-[radial-gradient(closest-side,rgb(59_130_246/0.25),transparent)]" />

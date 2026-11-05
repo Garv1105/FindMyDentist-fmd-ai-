@@ -15,7 +15,7 @@ const PRODUCTS = [
     id: "main",
     icon: HeartPulse,
     tag: "For patients",
-    name: "FMD ONE",
+    name: "FMD Main",
     body: "The patient ecosystem: FMD AI guidance, verified dentist discovery, appointments, records and FMD Edge concierge.",
     points: ["FMD AI in five languages", "Verified vs sponsored, always labelled", "Consent-first dental records"],
     cta: { label: "Find a dentist", href: "/#dentists" },
@@ -51,13 +51,10 @@ const bar = (w: string, o = 0.3) => <span className="block h-[4px] rounded-full 
 /** FMD Main: the patient app on a phone. */
 export function Phone() {
   return (
-    <div className="w-[248px] rounded-[40px] border border-[var(--fmd-border-strong)] bg-[#03060c] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_40px_90px_-30px_rgba(0,0,0,0.9),0_0_0_6px_rgba(142,179,229,0.04)]">
-      <div className="relative overflow-hidden rounded-[32px] bg-[linear-gradient(180deg,var(--fmd-deep),var(--fmd-midnight)_55%)] px-4 pb-6 pt-11">
-        {/* the island: a pill floating clear of the top edge, a lens at its right */}
-        <div className="absolute left-1/2 top-2.5 flex h-[22px] w-[78px] -translate-x-1/2 items-center justify-end rounded-full bg-black px-2 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]">
-          <span className="size-[7px] rounded-full bg-[radial-gradient(circle_at_35%_35%,#2a3a5c,#05070d_70%)] ring-1 ring-white/5" />
-        </div>
-        <p className="text-[15px] font-medium tracking-[-0.01em] text-ink">FMD</p>
+    <div className="w-[248px] rounded-[38px] border border-[var(--fmd-border-strong)] bg-[#03060c] p-2 shadow-[0_40px_90px_-30px_rgba(0,0,0,0.9),0_0_0_6px_rgba(142,179,229,0.04)]">
+      <div className="relative overflow-hidden rounded-[31px] bg-[linear-gradient(180deg,var(--fmd-deep),var(--fmd-midnight)_55%)] px-4 pb-6 pt-3">
+        <div className="mx-auto h-[18px] w-20 rounded-full bg-black" />
+        <p className="mt-4 text-[15px] font-medium tracking-[-0.01em] text-ink">FMD</p>
         <div className="mt-3 flex items-center gap-2 rounded-full border border-[var(--fmd-border)] bg-white/[0.03] px-3 py-2 text-[10.5px] text-ink-4">
           <Search className="size-3 shrink-0" strokeWidth={1.6} />
           <span className="truncate">Search dentists, treatments or clinics…</span>
@@ -139,7 +136,7 @@ export function ClinicWindow() {
 }
 
 /** Scholar: a study workspace, tabbed by what the product says it's for. */
-export function ScholarWindow() {
+function ScholarWindow() {
   return (
     <div className="overflow-hidden rounded-[var(--sf-r-md)] fmd-surface">
       <div className="flex gap-1 border-b border-[var(--fmd-border)] px-2 py-2">
