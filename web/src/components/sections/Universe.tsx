@@ -485,11 +485,11 @@ export default function Universe() {
         />
 
         {/* the stage: on desktop, as tall as the grid plus the stretch it stays pinned for */}
-        <div ref={stage} className="relative lg:h-[calc(624px+75vh)]">
+        <div ref={stage} className="relative overflow-x-clip lg:h-[calc(624px+75vh)]">
           <div className="lg:sticky lg:top-[90px]">
             <div
               ref={grid}
-              className="relative grid grid-cols-1 gap-3 [perspective:1600px] sm:grid-cols-2 lg:auto-rows-[200px] lg:grid-cols-6"
+              className="relative grid grid-cols-[minmax(0,1fr)] gap-3 [perspective:1600px] sm:grid-cols-2 lg:auto-rows-[200px] lg:grid-cols-6"
             >
               {/* FMD ONE: the phone, floating, bleeding off the tile */}
               <Tile

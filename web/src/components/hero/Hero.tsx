@@ -283,7 +283,7 @@ function SpeechBubble({ show, text }: { show: boolean; text: string }) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
           transition={{ type: "spring", stiffness: 380, damping: 26 }}
-          className="absolute left-[74%] top-[-6%] origin-bottom-left whitespace-nowrap rounded-2xl rounded-bl-md border border-white/70 bg-white px-5 py-3 text-[17px] font-semibold tracking-[-0.01em] text-[#0b1630] shadow-[0_10px_30px_-8px_rgb(59_130_246/0.55)] sm:text-[19px]"
+          className="absolute left-[28%] top-[-14%] origin-bottom-left sm:left-[74%] sm:top-[-6%] whitespace-nowrap rounded-2xl rounded-bl-md border border-white/70 bg-white px-5 py-3 text-[17px] font-semibold tracking-[-0.01em] text-[#0b1630] shadow-[0_10px_30px_-8px_rgb(59_130_246/0.55)] sm:text-[19px]"
         >
           {[...text].map((ch, i) => (
             <motion.span
