@@ -22,7 +22,8 @@ import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js
 // gltf-transform center, the head's sculpted seam/pit faired off with the face pinned, meshopt + WebP 2048 → 2.5 MB);
 // it floats, bobs its hands and flutters its coat tails (forearm + coat bones, arms_raw.py); the clips below need the
 // rigged one
-const MODEL_URL = "/mascot-sitting-raw.glb?v=5";
+// 25% of the raw model's triangles (gltf-transform weld → simplify 0.25 → meshopt): ~100k tris, 1.1 MB; scroll-linked, so it must be cheap
+const MODEL_URL = "/mascot-sitting-lite.glb?v=1";
 // const MODEL_URL = "/mascot-sitting.glb?v=20"; // rigged + animated (Fly, Meditate, face)
 // const MODEL_URL = "/mascot-sitting-org.glb?v=20";
 const FADE = 0.45;
@@ -146,6 +147,9 @@ function Model({ base, gesture, rotY, onReady, onMouth }: Props) {
     [scene],
   );
 
+  // looked up once: a per-frame getObjectByName walks the whole scene graph
+  const parts = useMemo(() => ({ mouth: scene.getObjectByName("mouth"), head: scene.getObjectByName("head") }), [scene]);
+
   useEffect(() => {
     scene.traverse((o) => {
       if ((o as THREE.Mesh).isMesh) o.frustumCulled = false; // skinned bounds are bind-pose only
@@ -170,8 +174,7 @@ function Model({ base, gesture, rotY, onReady, onMouth }: Props) {
       const a = coat ? 0.08 * Math.sin(t * 2.2) : 0.12 * Math.sin(t * 1.2);
       bone.quaternion.copy(rest).multiply(_bob.setFromAxisAngle(_axisY, sign * a));
     }
-    const mouth = scene.getObjectByName("mouth");
-    const head = scene.getObjectByName("head");
+    const { mouth, head } = parts;
     if (onMouth && mouth && head) {
       group.current?.updateMatrixWorld();
       mouth.getWorldPosition(_mouth);
@@ -196,12 +199,12 @@ export default function Mascot3D({ active, ...props }: Props & { active: boolean
   return (
     <Canvas
       frameloop={active ? "always" : "never"}
-      dpr={[1, 2]}
+      dpr={[1, 1.5]}
       // measure the unscaled box: the parent is CSS-scaled while rising, and a scaled measure shrinks the canvas off-centre
       resize={{ offsetSize: true }}
       // the model is 1 unit tall, sitting on y=-0.5; the canvas is wider than tall so waving/pointing arms fit
       camera={{ position: [0, 0.03, 2.15], fov: 30 }}
-      gl={{ antialias: true, alpha: true }}
+      gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.NeutralToneMapping;
         gl.toneMappingExposure = 1;
