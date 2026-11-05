@@ -160,12 +160,13 @@ function CinematicHero() {
             className="absolute inset-x-0 bottom-0 mx-auto h-[var(--mh)] w-[var(--mh)] origin-bottom will-change-transform"
           >
             <div className="relative size-full">
-              <Image
-                src="/img/hero/mascot.webp"
+              {/* the fallback: a still of the GLB, framed like its canvas (170% wide, 1.7:1) */}
+              {/* eslint-disable-next-line @next/next/no-img-element -- already sized, optimised WebP */}
+              <img
+                src="/models/stills/hero-sitting.webp?v=1"
                 alt=""
-                fill
-                sizes="380px"
-                className={`object-contain transition-opacity duration-500 ${mascotReady ? "opacity-0" : ""}`}
+                decoding="async"
+                className={`absolute inset-y-0 left-1/2 h-full w-[170%] max-w-none -translate-x-1/2 transition-opacity duration-500 ${mascotReady ? "opacity-0" : ""}`}
               />
               {/* wider than the sprite box: room for the arms */}
               <div className="absolute inset-y-0 left-1/2 w-[170%] -translate-x-1/2">
@@ -347,7 +348,7 @@ function Earth({
   return (
     <motion.div
       aria-hidden
-      className="pointer-events-none absolute left-1/2 w-[var(--ew)] -translate-x-1/2"
+      className="pointer-events-none absolute left-1/2 w-[var(--ew)] -translate-x-1/2 [contain:layout_paint] will-change-[opacity]"
       style={{ aspectRatio: `${IMG_W} / ${IMG_H}`, opacity: fade, bottom: "var(--eb)" }}
     >
       {/* unlit planet */}
@@ -699,7 +700,8 @@ function HeroAssistantStage({ active }: { active: boolean }) {
 
       {/* FMD AI's mascot, floated over its place (above); if its model can't load, the guide's picture stands in */}
       <motion.div style={{ x: fx, y: fy, width: fw, height: fh }} className="pointer-events-none absolute left-0 top-0 z-20">
-        <Contain fallback={<Image src="/img/mascots/mascot-guide-1024.webp" alt="" width={96} height={128} className="size-full object-contain object-bottom" />}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- the fallback is a versioned still, cached forever */}
+        <Contain fallback={<img src="/models/stills/guide.webp?v=2" alt="" decoding="async" className="size-full object-contain object-bottom" />}>
           <AssistantMascot mood={mood} active={active} />
         </Contain>
       </motion.div>
@@ -720,7 +722,8 @@ function StaticHero() {
         <Earth spread={full} core={full} coreScale={full} />
         <MascotStage>
           <div className="absolute inset-x-0 bottom-0 mx-auto [--mh:clamp(150px,26svh,260px)] h-[var(--mh)] w-[var(--mh)] -translate-y-[8%]">
-            <Image src="/img/hero/mascot.webp" alt="" fill sizes="380px" priority className="object-contain" />
+            {/* eslint-disable-next-line @next/next/no-img-element -- already sized, optimised WebP */}
+            <img src="/models/stills/hero-sitting.webp?v=1" alt="" decoding="async" className="absolute inset-y-0 left-1/2 h-full w-[170%] max-w-none -translate-x-1/2" />
           </div>
         </MascotStage>
         <div aria-hidden className="hero-rimfront absolute left-1/2 -translate-x-1/2 translate-y-1/2" />
