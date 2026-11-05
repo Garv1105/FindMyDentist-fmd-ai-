@@ -187,3 +187,4 @@ Known gaps in built milestones: week/month calendar, multiple branches, MFA for 
 - Services take the authenticated `Auth` and call `requireAuth` / `requireClinic` / `requireRole` first.
 - New external dependency: add an adapter that reports `configured` and never claims success it didn't verify.
 - Next.js 16 differs from older versions; read `web/node_modules/next/dist/docs/` before changing framework-level code.
+# fmd-website
