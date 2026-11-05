@@ -22,8 +22,7 @@ import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js
 // gltf-transform center, the head's sculpted seam/pit faired off with the face pinned, meshopt + WebP 2048 → 2.5 MB);
 // it floats, bobs its hands and flutters its coat tails (forearm + coat bones, arms_raw.py); the clips below need the
 // rigged one
-// 25% of the raw model's triangles (gltf-transform weld → simplify 0.25 → meshopt): ~100k tris, 1.1 MB; scroll-linked, so it must be cheap
-const MODEL_URL = "/mascot-sitting-lite.glb?v=1";
+const MODEL_URL = "/mascot-sitting-raw.glb?v=5";
 // const MODEL_URL = "/mascot-sitting.glb?v=20"; // rigged + animated (Fly, Meditate, face)
 // const MODEL_URL = "/mascot-sitting-org.glb?v=20";
 const FADE = 0.45;
