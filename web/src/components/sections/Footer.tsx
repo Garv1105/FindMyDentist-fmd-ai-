@@ -34,7 +34,7 @@ const COLS = [
 const SOCIALS = [
   {
     label: "LinkedIn",
-    href: "https://www.linkedin.com/company/findmydentist",
+    href: "https://www.linkedin.com/company/findmydentist-io",
     icon: (
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="h-4 w-4">
         <path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1s2.48 1.12 2.48 2.5zM.22 8.25h4.56V23H.22V8.25zM8.34 8.25h4.37v2.02h.06c.61-1.15 2.1-2.36 4.32-2.36 4.62 0 5.47 3.04 5.47 6.99V23h-4.56v-6.94c0-1.66-.03-3.79-2.31-3.79-2.31 0-2.66 1.8-2.66 3.67V23H8.34V8.25z" />
@@ -63,7 +63,7 @@ const SOCIALS = [
   },
   {
     label: "Facebook",
-    href: "https://www.facebook.com/findmydentist",
+    href: "https://www.facebook.com/findmydentist.io",
     icon: (
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="h-4 w-4">
         <path d="M22 12.06C22 6.5 17.52 2 12 2S2 6.5 2 12.06c0 5.02 3.66 9.18 8.44 9.94v-7.03H7.9v-2.9h2.54V9.85c0-2.52 1.5-3.91 3.77-3.91 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56v1.9h2.78l-.45 2.9h-2.33V22c4.78-.76 8.44-4.92 8.44-9.94z" />
@@ -200,7 +200,7 @@ export default function Footer() {
           </a>
 
           <a
-            href="https://www.linkedin.com/company/findmydentist"
+            href="https://www.linkedin.com/company/findmydentist-io/"
             target="_blank"
             rel="noopener noreferrer"
             className="group flex items-start gap-3 rounded-xl p-2 transition-colors hover:bg-white/[0.03]"
@@ -213,7 +213,7 @@ export default function Footer() {
             <span>
               <span className="block text-[11px] uppercase tracking-wider text-ink-4">LinkedIn</span>
               <span className="block text-[14px] text-ink-3 group-hover:text-ink">
-                /company/findmydentist
+                /company/findmydentist-io
               </span>
             </span>
           </a>
