@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { useGLTF } from "@react-three/drei";
-import { MODEL_URLS, isTouch } from "./MascotArt";
+import { MODEL_URLS } from "./MascotArt";
 import { ASSISTANT_URL } from "./hero/AssistantMascot";
 
 /**
@@ -9,9 +9,7 @@ import { ASSISTANT_URL } from "./hero/AssistantMascot";
  * queues as soon as it's imported). Resolves when everything has loaded.
  */
 export function preloadModels(onProgress: (fraction: number) => void): Promise<void> {
-  // touch devices show stills of the section mascots, so only the hero's models (its mascot and FMD AI's, beside the
-  // search bar) are fetched there
-  const urls = [ASSISTANT_URL, ...(isTouch() ? [] : MODEL_URLS)];
+  const urls = [ASSISTANT_URL, ...MODEL_URLS];
   return new Promise((resolve) => {
     const m = THREE.DefaultLoadingManager;
     m.onProgress = (_url, loaded, total) => {
