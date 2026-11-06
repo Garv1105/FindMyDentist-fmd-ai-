@@ -22,7 +22,12 @@ import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js
 // gltf-transform center, the head's sculpted seam/pit faired off with the face pinned, meshopt + WebP 2048 → 2.5 MB);
 // it floats, bobs its hands and flutters its coat tails (forearm + coat bones, arms_raw.py); the clips below need the
 // rigged one
-const MODEL_URL = "/mascot-sitting-raw.glb?v=5";
+// phones and low-memory devices get the same model built lighter (150k tris, 1024 textures: build_raw.sh 150000 1024
+// mascot-sitting-raw-mobile.glb); at a phone's mascot size it looks the same, at a fraction of the GPU work. This module
+// only runs in the browser (Hero loads it with ssr: false), so window is safe here.
+const LIGHT =
+  window.matchMedia("(max-width: 767px)").matches || ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) <= 4;
+const MODEL_URL = LIGHT ? "/mascot-sitting-raw-mobile.glb?v=1" : "/mascot-sitting-raw.glb?v=5";
 // const MODEL_URL = "/mascot-sitting.glb?v=20"; // rigged + animated (Fly, Meditate, face)
 // const MODEL_URL = "/mascot-sitting-org.glb?v=20";
 const FADE = 0.45;
