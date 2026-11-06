@@ -2,6 +2,7 @@
 
 import { ArrowRight, Bell, Crown, Mail, Users } from "lucide-react";
 import { Fragment, useId, useState } from "react";
+import { DISTRICTS } from "@/lib/districts";
 import { Reveal } from "../ui";
 
 const PERKS = [
@@ -48,7 +49,7 @@ const ROLES = [
   { value: "company", label: "Dental company" },
 ];
 
-// States of India.
+// States and union territories of India.
 const INDIAN_STATES = [
   "Andhra Pradesh",
   "Arunachal Pradesh",
@@ -78,6 +79,14 @@ const INDIAN_STATES = [
   "Uttar Pradesh",
   "Uttarakhand",
   "West Bengal",
+  "Andaman and Nicobar Islands",
+  "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Jammu and Kashmir",
+  "Ladakh",
+  "Lakshadweep",
+  "Puducherry",
 ];
 
 export default function ComingSoon() {
@@ -96,7 +105,8 @@ export default function ComingSoon() {
   const [serverMsg, setServerMsg] = useState<string>("");
 
   function update<K extends keyof typeof form>(key: K, value: string) {
-    setForm((f) => ({ ...f, [key]: value }));
+    // changing the state invalidates the chosen district
+    setForm((f) => ({ ...f, [key]: value, ...(key === "state" ? { city: "" } : {}) }));
     // clear that field's error as soon as the user starts fixing it
     setErrors((e) => {
       if (!e[key]) return e;
@@ -116,6 +126,7 @@ export default function ComingSoon() {
     if (!EMAIL_RE.test(form.email.trim())) next.email = "Please enter a valid email address.";
     if (!form.role) next.role = "Please pick who you are.";
     if (!form.state) next.state = "Please select your state.";
+    else if (!DISTRICTS[form.state]?.includes(form.city)) next.city = "Please select your district.";
     return next;
   }
 
@@ -335,7 +346,7 @@ export default function ComingSoon() {
               {/* Indian state */}
               <div className="sm:col-span-1">
                 <label htmlFor={`${id}-state`} className="mb-1.5 block px-1 text-[11px] font-medium uppercase tracking-[0.18em] text-[#aab6d8]">
-                  State in India
+                  State / UT
                 </label>
                 <div className="relative">
                   <select
@@ -349,7 +360,7 @@ export default function ComingSoon() {
                     } ${form.state ? "" : "text-[#7c88ab]"}`}
                   >
                     <option value="" disabled>
-                      Select your state
+                      Select your state / UT
                     </option>
                     {INDIAN_STATES.map((state) => (
                       <option key={state} value={state} className="bg-[#0a1030] text-[#eef2ff]">
@@ -371,17 +382,38 @@ export default function ComingSoon() {
               {/* city */}
               <div className="sm:col-span-1">
                 <label htmlFor={`${id}-city`} className="mb-1.5 block px-1 text-[11px] font-medium uppercase tracking-[0.18em] text-[#aab6d8]">
-                  City <span className="normal-case tracking-normal text-[#7c88ab]">(optional)</span>
+                  District
                 </label>
-                <input
-                  id={`${id}-city`}
-                  type="text"
-                  autoComplete="address-level2"
-                  value={form.city}
-                  onChange={(e) => update("city", e.target.value)}
-                  placeholder="Mumbai"
-                  className="h-11 w-full rounded-full border border-white/10 bg-[#0a1030]/60 px-4 text-[14px] text-[#eef2ff] outline-none placeholder:text-[#7c88ab] transition-colors focus:border-[#7f9cff]/80"
-                />
+                <div className="relative">
+                  <select
+                    id={`${id}-city`}
+                    value={form.city}
+                    disabled={!form.state}
+                    onChange={(e) => update("city", e.target.value)}
+                    aria-invalid={hasError("city")}
+                    aria-describedby={hasError("city") ? `${id}-city-err` : undefined}
+                    className={`h-11 w-full appearance-none rounded-full border bg-[#0a1030]/60 px-4 pr-10 text-[14px] text-[#eef2ff] outline-none transition-colors focus:border-[#7f9cff]/80 disabled:opacity-50 ${
+                      hasError("city") ? "border-[#ffb4a8]/70" : "border-white/10"
+                    } ${form.city ? "" : "text-[#7c88ab]"}`}
+                  >
+                    <option value="" disabled>
+                      {form.state ? "Select your district" : "Select a state first"}
+                    </option>
+                    {(DISTRICTS[form.state] ?? []).map((d) => (
+                      <option key={d} value={d} className="bg-[#0a1030] text-[#eef2ff]">
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                  <svg aria-hidden viewBox="0 0 20 20" className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[#aab6d8]" fill="none" stroke="currentColor" strokeWidth="1.6">
+                    <path d="m5 8 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                {hasError("city") && (
+                  <p id={`${id}-city-err`} className="mt-1 px-1 text-[12px] text-[#ffb4a8]">
+                    {errors.city}
+                  </p>
+                )}
               </div>
             </div>
 

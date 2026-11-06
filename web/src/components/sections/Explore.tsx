@@ -8,11 +8,22 @@ import type { FeedItem } from "../content/FeedCard";
 import { Container, Reveal, SponsoredBadge } from "../ui";
 import { Atmosphere } from "./LowerWorld";
 
+
+// mock posts shown while the feed API is unavailable or empty; remove this block (and the two fallbacks below) when real posts exist
+const base = { kind: "education", sponsoredBy: null, publishedAt: null, likes: 0, comments: 0, liked: false, saved: false, poll: null, reason: "", demo: true } as const;
+const dr = (id: string, name: string) => ({ dentistId: id, name, photo: null, verified: true, followed: false });
+const MOCK_ITEMS: FeedItem[] = [
+  { ...base, id: "m1", topic: "Oral care", title: "How to brush properly: a two-minute routine that works", body: "Hold the brush at 45 degrees to the gumline, use gentle circular strokes, and spend 30 seconds on each quadrant. Replace your brush every three months, and do not forget your tongue. Most plaque builds up along the gumline and on the back teeth, so spend a little longer there.", author: dr("d1", "Dr. Ananya Rao") },
+  { ...base, id: "m2", topic: "Braces", title: "Braces or clear aligners: which one fits you?", body: "Both straighten teeth. Aligners are removable and discreet, while braces handle complex cases better.", author: dr("d2", "Dr. Karthik Menon") },
+  { ...base, id: "m3", topic: "Prevention", title: "Why a 6-month check-up saves money", body: "Small cavities are cheap and painless to fix. Left alone, they become root canals.", author: dr("d3", "Dr. Meera Iyer") },
+  { ...base, id: "m4", topic: "Kids", title: "When should a child first see a dentist?", body: "By their first birthday or when the first tooth appears. Early visits build comfort and catch problems early.", author: dr("d4", "Dr. Rahul Verma") },
+];
+
 /** Section 05: homepage preview of the live feed, editorial layout (one lead story, a short list); full feed at /explore. */
 export default function Explore() {
   const [items, setItems] = useState<FeedItem[] | null>(null);
   useEffect(() => {
-    api<{ items: FeedItem[] }>("/api/feed").then((r) => setItems(r.items.slice(0, 4))).catch(() => setItems([]));
+    api<{ items: FeedItem[] }>("/api/feed").then((r) => setItems((r.items.length ? r.items : MOCK_ITEMS).slice(0, 4))).catch(() => setItems(MOCK_ITEMS));
   }, []);
   const [lead, ...rest] = items ?? [];
   return (

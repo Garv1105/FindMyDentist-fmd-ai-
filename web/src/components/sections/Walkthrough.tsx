@@ -45,19 +45,22 @@ const STEPS: Step[] = [
     title: "Find",
     line: "Choose a dentist",
     detail: "Discover verified Dentists & Explore Trusted Dental Clinics",
-    action: <ActionLink href="#dentists">Find dentists</ActionLink>,
+    // action: <ActionLink href="#dentists">Find dentists</ActionLink>, // hidden with the Dentists section
+    action: null,
   },
   {
     title: "Act",
     line: "Book on your terms",
     detail: "Review your appointment time, clinic details and consultation fees before confirming your booking.",
-    action: <ActionLink href="/appointments">My appointments</ActionLink>,
+    // action: <ActionLink href="/appointments">My appointments</ActionLink>,
+    action: null,
   },
   {
     title: "Follow up",
     line: "Continuity of patient care",
     detail: "Ensure regular follow-ups, update records after each visit and plan the next appointment accordingly.",
-    action: <ActionLink href="/records">Dental records</ActionLink>,
+    // action: <ActionLink href="/records">Dental records</ActionLink>,
+    action: null,
   },
 ];
 

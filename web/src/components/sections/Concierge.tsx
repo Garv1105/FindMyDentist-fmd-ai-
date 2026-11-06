@@ -10,6 +10,9 @@ import { api, useMe } from "@/lib/me";
 import { Container, Reveal } from "../ui";
 import { Atmosphere } from "./LowerWorld";
 
+// the request form on the right is hidden for now; set to true to bring it back (the /api/concierge routes are ready)
+const SHOW_REQUEST_FORM = false;
+
 const FLOW = [
   { title: "You share what you need", body: "Your dental need, location and timing." },
   { title: "A coordinator follows up", body: "A real person from our team reaches out." },
@@ -247,16 +250,25 @@ export default function Concierge() {
             <div aria-hidden className={`edge-panel absolute inset-0 -z-20 shadow-none! ${DISSOLVE}`} />
             <div aria-hidden className="hidden lg:col-start-1 lg:row-start-1 lg:block lg:aspect-[2330/1696]" />
             <div aria-hidden className={`absolute inset-0 -z-10 hidden lg:block ${DISSOLVE}`}>
-              <Image src={BG} alt="" fill sizes="(min-width:1320px) 1240px, 100vw" className="object-cover" style={{ objectPosition: `${PEDESTAL.x} ${PEDESTAL.y}` }} />
-              {/* readability: dark behind the copy on the left and under the form on the right, the stage left open */}
-              <div className="absolute inset-0 bg-[linear-gradient(90deg,rgb(8_7_10/0.9)_0%,rgb(8_7_10/0.78)_30%,rgb(8_7_10/0.45)_37%,rgb(8_7_10/0.06)_46%,rgb(8_7_10/0.08)_56%,rgb(8_7_10/0.5)_75%,rgb(8_7_10/0.6)_100%)]" />
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgb(8_7_10/0.35),transparent_25%,transparent_80%,rgb(8_7_10/0.55))]" />
-              {concierge("28%", "(min-width:1320px) 350px, 28vw")}
+              {/* form hidden: the room is drawn 141% wide, shifted left 41%, so the pedestal lands at ~27% across (0.483 × 141 − 41) and the copy takes the right half */}
+              <div className={SHOW_REQUEST_FORM ? "absolute inset-0" : "absolute inset-y-0 -left-[41%] w-[141%]"}>
+                <Image src={BG} alt="" fill sizes="(min-width:1320px) 1240px, 100vw" className="object-cover" style={{ objectPosition: `${PEDESTAL.x} ${PEDESTAL.y}` }} />
+                {/* readability: dark behind the copy and the form, the stage left open */}
+                <div
+                  className={`absolute inset-0 ${
+                    SHOW_REQUEST_FORM
+                      ? "bg-[linear-gradient(90deg,rgb(8_7_10/0.9)_0%,rgb(8_7_10/0.78)_30%,rgb(8_7_10/0.45)_37%,rgb(8_7_10/0.06)_46%,rgb(8_7_10/0.08)_56%,rgb(8_7_10/0.5)_75%,rgb(8_7_10/0.6)_100%)]"
+                      : "bg-[linear-gradient(90deg,rgb(8_7_10/0.3)_29%,rgb(8_7_10/0.05)_36%,rgb(8_7_10/0.08)_56%,rgb(8_7_10/0.6)_66%,rgb(8_7_10/0.88)_80%,rgb(8_7_10/0.9)_100%)]"
+                  }`}
+                />
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgb(8_7_10/0.35),transparent_25%,transparent_80%,rgb(8_7_10/0.55))]" />
+                {concierge("28%", "(min-width:1320px) 350px, 28vw")}
+              </div>
             </div>
 
             {/* columns: copy · the stage (left open for him) · the request. pointer-events pass through the gap to the concierge */}
-            <div className="pointer-events-none relative grid gap-10 p-6 sm:p-10 lg:col-start-1 lg:row-start-1 lg:grid-cols-[34fr_25fr_37fr] lg:items-center lg:gap-0 lg:px-[3%] lg:py-12">
-              <div className="pointer-events-auto">
+            <div className={`pointer-events-none relative grid gap-10 p-6 sm:p-10 lg:col-start-1 lg:row-start-1 ${SHOW_REQUEST_FORM ? "lg:grid-cols-[34fr_25fr_37fr]" : "lg:grid-cols-[48fr_52fr]"} lg:items-center lg:gap-0 lg:px-[3%] lg:py-12`}>
+              <div className={`pointer-events-auto ${SHOW_REQUEST_FORM ? "" : "lg:order-2 lg:pl-[6%]"}`}>
                 <p className="eyebrow mb-5 flex items-center gap-2.5 !text-[13.5px] !font-semibold sm:!text-[15px]">
                   <Sparkles aria-hidden className="size-[18px] shrink-0 text-[var(--edge-gold)] drop-shadow-[0_0_8px_rgb(var(--edge-gold-rgb)/0.55)] sm:size-5" strokeWidth={1.75} />
                   <span className="edge-shimmer">FMD Edge</span>
@@ -298,9 +310,10 @@ export default function Concierge() {
                 </p>
               </div>
 
-              <div aria-hidden className="hidden lg:block" />
+              <div aria-hidden className={`hidden lg:block ${SHOW_REQUEST_FORM ? "" : "lg:order-1"}`} />
 
               {/* warm glass card, dark enough that the fields read first; a mouse coming onto it catches the concierge's attention */}
+              {SHOW_REQUEST_FORM && (
               <div
                 onPointerEnter={attend}
                 className="fmd-glass-pane edge-glass pointer-events-auto relative rounded-[26px] border border-[#D4AF37]/20 bg-[#0E0B08]/80 p-5 shadow-2xl shadow-black/60 backdrop-blur-xl sm:p-7"
@@ -417,6 +430,7 @@ export default function Concierge() {
                   )}
                 </AnimatePresence>
               </div>
+              )}
             </div>
           </div>
         </Reveal>
