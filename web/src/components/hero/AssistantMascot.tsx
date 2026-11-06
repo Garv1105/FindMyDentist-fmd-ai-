@@ -7,7 +7,7 @@ import { Environment, Lightformer, useGLTF } from "@react-three/drei";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { PORCELAIN } from "../MascotModel";
+import { PHONE, PORCELAIN } from "../MascotModel";
 
 /**
  * FMD AI's mascot beside the search bar: the guide (web/public/models/assistant.glb, built by
@@ -167,7 +167,7 @@ export default function AssistantMascot({ mood, active }: { mood: Mood; active: 
     <div aria-hidden className={`relative size-full transition-opacity duration-700 ${ready ? "opacity-100" : "opacity-0"}`}>
       <Canvas
         frameloop={active && !still ? "always" : "demand"}
-        dpr={[1, 2]}
+        dpr={PHONE ? [1, 1.5] : [1, 2]} // phones: less GPU memory, see MascotModel
         camera={{ position: [0, 0.12, dist], fov: FOV }}
         gl={{ antialias: true, alpha: true }}
         onCreated={({ gl }) => {
