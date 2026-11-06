@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { rigPath } from "@/lib/device";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import Contain from "./Contain";
@@ -15,7 +16,7 @@ const MascotModel = dynamic(() => import("./MascotModel"), { ssr: false });
  */
 // served from Cloudinary (src/lib/models.ts; re-run scripts/upload-models.mjs after rebuilding a model: its URLs change,
 // so browsers never keep a stale one)
-const M = (name: string) => model(`/models/rig/${name}.glb`);
+const M = (name: string) => model(rigPath(name)); // phones: models/rig-mobile (lib/device.ts)
 type Art = { model: string; overlay?: { src: string; style: React.CSSProperties } };
 const MODELS: Record<string, Art> = {
   "/img/mascots/mascot-guide-1024.webp": { model: M("guide") },

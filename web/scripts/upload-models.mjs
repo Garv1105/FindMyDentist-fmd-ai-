@@ -17,7 +17,9 @@ const FILES = [
   "/mascot-sitting-raw.glb", // hero, desktop
   "/mascot-sitting-raw-mobile.glb", // hero, phones and low-memory devices
   "/models/assistant.glb", // FMD AI's mascot beside the search bar
-  ...["guide", "guide-left", "laptop", "reading", "scholar", "vault", "butler", "pin", "heart", "tooth"].map((n) => `/models/rig/${n}.glb`),
+  "/models/assistant-mobile.glb",
+  // the section mascots, and their phone builds (models/rig-mobile: same look, ~half the triangles)
+  ...["guide", "guide-left", "laptop", "reading", "scholar", "vault", "butler", "pin", "heart", "tooth"].flatMap((n) => [`/models/rig/${n}.glb`, `/models/rig-mobile/${n}.glb`]),
 ];
 
 async function upload(file) {

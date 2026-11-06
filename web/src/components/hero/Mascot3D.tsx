@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { LIGHT_DEVICE } from "@/lib/device";
 import { model } from "@/lib/models";
 import type { MotionValue } from "motion/react";
 import { Canvas, useFrame } from "@react-three/fiber";
@@ -24,12 +25,8 @@ import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js
 // it floats, bobs its hands and flutters its coat tails (forearm + coat bones, arms_raw.py); the clips below need the
 // rigged one
 // phones and low-memory devices get the same model built lighter (150k tris, 1024 textures: build_raw.sh 150000 1024
-// mascot-sitting-raw-mobile.glb); at a phone's mascot size it looks the same, at a fraction of the GPU work. This module
-// only runs in the browser (Hero loads it with ssr: false), so window is safe here.
-const LIGHT =
-  window.matchMedia("(max-width: 767px)").matches || ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) <= 4;
-// both served from Cloudinary (src/lib/models.ts)
-const MODEL_URL = model(LIGHT ? "/mascot-sitting-raw-mobile.glb" : "/mascot-sitting-raw.glb");
+// mascot-sitting-raw-mobile.glb); at a phone's mascot size it looks the same, at a fraction of the GPU work (see lib/device.ts)
+const MODEL_URL = model(LIGHT_DEVICE ? "/mascot-sitting-raw-mobile.glb" : "/mascot-sitting-raw.glb");
 // const MODEL_URL = "/mascot-sitting.glb?v=20"; // rigged + animated (Fly, Meditate, face)
 // const MODEL_URL = "/mascot-sitting-org.glb?v=20";
 const FADE = 0.45;
