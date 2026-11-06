@@ -18,7 +18,8 @@ const PRODUCTS = [
     name: "FMD Main",
     body: "The patient ecosystem: FMD AI guidance, verified dentist discovery, appointments, records and FMD Edge concierge.",
     points: ["FMD AI in five languages", "Verified vs sponsored, always labelled", "Consent-first dental records"],
-    cta: { label: "Find a dentist", href: "/#dentists" },
+    // cta: { label: "Find a dentist", href: "/#dentists" }, // hidden with the Dentists section
+    cta: { label: "Find a dentist", href: "/#coming-soon" },
   },
   {
     id: "clinics",
