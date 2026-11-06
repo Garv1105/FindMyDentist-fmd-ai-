@@ -35,9 +35,12 @@ export function askInHero(prompt?: string) {
   requestAnimationFrame(wait);
 }
 
-type Action = { type: "navigate"; label: string; target: "dentists" | "concierge" | "records" | "appointments"; specialty?: string };
+type Action = { type: "navigate"; label: string; target: "dentists" | "concierge" | "records" | "appointments" | "waitlist"; specialty?: string };
 type Msg = { role: "user" | "assistant"; text: string; actions?: Action[]; urgent?: boolean };
 type ChatRes = { conversationId: string | null; stored: boolean; urgent: boolean; provider: { name: string; configured: boolean }; reply: { text: string; actions: Action[] } };
+
+const COMING_SOON_REPLY =
+  "Thank you for your question! FMD AI is almost ready and will be available very soon. Please check back shortly. We look forward to helping you.";
 
 export type Chat = ReturnType<typeof useAssistant>;
 
@@ -77,11 +80,20 @@ export function useAssistant() {
     setMsgs((m) => [...m, { role: "user", text }]);
     setTyping(true);
     try {
-      const { msgs: prev, conversationId: cid } = state.current;
-      const r = await api<ChatRes>("/api/assistant", {
-        method: "POST",
-        body: { message: text, conversationId: cid, history: prev.slice(-10).map(({ role, text }) => ({ role, text })) },
-      });
+      // The real assistant backend is not live yet, so every question gets the same "coming soon" reply.
+      // To restore it, delete the `const r = …` block below and uncomment this one:
+      // const { msgs: prev, conversationId: cid } = state.current;
+      // const r = await api<ChatRes>("/api/assistant", {
+      //   method: "POST",
+      //   body: { message: text, conversationId: cid, history: prev.slice(-10).map(({ role, text }) => ({ role, text })) },
+      // });
+      const r: ChatRes = {
+        conversationId: null,
+        stored: false,
+        urgent: false,
+        provider: { name: "coming-soon", configured: true },
+        reply: { text: COMING_SOON_REPLY, actions: [{ type: "navigate", label: "Join the waitlist", target: "waitlist" }] },
+      };
       await new Promise((done) => setTimeout(done, MIN_THINK - (performance.now() - asked)));
       if (g !== gen.current) return;
       setConversationId(r.conversationId);
@@ -146,7 +158,8 @@ export function ChatThread({ chat }: { chat: Chat }) {
     if (a.target === "dentists") {
       if (a.specialty) setSpecialty(a.specialty);
       document.getElementById("dentists")?.scrollIntoView({ behavior: "smooth" });
-    } else if (a.target === "concierge") document.getElementById("concierge")?.scrollIntoView({ behavior: "smooth" });
+    } else if (a.target === "waitlist") document.getElementById("coming-soon")?.scrollIntoView({ behavior: "smooth" });
+    else if (a.target === "concierge") document.getElementById("concierge")?.scrollIntoView({ behavior: "smooth" });
     else router.push(`/${a.target}`);
   };
 
@@ -218,10 +231,18 @@ export function ChatThread({ chat }: { chat: Chat }) {
                   {chat.live !== m && m.actions && m.actions.length > 0 && (
                     <motion.div variants={piece} className="mt-3 flex flex-wrap gap-2">
                       {m.actions.map((a) => (
-                        <button key={a.label} onClick={() => go(a)} className="btn-ghost group h-9 px-4 text-[12.5px]">
-                          {a.label}
-                          <ArrowRight className="arrow-nudge size-3.5" strokeWidth={1.5} />
-                        </button>
+                        // the waitlist button looks and pulses like the navbar's
+                        a.target === "waitlist" ? (
+                          <button key={a.label} onClick={() => go(a)} className="btn-primary cta-pulse h-10 gap-1.5 whitespace-nowrap pl-5 pr-4 text-[13px]">
+                            {a.label}
+                            <ArrowRight className="cta-arrow size-4" strokeWidth={2} />
+                          </button>
+                        ) : (
+                          <button key={a.label} onClick={() => go(a)} className="btn-ghost group h-9 px-4 text-[12.5px]">
+                            {a.label}
+                            <ArrowRight className="arrow-nudge size-3.5" strokeWidth={1.5} />
+                          </button>
+                        )
                       ))}
                     </motion.div>
                   )}

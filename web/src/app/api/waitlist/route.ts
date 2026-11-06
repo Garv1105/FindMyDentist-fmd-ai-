@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import nodemailer from "nodemailer";
+import { DISTRICTS } from "@/lib/districts";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -30,6 +31,13 @@ export async function POST(request: Request) {
     if (!EMAIL_RE.test(email.trim())) {
       return NextResponse.json(
         { error: "Invalid email format." },
+        { status: 400 }
+      );
+    }
+
+    if (!DISTRICTS[state]?.includes(city)) {
+      return NextResponse.json(
+        { error: "Please select a valid district for your state." },
         { status: 400 }
       );
     }
