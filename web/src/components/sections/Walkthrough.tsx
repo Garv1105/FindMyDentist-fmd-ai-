@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useInView, useReducedMotion } from "motion/react";
+import { model } from "@/lib/models";
 import { ArrowRight, Calendar, CircleHelp, MessageCircleQuestion, Search } from "lucide-react";
 import MascotArt from "@/components/MascotArt";
 import Image from "next/image";
@@ -193,7 +194,7 @@ function Scene({ s, className = "", children }: { s: SceneDef; className?: strin
         </div>
         {/* the artwork is mirrored to face the Care Core; the model is its own mirrored pose */}
         <div aria-hidden className="absolute" style={at(s.guide)}>
-          <MascotArt src="/img/mascots/mascot-guide-1024.webp" model="/models/rig/guide-left.glb?v=4" sizes="(min-width:1280px) 400px, 200px" className="-scale-x-100 object-contain" />
+          <MascotArt src="/img/mascots/mascot-guide-1024.webp" model={model("/models/rig/guide-left.glb")} sizes="(min-width:1280px) 400px, 200px" className="-scale-x-100 object-contain" />
         </div>
       </div>
       {children}
