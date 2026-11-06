@@ -15,6 +15,8 @@ type Props = {
   onReady: () => void;
   /** a picture of the first rendered frame: the placeholder if this canvas is ever released */
   onSnapshot: (dataUrl: string) => void;
+  /** the browser killed this canvas's WebGL context (phones cap how many can live at once) */
+  onLost?: () => void;
 };
 
 const FOV = 20;
@@ -387,6 +389,7 @@ export default function MascotModel(props: Props) {
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.NeutralToneMapping;
         gl.toneMappingExposure = 1.05;
+        gl.domElement.addEventListener("webglcontextlost", () => props.onLost?.(), { once: true });
       }}
       style={{ pointerEvents: "none" }}
     >

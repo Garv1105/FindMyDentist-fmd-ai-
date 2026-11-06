@@ -37,7 +37,7 @@ const MODELS: Record<string, Art> = {
  * pose and framing, transparent) stand in on every device until a model's first frame has rendered. Bump STILL_V when
  * they are re-rendered.
  */
-const STILL_V = 2;
+const STILL_V = 3;
 const stillOf = (model: string) => `/models/stills/${model.split("/").pop()!.split("?")[0].replace(".glb", ".webp")}?v=${STILL_V}`;
 /** every model the page can show (and the walkthrough's mirrored guide): the loading screen fetches them up front */
 export const MODEL_URLS = [...new Set([...Object.values(MODELS).map((a) => a.model), M("guide-left")])];
@@ -47,9 +47,10 @@ export const MODEL_URLS = [...new Set([...Object.values(MODELS).map((a) => a.mod
  * Browsers cap a page at ~16 WebGL contexts (the hero takes some), so past LIVE the canvas scrolled away from longest ago
  * is released; its box then shows a snapshot of its own last frame until it is needed again (no visible change).
  */
-// phones allow fewer WebGL contexts than desktops; a released canvas keeps showing a snapshot of its last frame, so
-// nothing visibly changes
-const LIVE = typeof window !== "undefined" && window.matchMedia("(hover: none) and (pointer: coarse)").matches ? 6 : 9;
+// phones allow far fewer WebGL contexts than desktops (Android Chrome kills the oldest past its cap and paints a white
+// "sad face" box), and the hero and assistant hold two more; a released canvas keeps showing a snapshot of its last
+// frame, so nothing visibly changes
+const LIVE = typeof window !== "undefined" && window.matchMedia("(hover: none) and (pointer: coarse)").matches ? 3 : 9;
 const live = new Map<number, { seen: number; visible: boolean; key: string; release: () => void }>();
 const snapshots = new Map<string, string>();
 let nextId = 0;
@@ -129,6 +130,7 @@ export default function MascotArt({ src, model, sizes, className = "object-conta
   const [ready, setReady] = useState<string | null>(null);
   const [, snapped] = useState(0); // re-render once a snapshot exists
   const warmTurn = useRef<(() => void) | null>(null); // set while this box is the one warming up
+  const lost = useRef<() => void>(() => {}); // the browser killed this box's canvas: drop it, its picture shows
 
   useEffect(() => {
     if (!url || !box.current) return;
@@ -138,6 +140,11 @@ export default function MascotArt({ src, model, sizes, className = "object-conta
     const release = () => {
       setMounted(false);
       setReady(null);
+    };
+    lost.current = () => {
+      live.delete(id);
+      release();
+      warmTurn.current?.();
     };
     // the warm-up turn: mount the canvas off screen (paused), move on once its snapshot is taken
     warmTotal += 1;
@@ -214,6 +221,7 @@ export default function MascotArt({ src, model, sizes, className = "object-conta
             align={align}
             active={visible}
             onReady={() => setReady(url)}
+            onLost={() => lost.current()}
             onSnapshot={(d) => {
               snapshots.set(key, d);
               snapped((n) => n + 1);
