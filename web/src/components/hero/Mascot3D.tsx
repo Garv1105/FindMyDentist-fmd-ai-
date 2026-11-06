@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { MotionValue } from "motion/react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Environment, Lightformer, useGLTF } from "@react-three/drei";
@@ -200,6 +200,9 @@ function Model({ base, gesture, rotY, onReady, onMouth }: Props) {
 useGLTF.preload(MODEL_URL);
 
 export default function Mascot3D({ active, ...props }: Props & { active: boolean }) {
+  // the browser can kill a WebGL context (phones cap how many live at once): throw, so the hero's Contain shows the still
+  const [lost, setLost] = useState(false);
+  if (lost) throw new Error("WebGL context lost");
   return (
     <Canvas
       frameloop={active ? "always" : "never"}
@@ -212,6 +215,7 @@ export default function Mascot3D({ active, ...props }: Props & { active: boolean
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.NeutralToneMapping;
         gl.toneMappingExposure = 1;
+        gl.domElement.addEventListener("webglcontextlost", () => setLost(true), { once: true });
       }}
       style={{ pointerEvents: "none" }}
     >

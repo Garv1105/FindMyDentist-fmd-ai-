@@ -155,6 +155,9 @@ export default function AssistantMascot({ mood, active }: { mood: Mood; active: 
   const still = useReducedMotion();
   const [ready, setReady] = useState(false);
   const onReady = useMemo(() => () => setReady(true), []);
+  // the browser can kill a WebGL context (phones cap how many live at once): throw, so Hero's Contain shows the still
+  const [lost, setLost] = useState(false);
+  if (lost) throw new Error("WebGL context lost");
   // frames the 1-unit-tall model with room all round (the presenting hand reaches out to the side, the listening hand
   // up by the head), so nothing is cut at the box's edges; the feet near the bottom edge
   const dist = 0.68 / Math.tan(THREE.MathUtils.degToRad(FOV / 2));
@@ -169,6 +172,7 @@ export default function AssistantMascot({ mood, active }: { mood: Mood; active: 
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.NeutralToneMapping;
           gl.toneMappingExposure = look.exposure;
+          gl.domElement.addEventListener("webglcontextlost", () => setLost(true), { once: true });
         }}
         style={{ pointerEvents: "none" }}
       >
