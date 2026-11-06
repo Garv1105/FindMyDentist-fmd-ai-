@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import Contain from "./Contain";
+import { model } from "@/lib/models";
 
 const MascotModel = dynamic(() => import("./MascotModel"), { ssr: false });
 
@@ -12,8 +13,9 @@ const MascotModel = dynamic(() => import("./MascotModel"), { ssr: false });
  * the site loads public/models/rig: porcelain, rigged and meshopt + WebP (model/blender/mascots/build_rig.sh; their
  * motions are MascotModel's MOTIONS). public/models/compressed holds the same models unrigged (build_porcelain.sh).
  */
-// bump ?v= whenever the models are rebuilt, or browsers keep the cached old ones
-const M = (name: string) => `/models/rig/${name}.glb?v=4`;
+// served from Cloudinary (src/lib/models.ts; re-run scripts/upload-models.mjs after rebuilding a model: its URLs change,
+// so browsers never keep a stale one)
+const M = (name: string) => model(`/models/rig/${name}.glb`);
 type Art = { model: string; overlay?: { src: string; style: React.CSSProperties } };
 const MODELS: Record<string, Art> = {
   "/img/mascots/mascot-guide-1024.webp": { model: M("guide") },

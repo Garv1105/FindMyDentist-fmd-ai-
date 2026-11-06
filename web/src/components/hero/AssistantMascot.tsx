@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { model } from "@/lib/models";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, Lightformer, useGLTF } from "@react-three/drei";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
@@ -16,7 +17,7 @@ import { PORCELAIN } from "../MascotModel";
  * and talking, while it types out). It blinks now and then over all of them, and turns: towards the visitor while it
  * waits or listens, towards the chat on its right as it explains. Bump ?v= when the GLB is rebuilt.
  */
-export const ASSISTANT_URL = "/models/assistant.glb?v=1";
+export const ASSISTANT_URL = model("/models/assistant.glb"); // Cloudinary, see src/lib/models.ts
 
 export type Mood = "idle" | "listening" | "thinking" | "explaining";
 
