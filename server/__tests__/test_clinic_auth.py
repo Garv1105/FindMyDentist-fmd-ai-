@@ -141,6 +141,25 @@ async def test_invite_by_email_accept_binds_email_and_role_checks():
         }
 
 
+async def test_finance_and_assistant_roles_can_be_invited_and_changed():
+    async with signed_in(email=True) as owner, signed_in() as fin:
+        clinic_id = await open_clinic(owner)
+        token = await invite(owner, clinic_id, new_email(), "finance")
+        assert (await fin.post(f"/api/v1/invitations/{token}/accept")).json()["role"] == "finance"
+        me = (await fin.get("/api/v1/auth/me")).json()
+        assert me["workspaces"] == [
+            {"clinic_id": clinic_id, "clinic_name": "Lumen Dental", "role": "finance"}
+        ]
+
+        r = await owner.patch(
+            f"/api/v1/clinics/{clinic_id}/members/{me['id']}", json={"role": "assistant"}
+        )
+        assert r.status_code == 200 and r.json()["role"] == "assistant"
+        r = await owner.post(f"/api/v1/clinics/{clinic_id}/invitations",
+                             json={"email": new_email(), "role": "janitor"})
+        assert r.status_code == 422
+
+
 async def test_revoked_and_expired_invites_are_rejected():
     async with signed_in(email=True) as owner, signed_in() as rec:
         clinic_id = await open_clinic(owner)

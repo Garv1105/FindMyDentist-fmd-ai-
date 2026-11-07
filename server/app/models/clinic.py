@@ -17,7 +17,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, TimestampMixin
 from app.models.user import User
 
-ROLE_CHECK = "role in ('owner', 'dentist', 'receptionist')"
+ROLE_CHECK = "role in ('owner', 'dentist', 'receptionist', 'finance', 'assistant')"
 
 
 class Clinic(TimestampMixin, Base):

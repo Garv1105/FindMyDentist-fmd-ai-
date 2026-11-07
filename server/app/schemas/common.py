@@ -26,4 +26,4 @@ def _blank_to_none(value: str | None) -> str | None:
 Email = Annotated[EmailStr, AfterValidator(str.lower)]
 Phone = Annotated[str, AfterValidator(normalise_phone)]
 OptionalText = Annotated[str | None, AfterValidator(_blank_to_none)]
-Role = Literal["owner", "dentist", "receptionist"]
+Role = Literal["owner", "dentist", "receptionist", "finance", "assistant"]

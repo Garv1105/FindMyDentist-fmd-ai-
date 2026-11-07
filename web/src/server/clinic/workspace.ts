@@ -1,6 +1,6 @@
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { all, audit, one, run, tx } from "../db.ts";
-import { requireRole, type Auth } from "../auth.ts";
+import { apiWorkspaces, requireRole, type Auth } from "../auth.ts";
 import { bad, forbidden, HttpError, notFound } from "../http.ts";
 import { CITIES } from "../../lib/catalog.ts";
 
@@ -93,11 +93,15 @@ const DEFAULT_TYPES: [string, number, number][] = [
 ];
 
 /**
- * A dentist account creates a clinic workspace - either for a new clinic or for the directory clinic
- * of a profile they have claimed. It starts in "setup"; FMD activates it after verification (Annex E).
+ * The workspace for a clinic its owner has created in the FastAPI service (POST /api/v1/clinics, which owns the
+ * clinic, its team and invitations): either a new clinic here, or the directory clinic of a profile they have claimed
+ * (so FMD booking requests for it arrive in the workspace). It starts in "setup"; FMD activates it after verification
+ * (Annex E). The caller re-reads FastAPI first, so a just-created clinic's ownership is known.
  */
 export function createWorkspace(a: Auth, input: Record<string, unknown>) {
-  if (a.user.account_type !== "dentist") throw new HttpError(403, "forbidden", "Clinic workspaces are created from a dentist account.");
+  const apiClinicId = typeof input.apiClinicId === "string" ? input.apiClinicId : "";
+  if (!apiWorkspaces(a).some((w) => w.clinic_id === apiClinicId && w.role === "owner")) throw new HttpError(403, "forbidden", "Only the clinic's owner can set up its workspace.");
+  if (one("SELECT 1 FROM clinic_workspaces WHERE api_clinic_id = ?", apiClinicId)) throw new HttpError(409, "exists", "This clinic's workspace is already set up.");
   const existingClinic = typeof input.clinicId === "string" ? input.clinicId : "";
   const now = Date.now();
   return tx(() => {
@@ -120,7 +124,7 @@ export function createWorkspace(a: Auth, input: Record<string, unknown>) {
         clinicId, name, city, area, typeof input.address === "string" ? input.address.trim().slice(0, 200) : "", typeof input.phone === "string" ? input.phone.trim().slice(0, 20) : "", now,
       );
     }
-    run("INSERT INTO clinic_workspaces (clinic_id, status, created_by, created_at) VALUES (?, 'setup', ?, ?)", clinicId, a.user.id, now);
+    run("INSERT INTO clinic_workspaces (clinic_id, status, created_by, created_at, api_clinic_id) VALUES (?, 'setup', ?, ?, ?)", clinicId, a.user.id, now, apiClinicId);
     run("INSERT OR IGNORE INTO user_roles (user_id, role, org_id, granted_at, granted_by) VALUES (?, 'clinic_owner', ?, ?, ?)", a.user.id, clinicId, now, a.user.id);
     for (let d = 1; d <= 6; d++) run("INSERT INTO clinic_hours (clinic_id, weekday, opens, closes) VALUES (?, ?, '10:00', '18:00')", clinicId, d);
     for (const [name, dur, buf] of DEFAULT_TYPES)
@@ -139,9 +143,17 @@ export function createWorkspace(a: Auth, input: Record<string, unknown>) {
 export function workspace(a: Auth, clinicId: string) {
   const roles = requireClinic(a, clinicId, "tasks.use");
   const c = one<{ id: string; name: string; city: string; area: string; address: string; phone: string; is_demo: number }>("SELECT * FROM clinics WHERE id = ?", clinicId)!;
-  const w = one<Workspace>("SELECT * FROM clinic_workspaces WHERE clinic_id = ?", clinicId)!;
+  const w = one<Workspace & { api_clinic_id: string | null }>("SELECT * FROM clinic_workspaces WHERE clinic_id = ?", clinicId)!;
+  // the clinic's name is edited in FastAPI; keep this app's copy (header, directory) in step with the last sync
+  const apiName = apiWorkspaces(a).find((x) => x.clinic_id === w.api_clinic_id)?.clinic_name;
+  if (apiName && apiName !== c.name) {
+    run("UPDATE clinics SET name = ? WHERE id = ?", apiName, clinicId);
+    c.name = apiName;
+  }
   return {
     clinic: { id: c.id, name: c.name, city: c.city, area: c.area, address: c.address, phone: c.phone, demo: c.is_demo === 1 },
+    /** the FastAPI clinic this workspace belongs to: its team, invitations and details are managed there */
+    apiClinicId: w.api_clinic_id,
     status: w.status,
     timezone: w.timezone,
     roles,
@@ -151,6 +163,11 @@ export function workspace(a: Auth, clinicId: string) {
 
 /* ---------------- team ---------------- */
 
+/**
+ * Who works here, as this app last synced it (each member's clinic role comes from FastAPI when they sign in). Used to
+ * assign tasks and appointments. The team itself - invitations, roles, removal - is managed in FastAPI
+ * (/api/v1/clinics/{apiClinicId}/members and /invitations).
+ */
 export function members(a: Auth, clinicId: string) {
   requireClinic(a, clinicId, "tasks.use");
   const rows = all<{ user_id: string; name: string; email: string | null; phone: string | null; role: string }>(
@@ -163,68 +180,7 @@ export function members(a: Auth, clinicId: string) {
     m.roles.push(r.role.slice(7));
     byUser.set(r.user_id, m);
   }
-  const canManage = can(a, clinicId, "staff.manage");
-  return {
-    members: [...byUser.values()],
-    invites: canManage
-      ? all<{ id: string; email: string; role: string; expires_at: number }>("SELECT id, email, role, expires_at FROM clinic_invites WHERE clinic_id = ? AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at > ?", clinicId, Date.now())
-      : [],
-  };
-}
-
-const sha = (s: string) => createHash("sha256").update(s).digest("hex");
-
-/** Owner invites staff by email; they accept by signing in with that same email (secure account setup). */
-export function invite(a: Auth, clinicId: string, input: Record<string, unknown>) {
-  requireClinic(a, clinicId, "staff.manage");
-  const email = typeof input.email === "string" ? input.email.trim().toLowerCase() : "";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) throw bad("Enter a valid email address.");
-  const role = typeof input.role === "string" && input.role in CLINIC_ROLES ? input.role : null;
-  if (!role) throw bad("Choose a role.");
-  const token = randomBytes(24).toString("base64url");
-  const id = randomUUID();
-  run(
-    "INSERT INTO clinic_invites (id, clinic_id, email, role, token_hash, expires_at, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-    id, clinicId, email, role, sha(token), Date.now() + 7 * 86400_000, a.user.id, Date.now(),
-  );
-  audit(a.user.id, "clinic.invite_sent", "clinic", clinicId, { role });
-  // OD-14: no email provider - the link is returned for the owner to share; nothing claims it was emailed
-  return { inviteId: id, link: `/clinic/join?token=${token}`, delivered: false };
-}
-
-export function acceptInvite(a: Auth, token: unknown) {
-  if (typeof token !== "string" || !token) throw bad("This invitation link is invalid.");
-  return tx(() => {
-    const inv = one<{ id: string; clinic_id: string; email: string; role: string; expires_at: number; accepted_at: number | null; revoked_at: number | null }>(
-      "SELECT * FROM clinic_invites WHERE token_hash = ?",
-      sha(token),
-    );
-    if (!inv || inv.revoked_at || inv.accepted_at || inv.expires_at < Date.now()) throw new HttpError(410, "invite_invalid", "This invitation has expired or was already used. Ask the clinic for a new one.");
-    if ((a.user.email ?? "") !== inv.email) throw new HttpError(403, "wrong_account", `This invitation is for ${inv.email}. Sign in with that email to accept it.`);
-    run("INSERT OR IGNORE INTO user_roles (user_id, role, org_id, granted_at, granted_by) VALUES (?, ?, ?, ?, ?)", a.user.id, `clinic_${inv.role}`, inv.clinic_id, Date.now(), null);
-    run("UPDATE clinic_invites SET accepted_by = ?, accepted_at = ? WHERE id = ?", a.user.id, Date.now(), inv.id);
-    audit(a.user.id, "clinic.invite_accepted", "clinic", inv.clinic_id, { role: inv.role });
-    return { clinicId: inv.clinic_id };
-  });
-}
-
-export function setMemberRoles(a: Auth, clinicId: string, userId: string, roles: unknown) {
-  requireClinic(a, clinicId, "staff.manage");
-  const list = Array.isArray(roles) ? roles.filter((r): r is ClinicRole => typeof r === "string" && r in CLINIC_ROLES) : [];
-  return tx(() => {
-    const owners = all<{ user_id: string }>("SELECT user_id FROM user_roles WHERE org_id = ? AND role = 'clinic_owner'", clinicId);
-    if (!list.includes("owner") && owners.length === 1 && owners[0].user_id === userId) throw new HttpError(409, "last_owner", "A clinic needs at least one owner.");
-    run("DELETE FROM user_roles WHERE user_id = ? AND org_id = ? AND role LIKE 'clinic_%'", userId, clinicId);
-    for (const r of list) run("INSERT INTO user_roles (user_id, role, org_id, granted_at, granted_by) VALUES (?, ?, ?, ?, ?)", userId, `clinic_${r}`, clinicId, Date.now(), a.user.id);
-    audit(a.user.id, list.length ? "clinic.roles_changed" : "clinic.member_deactivated", "clinic", clinicId, { userId, roles: list });
-    return members(a, clinicId);
-  });
-}
-
-export function revokeInvite(a: Auth, clinicId: string, inviteId: string) {
-  requireClinic(a, clinicId, "staff.manage");
-  run("UPDATE clinic_invites SET revoked_at = ? WHERE id = ? AND clinic_id = ?", Date.now(), inviteId, clinicId);
-  return members(a, clinicId);
+  return { members: [...byUser.values()] };
 }
 
 /* ---------------- settings ---------------- */

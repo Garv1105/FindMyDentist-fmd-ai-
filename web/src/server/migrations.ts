@@ -774,4 +774,10 @@ export const MIGRATIONS: string[] = [
   DROP TABLE otp_challenges;
   DROP TABLE sessions;
   `,
+  /* 15 - clinic teams live in FastAPI: each workspace is linked to its FastAPI clinic (a workspace can be a claimed
+     directory clinic, whose id the bookings already use, so the ids differ); invitations are FastAPI's now */ `
+  ALTER TABLE clinic_workspaces ADD COLUMN api_clinic_id TEXT;
+  CREATE UNIQUE INDEX clinic_workspaces_api_clinic ON clinic_workspaces(api_clinic_id) WHERE api_clinic_id IS NOT NULL;
+  DROP TABLE clinic_invites;
+  `,
 ];
