@@ -6,7 +6,7 @@ import { readByToken } from "@/server/records";
 export const GET = handler(async (req) => {
   const t = new URL(req.url).searchParams.get("t");
   if (!t) throw bad("Missing link.");
-  const f = readByToken(requireAuth(req), t);
+  const f = readByToken(await requireAuth(req), t);
   return new Response(new Uint8Array(f.bytes), {
     headers: {
       "content-type": f.mime,

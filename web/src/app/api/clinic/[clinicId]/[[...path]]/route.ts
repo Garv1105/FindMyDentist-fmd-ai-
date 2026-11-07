@@ -9,7 +9,7 @@ type Ctx = RouteContext<"/api/clinic/[clinicId]/[[...path]]">;
 async function go(method: string, req: Request, ctx: Ctx) {
   const { clinicId, path } = await ctx.params;
   return dispatch(method, path ?? [], {
-    a: requireAuth(req),
+    a: await requireAuth(req),
     clinicId,
     body: method === "GET" ? {} : await body(req),
     q: new URL(req.url).searchParams,

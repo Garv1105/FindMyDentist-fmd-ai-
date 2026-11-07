@@ -10,5 +10,5 @@ export const GET = handler(async (req) => {
     seedDemoContent();
   });
   const q = new URL(req.url).searchParams;
-  return Response.json(feed(currentAuth(req), { tab: q.get("tab") ?? undefined, topic: q.get("topic") ?? undefined, q: q.get("q") ?? undefined }));
+  return Response.json(feed(await currentAuth(req), { tab: q.get("tab") ?? undefined, topic: q.get("topic") ?? undefined, q: q.get("q") ?? undefined }));
 });

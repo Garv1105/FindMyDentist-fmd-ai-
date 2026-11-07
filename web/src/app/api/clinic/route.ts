@@ -10,6 +10,6 @@ export const GET = handler(async (req) => {
     seedDemoDirectory();
     seedDemoClinic();
   });
-  return Response.json({ items: myClinics(requireAuth(req)) });
+  return Response.json({ items: myClinics(await requireAuth(req)) });
 });
-export const POST = handler(async (req) => Response.json(createWorkspace(requireAuth(req), await body(req)), { status: 201 }));
+export const POST = handler(async (req) => Response.json(createWorkspace(await requireAuth(req), await body(req)), { status: 201 }));

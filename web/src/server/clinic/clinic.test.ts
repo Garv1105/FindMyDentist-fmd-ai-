@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
 import { one, resetDb, run } from "../db.ts";
-import { grantRole, register, requestOtp, requireAuth, SESSION_COOKIE, verifyOtp, type Auth } from "../auth.ts";
+import { type Auth } from "../auth.ts";
+import { testUser } from "../testing.ts";
 import { availability, cancelBooking, myBookings, requestBooking } from "../booking.ts";
 import { seedDemoDirectory } from "../seed.ts";
 import type { HttpError } from "../http.ts";
@@ -19,12 +20,7 @@ beforeEach(() => {
 
 let n = 0;
 function user(email: string, accountType = "patient", fmdRole?: "fmd_ops"): Auth {
-  const v = verifyOtp(email, requestOtp(email).devCode!);
-  assert.ok(v.ok && "ticket" in v);
-  const { token } = register({ ticket: v.ticket, name: `User ${email.split("@")[0]}`, accountType, consents: { terms: true, privacy: true } });
-  const auth = () => requireAuth(new Request("http://x/", { headers: { cookie: `${SESSION_COOKIE}=${token}` } }));
-  if (fmdRole) grantRole(auth().user.id, fmdRole, null);
-  return auth();
+  return testUser(email, { name: `User ${email.split("@")[0]}`, accountType, roles: fmdRole ? [fmdRole] : [] });
 }
 const refresh = (a: Auth) => ({ ...a, roles: a.roles }); // roles for clinic checks are read from the DB each call
 const status = (fn: () => unknown) => {

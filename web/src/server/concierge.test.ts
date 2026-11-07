@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
 import { one, resetDb } from "./db.ts";
-import { grantRole, register, requestOtp, requireAuth, SESSION_COOKIE, verifyOtp, type Auth } from "./auth.ts";
+import { type Auth } from "./auth.ts";
+import { testUser } from "./testing.ts";
 import { act, enquiryDetail, listQueue, myEnquiries, submitEnquiry } from "./concierge.ts";
 import type { HttpError } from "./http.ts";
 
@@ -9,12 +10,7 @@ process.env.FMD_DB = ":memory:";
 beforeEach(() => resetDb());
 
 function user(email: string, ops = false): Auth {
-  const v = verifyOtp(email, requestOtp(email).devCode!);
-  assert.ok(v.ok && "ticket" in v);
-  const { token } = register({ ticket: v.ticket, name: email.split("@")[0] + " Test", accountType: "patient", consents: { terms: true, privacy: true } });
-  const req = () => new Request("http://x/", { headers: { cookie: `${SESSION_COOKIE}=${token}` } });
-  if (ops) grantRole(requireAuth(req()).user.id, "fmd_ops", null);
-  return requireAuth(req());
+  return testUser(email, { name: email.split("@")[0] + " Test", roles: ops ? ["fmd_ops"] : [] });
 }
 const status = (fn: () => unknown) => {
   try { fn(); } catch (e) { return (e as HttpError).status; }

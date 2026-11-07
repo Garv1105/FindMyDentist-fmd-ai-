@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
 import { one, resetDb, run } from "./db.ts";
-import { grantRole, register, requestOtp, requireAuth, SESSION_COOKIE, verifyOtp, type Auth } from "./auth.ts";
+import { type Auth } from "./auth.ts";
+import { testUser } from "./testing.ts";
 import { addComment, createPost, decideReport, feed, moderatePost, report, reviewQueue, setInterests, setSponsor, toggle, toggleFollow, vote } from "./content.ts";
 import { myJobs, postJob, searchJobs, updateJob } from "./jobs.ts";
 import { seedDemoContent, seedDemoDirectory } from "./seed.ts";
@@ -15,12 +16,7 @@ beforeEach(() => {
 });
 
 function user(email: string, accountType = "patient", role?: "moderator" | "fmd_ops"): Auth {
-  const v = verifyOtp(email, requestOtp(email).devCode!);
-  assert.ok(v.ok && "ticket" in v);
-  const { token } = register({ ticket: v.ticket, name: "Test User", accountType, consents: { terms: true, privacy: true } });
-  const req = () => new Request("http://x/", { headers: { cookie: `${SESSION_COOKIE}=${token}` } });
-  if (role) grantRole(requireAuth(req()).user.id, role, null);
-  return requireAuth(req());
+  return testUser(email, { accountType, roles: role ? [role] : [] });
 }
 function verifiedDentist(email: string, profile = "Dr. Venkat Rao") {
   const d = user(email, "dentist");
