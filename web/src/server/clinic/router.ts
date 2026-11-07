@@ -19,10 +19,8 @@ const num = (v: string | null, d: number) => (v && Number.isFinite(Number(v)) ? 
 const ROUTES: [string, string, Handler][] = [
   // workspace & team
   ["GET", "", ({ a, clinicId }) => ws.workspace(a, clinicId)],
+  // the team itself (invitations, roles) is managed in FastAPI: /api/v1/clinics/{apiClinicId}/...
   ["GET", "members", ({ a, clinicId }) => ws.members(a, clinicId)],
-  ["POST", "members/invite", ({ a, clinicId, body }) => ws.invite(a, clinicId, body)],
-  ["POST", "members/:userId/roles", ({ a, clinicId, p, body }) => ws.setMemberRoles(a, clinicId, p.userId, body.roles)],
-  ["POST", "invites/:id/revoke", ({ a, clinicId, p }) => ws.revokeInvite(a, clinicId, p.id)],
   ["GET", "settings", ({ a, clinicId }) => ws.settings(a, clinicId)],
   ["POST", "settings", ({ a, clinicId, body }) => ws.updateSettings(a, clinicId, body)],
   // calendar

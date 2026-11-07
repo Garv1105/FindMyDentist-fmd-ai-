@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
 import { one, resetDb, run } from "../db.ts";
-import { grantRole, register, requestOtp, requireAuth, SESSION_COOKIE, verifyOtp, type Auth } from "../auth.ts";
+import { type Auth } from "../auth.ts";
+import { apiClinic, apiRole, joinClinic, leaveClinic, testClinic, testUser } from "../testing.ts";
 import { availability, cancelBooking, myBookings, requestBooking } from "../booking.ts";
 import { seedDemoDirectory } from "../seed.ts";
 import type { HttpError } from "../http.ts";
-import { acceptInvite, activateWorkspace, createWorkspace, invite, members, requireClinic, setMemberRoles, updateSettings, workspace } from "./workspace.ts";
+import { activateWorkspace, createWorkspace, members, requireClinic, updateSettings, workspace } from "./workspace.ts";
 import { calendar, confirmFmdRequest, createAppointment, istDayStart, publishAvailability, rescheduleAppointment, setAppointmentStatus } from "./calendar.ts";
 import { addChartEntry, amendNote, chart, createNote, createPatient, createPlan, mergePatients, notes, patientDetail, setPlanStatus, signNote, updateDraft } from "./patients.ts";
 import { collectionSheet, createInvoice, issueInvoice, recordPayment, recordRefund, voidInvoice } from "./billing.ts";
@@ -19,14 +20,8 @@ beforeEach(() => {
 
 let n = 0;
 function user(email: string, accountType = "patient", fmdRole?: "fmd_ops"): Auth {
-  const v = verifyOtp(email, requestOtp(email).devCode!);
-  assert.ok(v.ok && "ticket" in v);
-  const { token } = register({ ticket: v.ticket, name: `User ${email.split("@")[0]}`, accountType, consents: { terms: true, privacy: true } });
-  const auth = () => requireAuth(new Request("http://x/", { headers: { cookie: `${SESSION_COOKIE}=${token}` } }));
-  if (fmdRole) grantRole(auth().user.id, fmdRole, null);
-  return auth();
+  return testUser(email, { name: `User ${email.split("@")[0]}`, accountType, roles: fmdRole ? [fmdRole] : [] });
 }
-const refresh = (a: Auth) => ({ ...a, roles: a.roles }); // roles for clinic checks are read from the DB each call
 const status = (fn: () => unknown) => {
   try {
     fn();
@@ -43,44 +38,45 @@ function nextMonday(hour = 11) {
   return d + hour * 3600_000;
 }
 
-/** Owner with a new clinic, plus a linked dentist profile so providers exist. */
+const API = new Map<string, string>(); // workspace → its FastAPI clinic
+
+/** Owner with a new clinic (created in FastAPI, set up here), plus a linked dentist profile so providers exist. */
 function setup() {
-  const owner = user("owner@clinic.test", "dentist");
-  const { clinicId } = createWorkspace(owner, { name: "Smile Care", city: "Bengaluru", area: "Hebbal" });
+  const { owner, clinicId, api } = testClinic(createWorkspace, user("owner@clinic.test", "dentist"));
+  API.set(clinicId, api);
   const dentistId = one<{ id: string }>("SELECT id FROM dentists WHERE name = 'Dr. Venkat Rao'")!.id;
   run("INSERT INTO dentist_clinics (dentist_id, clinic_id, fee_note) VALUES (?, ?, '₹500')", dentistId, clinicId);
   const s = one<{ id: string }>("SELECT id FROM appointment_types WHERE clinic_id = ? AND name = 'Consultation'", clinicId)!.id;
   const chair = one<{ id: string }>("SELECT id FROM chairs WHERE clinic_id = ?", clinicId)!.id;
   return { owner, clinicId, dentistId, typeId: s, chairId: chair };
 }
-function staff(clinicId: string, owner: Auth, email: string, role: string) {
-  const u = user(email);
-  const { link } = invite(owner, clinicId, { email, role });
-  acceptInvite(u, link.split("token=")[1]);
-  return refresh(u);
+/** Staff who accepted the owner's invitation in FastAPI, as this app sees them after their next sign-in. */
+function staff(clinicId: string, _owner: Auth, email: string, role: string) {
+  return joinClinic(user(email), API.get(clinicId)!, apiRole(role));
 }
 
-test("workspace: dentist-only creation, defaults, email-bound invites, last-owner protection, tenant isolation", () => {
-  assert.equal(status(() => createWorkspace(user("p@example.com"), { name: "X Clinic", city: "Bengaluru", area: "Yelahanka" })), 403);
+test("workspace: only the FastAPI clinic's owner sets it up, once; defaults; roles come from FastAPI; tenant isolation", () => {
+  const notOwner = user("p@example.com");
+  assert.equal(status(() => createWorkspace(notOwner, { apiClinicId: apiClinic(), name: "X Clinic", city: "Bengaluru", area: "Yelahanka" })), 403);
   const { owner, clinicId } = setup();
+  assert.equal(status(() => createWorkspace(owner, { apiClinicId: API.get(clinicId), name: "Again", city: "Bengaluru", area: "Hebbal" })), 409);
   const w = workspace(owner, clinicId);
   assert.equal(w.status, "setup");
+  assert.equal(w.apiClinicId, API.get(clinicId));
   assert.ok(w.permissions.includes("staff.manage"));
 
-  const { link } = invite(owner, clinicId, { email: "desk@clinic.test", role: "front_desk" });
-  const stranger = user("stranger@example.com");
-  assert.equal(status(() => acceptInvite(stranger, link.split("token=")[1])), 403); // wrong email
-  const desk = user("desk@clinic.test");
-  acceptInvite(desk, link.split("token=")[1]);
-  assert.equal(status(() => acceptInvite(desk, link.split("token=")[1])), 410); // single use
+  // staff join in FastAPI; their role (receptionist = front desk) arrives with their next sign-in
+  const desk = staff(clinicId, owner, "desk@clinic.test", "front_desk");
+  assert.deepEqual(workspace(desk, clinicId).roles, ["front_desk"]);
   assert.equal(members(owner, clinicId).members.length, 2);
-  assert.equal(status(() => setMemberRoles(owner, clinicId, owner.user.id, ["dentist"])), 409);
+  // removed in FastAPI: access ends here on the next sync
+  leaveClinic(desk, API.get(clinicId)!);
+  assert.equal(status(() => workspace(desk, clinicId)), 404);
 
   // another clinic's owner sees nothing of this clinic
-  const other = user("other@clinic.test", "dentist");
-  createWorkspace(other, { name: "Other Clinic", city: "Bengaluru", area: "Banashankari" });
+  const other = testClinic(createWorkspace, user("other@clinic.test", "dentist"), "Other Clinic", "Banashankari").owner;
   assert.equal(status(() => workspace(other, clinicId)), 404);
-  assert.equal(status(() => requireClinic(stranger, clinicId, "patients.read")), 404);
+  assert.equal(status(() => requireClinic(user("stranger@example.com"), clinicId, "patients.read")), 404);
 });
 
 test("permission matrix: finance sees billing not clinical; front desk can't write notes or refund", () => {

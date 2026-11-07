@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { H, useClinic } from "@/components/clinic/Shell";
 import { inputCls, Notice } from "@/components/Page";
+import { accountChanged, api } from "@/lib/me";
 
 type S = {
   hours: { weekday: number; opens: string; closes: string }[];
@@ -68,6 +69,7 @@ export default function SettingsPage() {
           <Notice kind={msg.kind}>{msg.text}</Notice>
         </div>
       )}
+      {owner && ws.apiClinicId && <ClinicDetails apiClinicId={ws.apiClinicId} onSaved={refresh} />}
       <div className="grid gap-5 xl:grid-cols-2">
         <section className="glass space-y-2 rounded-[20px] p-5">
           <h2 className="text-[15px] text-ink">Working hours</h2>
@@ -175,5 +177,57 @@ export default function SettingsPage() {
         </section>
       </div>
     </>
+  );
+}
+
+type ApiClinic = { id: string; name: string; city: string; phone: string; email: string | null; gstin: string | null };
+
+/** The clinic's own details, held by the FastAPI service with its team (PATCH /api/v1/clinics/{id}, owners only). */
+function ClinicDetails({ apiClinicId, onSaved }: { apiClinicId: string; onSaved: () => void }) {
+  const [c, setC] = useState<ApiClinic | null>(null);
+  const [msg, setMsg] = useState<{ kind: "error" | "success"; text: string } | null>(null);
+  useEffect(() => {
+    api<{ clinic: ApiClinic }>(`/api/v1/clinics/${apiClinicId}`)
+      .then((r) => setC(r.clinic))
+      .catch((e) => setMsg({ kind: "error", text: e.message }));
+  }, [apiClinicId]);
+  if (!c) return msg ? <Notice kind={msg.kind}>{msg.text}</Notice> : null;
+  const save = async () => {
+    setMsg(null);
+    try {
+      const r = await api<ApiClinic>(`/api/v1/clinics/${apiClinicId}`, {
+        method: "PATCH",
+        body: { name: c.name.trim(), city: c.city.trim(), phone: c.phone, email: c.email?.trim() || null, gstin: c.gstin?.trim() || null },
+      });
+      setC(r);
+      await accountChanged(); // the new name reaches this workspace with the account sync
+      onSaved();
+      setMsg({ kind: "success", text: "Clinic details saved." });
+    } catch (e) {
+      setMsg({ kind: "error", text: (e as Error).message });
+    }
+  };
+  const cls = `${inputCls} h-9 text-[12.5px]`;
+  const field = (k: keyof ApiClinic, label: string) => (
+    <label className="block text-[12px] text-ink-3">
+      {label}
+      <input value={(c[k] as string | null) ?? ""} onChange={(e) => setC({ ...c, [k]: e.target.value })} className={`${cls} mt-1`} />
+    </label>
+  );
+  return (
+    <section className="glass mb-5 space-y-3 rounded-[20px] p-5">
+      <h2 className="text-[15px] text-ink">Clinic details</h2>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {field("name", "Name")}
+        {field("city", "City")}
+        {field("phone", "Phone")}
+        {field("email", "Email (optional)")}
+        {field("gstin", "GSTIN (optional)")}
+      </div>
+      {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
+      <button onClick={save} className="btn-primary h-9 px-5 text-[12.5px]">
+        Save details
+      </button>
+    </section>
   );
 }

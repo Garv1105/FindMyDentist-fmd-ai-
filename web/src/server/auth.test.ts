@@ -1,109 +1,152 @@
 import assert from "node:assert/strict";
-import { beforeEach, test } from "node:test";
-import { audit, one, resetDb } from "./db.ts";
-import {
-  currentAuth, grantRole, normaliseTarget, register, requestDeletion, requestOtp, requireAuth, requireRole,
-  revokeSession, SESSION_COOKIE, updateConsents, verifyOtp, currentConsents, listSessions,
-} from "./auth.ts";
+import { createHmac } from "node:crypto";
+import { afterEach, beforeEach, test } from "node:test";
+import { one, resetDb, run } from "./db.ts";
+import { currentAuth, currentConsents, requestDeletion, requireAuth, requireRole, updateConsents, verifyAccess, type ApiMe } from "./auth.ts";
 import { HttpError } from "./http.ts";
+import { testUser } from "./testing.ts";
 
 process.env.FMD_DB = ":memory:";
-beforeEach(() => resetDb());
+const SECRET = "test-secret-of-at-least-thirty-two-characters!";
+process.env.FMD_API_JWT_SECRET = SECRET;
 
-const req = (token?: string) => new Request("http://x/", { headers: token ? { cookie: `${SESSION_COOKIE}=${token}` } : {} });
-const code = (t: string) => requestOtp(t).devCode!;
-const status = (fn: () => unknown) => {
-  try { fn(); } catch (e) { return (e as HttpError).status; }
+/* A token exactly as FastAPI signs it (server/app/core/security.py). */
+const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString("base64url");
+function token(claims: Record<string, unknown> = {}, secret = SECRET) {
+  const now = Math.floor(Date.now() / 1000);
+  const body = `${b64({ alg: "HS256", typ: "JWT" })}.${b64({ sub: USER_ID, sid: "sess-1", iss: "fmd-api", aud: "fmd", iat: now, exp: now + 900, ...claims })}`;
+  const key = createHmac("sha256", secret).update("fmd-access-jwt-v1").digest();
+  return `${body}.${createHmac("sha256", key).update(body).digest("base64url")}`;
+}
+const req = (t?: string) => new Request("http://x/", { headers: t ? { cookie: `fmd_access=${t}` } : {} });
+
+const USER_ID = "0f8fad5b-d9cb-469f-a165-70867728950e";
+const ME: ApiMe = {
+  id: USER_ID,
+  full_name: "Asha Rao",
+  phone: "+919876543210",
+  email: "asha@example.com",
+  email_verified: true,
+  mfa_enabled: false,
+  city: "Bengaluru",
+  dentist_profile: null,
+  workspaces: [{ clinic_id: "c-1", clinic_name: "Smile Studio", role: "receptionist" }],
+};
+
+/* FastAPI's /auth/me, faked: what it answers and how often it is asked */
+let answer: ApiMe | number | "down" = ME;
+let calls = 0;
+const realFetch = globalThis.fetch;
+beforeEach(() => {
+  resetDb();
+  answer = ME;
+  calls = 0;
+  globalThis.fetch = (async () => {
+    calls++;
+    if (answer === "down") throw new Error("connection refused");
+    if (typeof answer === "number") return new Response("{}", { status: answer });
+    return Response.json(answer);
+  }) as typeof fetch;
+});
+afterEach(() => {
+  globalThis.fetch = realFetch;
+  delete process.env.FMD_OPS_EMAILS;
+});
+
+const status = async (fn: () => unknown) => {
+  try {
+    await fn();
+  } catch (e) {
+    return (e as HttpError).status;
+  }
   return 200;
 };
-function signUp(target = "asha@example.com", accountType = "patient") {
-  const v = verifyOtp(target, code(target));
-  assert.ok(v.ok && "needsProfile" in v);
-  return register({ ticket: v.ticket, name: "Asha Rao", accountType, consents: { terms: true, privacy: true, comms_appointments: true } }).token;
-}
 
-test("normalises Indian mobile numbers and emails; rejects junk", () => {
-  assert.equal(normaliseTarget("098765 43210").target, "+919876543210");
-  assert.equal(normaliseTarget("+91-98765-43210").target, "+919876543210");
-  assert.equal(normaliseTarget(" Asha@Example.COM ").target, "asha@example.com");
-  assert.equal(status(() => normaliseTarget("12345")), 400);
+test("only FastAPI's own, unexpired, untampered tokens are accepted", () => {
+  assert.deepEqual(verifyAccess(token()), { sub: USER_ID, sid: "sess-1" });
+  assert.equal(verifyAccess(token({}, "another-secret-of-at-least-thirty-two-chars")), null);
+  assert.equal(verifyAccess(token({ exp: Math.floor(Date.now() / 1000) - 1 })), null);
+  assert.equal(verifyAccess(token({ iss: "someone-else" })), null);
+  assert.equal(verifyAccess(token({ aud: "other" })), null);
+  const [h, , s] = token().split(".");
+  assert.equal(verifyAccess(`${h}.${b64({ sub: "attacker", sid: "x", iss: "fmd-api", aud: "fmd", exp: 9e9 })}.${s}`), null);
+  assert.equal(verifyAccess("not-a-jwt"), null);
 });
 
-test("sign-up → session → sign-in again uses the same account", () => {
-  const t1 = signUp();
-  const a = currentAuth(req(t1))!;
+test("first visit links the FastAPI account: same id, profile, clinic roles, consents", async () => {
+  // this app's workspace w-1 is linked to FastAPI clinic c-1
+  const creator = testUser("owner@example.com");
+  run("INSERT INTO clinics (id, name, city, area, address, phone, hours, is_demo, created_at) VALUES ('w-1', 'Smile Studio', 'Bengaluru', 'Hebbal', '', '', '', 0, 0)");
+  run("INSERT INTO clinic_workspaces (clinic_id, status, created_by, created_at, api_clinic_id) VALUES ('w-1', 'active', ?, 0, 'c-1')", creator.user.id);
+  const a = (await currentAuth(req(token())))!;
+  assert.equal(a.user.id, USER_ID);
   assert.equal(a.user.name, "Asha Rao");
-  assert.deepEqual(a.roles, ["patient"]);
-  const v = verifyOtp("asha@example.com", code("asha@example.com"));
-  assert.ok(v.ok && "token" in v);
-  assert.equal(currentAuth(req(v.token))!.user.id, a.user.id);
+  assert.equal(a.user.email, "asha@example.com");
+  assert.equal(a.user.account_type, "patient");
+  assert.equal(a.sessionId, "sess-1");
+  assert.ok(a.roles.includes("patient"));
+  assert.ok(a.roles.includes("clinic_front_desk")); // FastAPI receptionist
+  assert.equal(one<{ org_id: string }>("SELECT org_id FROM user_roles WHERE user_id = ? AND role = 'clinic_front_desk'", USER_ID)!.org_id, "w-1");
+  const c = currentConsents(USER_ID);
+  assert.equal(c.terms, true);
+  assert.equal(c.comms_marketing, false);
 });
 
-test("wrong code counts attempts and locks after 5", () => {
-  code("x@example.com");
-  for (let i = 0; i < 5; i++) assert.equal(verifyOtp("x@example.com", "000000").ok, false);
-  assert.equal(status(() => verifyOtp("x@example.com", "000000")), 429);
+test("the cache is used until stale; fresh re-reads FastAPI and mirrors its changes", async () => {
+  await currentAuth(req(token()));
+  await currentAuth(req(token()));
+  assert.equal(calls, 1);
+  answer = { ...ME, full_name: "Asha R.", dentist_profile: { council: "KSDC", registration_no: "1", verification_status: "pending" }, workspaces: [] };
+  const a = (await currentAuth(req(token()), { fresh: true }))!;
+  assert.equal(calls, 2);
+  assert.equal(a.user.name, "Asha R.");
+  assert.equal(a.user.account_type, "dentist");
+  assert.ok(a.roles.includes("dentist") && !a.roles.includes("patient"));
+  assert.ok(!a.roles.some((r) => r.startsWith("clinic_")), "a membership that ended in FastAPI ends here");
 });
 
-test("expired code is rejected", () => {
-  const c = code("y@example.com");
-  one("UPDATE otp_challenges SET expires_at = 0 WHERE target = 'y@example.com' RETURNING id");
-  assert.equal(status(() => verifyOtp("y@example.com", c)), 400);
+test("signed out when FastAPI rejects the session, or has never been reachable for this user", async () => {
+  answer = 401;
+  assert.equal(await currentAuth(req(token())), null);
+  answer = "down";
+  assert.equal(await currentAuth(req(token())), null);
+  assert.equal(await currentAuth(req()), null);
+  assert.equal(await status(() => requireAuth(req())), 401);
 });
 
-test("OTP requests are rate limited per target", () => {
-  for (let i = 0; i < 5; i++) requestOtp("z@example.com");
-  assert.equal(status(() => requestOtp("z@example.com")), 429);
+test("a known user stays signed in while FastAPI is briefly unreachable", async () => {
+  await currentAuth(req(token()));
+  answer = "down";
+  assert.equal((await currentAuth(req(token()), { fresh: true }))?.user.id, USER_ID);
 });
 
-test("signup ticket is single use and terms are required", () => {
-  const v = verifyOtp("t@example.com", code("t@example.com"));
-  assert.ok(v.ok && "ticket" in v);
-  assert.equal(status(() => register({ ticket: v.ticket, name: "T User", accountType: "patient", consents: { terms: true } })), 400);
-  register({ ticket: v.ticket, name: "T User", accountType: "patient", consents: { terms: true, privacy: true } });
-  assert.equal(status(() => register({ ticket: v.ticket, name: "T User", accountType: "patient", consents: { terms: true, privacy: true } })), 400);
+test("staff roles come from env, and only for a verified email", async () => {
+  process.env.FMD_OPS_EMAILS = "asha@example.com";
+  answer = { ...ME, email_verified: false };
+  assert.ok(!(await currentAuth(req(token())))!.roles.includes("fmd_ops"));
+  answer = ME;
+  assert.ok((await currentAuth(req(token()), { fresh: true }))!.roles.includes("fmd_ops"));
 });
 
-test("internal roles cannot be self-selected", () => {
-  const v = verifyOtp("evil@example.com", code("evil@example.com"));
-  assert.ok(v.ok && "ticket" in v);
-  assert.equal(status(() => register({ ticket: v.ticket, name: "Evil", accountType: "super_admin", consents: { terms: true, privacy: true } })), 400);
-});
-
-test("requireAuth denies anonymous and revoked sessions", () => {
-  assert.equal(status(() => requireAuth(req())), 401);
-  assert.equal(status(() => requireAuth(req("forged-token"))), 401);
-  const t = signUp();
-  const a = requireAuth(req(t));
-  const t2 = verifyOtp("asha@example.com", code("asha@example.com"));
-  assert.ok(t2.ok && "token" in t2);
-  revokeSession(a, "others");
-  assert.equal(status(() => requireAuth(req(t2.token))), 401);
-  assert.equal(listSessions(a).length, 1);
-});
-
-test("requireRole denies and audits", () => {
-  const a = requireAuth(req(signUp()));
-  assert.equal(status(() => requireRole(a, "fmd_ops")), 403);
-  assert.ok(one("SELECT id FROM audit_events WHERE action = 'access.denied'"));
-  grantRole(a.user.id, "fmd_ops", null);
-  assert.equal(status(() => requireRole(requireAuth(req(signUp("o@example.com"))), "fmd_ops")), 403);
+test("requireRole denies and audits", async () => {
+  const a = testUser("o@example.com");
+  assert.equal(await status(() => requireRole(a, "fmd_ops")), 403);
+  assert.equal(one<{ n: number }>("SELECT COUNT(*) n FROM audit_events WHERE action = 'access.denied'")!.n, 1);
 });
 
 test("consents: marketing is separate from appointments; terms cannot be withdrawn here; history kept", () => {
-  const a = requireAuth(req(signUp()));
+  const a = testUser("asha@example.com");
   assert.equal(currentConsents(a.user.id).comms_marketing, false);
   const c = updateConsents(a, { comms_marketing: true, terms: false } as never);
   assert.equal(c.comms_marketing, true);
-  assert.equal(c.comms_appointments, true);
+  assert.equal(c.comms_appointments, false);
   assert.equal(c.terms, true);
   assert.equal(one<{ n: number }>("SELECT COUNT(*) n FROM consents WHERE user_id = ? AND purpose = 'comms_marketing'", a.user.id)!.n, 2);
 });
 
-test("deletion request is recorded once", () => {
-  const a = requireAuth(req(signUp()));
+test("deletion request is recorded once", async () => {
+  const a = testUser("asha@example.com");
   assert.match(requestDeletion(a, "moving").reference, /^DEL-/);
-  assert.equal(status(() => requestDeletion(requireAuth(req(signUp("b@example.com"))), "")), 200);
-  assert.equal(status(() => requestDeletion(a, "")), 409);
-  audit(null, "noop", "test", null);
+  assert.equal(await status(() => requestDeletion(testUser("b@example.com"), "")), 200);
+  assert.equal(await status(() => requestDeletion(a, "")), 409);
 });

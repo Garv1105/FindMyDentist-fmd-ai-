@@ -767,4 +767,17 @@ export const MIGRATIONS: string[] = [
   /* 13 - product renamed: FMD Concierge → FMD Edge (user-facing text only; table and route names unchanged) */ `
   UPDATE plans SET features = REPLACE(features, 'Concierge requests', 'FMD Edge requests') WHERE features LIKE '%Concierge requests%';
   `,
+  /* 14 - accounts come from the FastAPI service (server/): users is its cache (same uuid), synced from /auth/me;
+     sign-in codes and sessions live there now */ `
+  ALTER TABLE users ADD COLUMN synced_at INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE users ADD COLUMN api_me TEXT NOT NULL DEFAULT '{}';
+  DROP TABLE otp_challenges;
+  DROP TABLE sessions;
+  `,
+  /* 15 - clinic teams live in FastAPI: each workspace is linked to its FastAPI clinic (a workspace can be a claimed
+     directory clinic, whose id the bookings already use, so the ids differ); invitations are FastAPI's now */ `
+  ALTER TABLE clinic_workspaces ADD COLUMN api_clinic_id TEXT;
+  CREATE UNIQUE INDEX clinic_workspaces_api_clinic ON clinic_workspaces(api_clinic_id) WHERE api_clinic_id IS NOT NULL;
+  DROP TABLE clinic_invites;
+  `,
 ];

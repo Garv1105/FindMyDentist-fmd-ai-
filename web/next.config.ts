@@ -17,6 +17,12 @@ const nextConfig: NextConfig = {
       { source: "/img/:path*", headers: [{ key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" }] },
     ];
   },
+  // FastAPI (server/) answers /api/v1/*: proxied through this origin, so its session cookies are first-party. This
+  // app's own route handlers live under /api/* outside v1, so the two never collide.
+  async rewrites() {
+    const api = process.env.API_URL ?? "http://localhost:8000";
+    return [{ source: "/api/v1/:path*", destination: `${api}/api/v1/:path*` }];
+  },
   turbopack: {
     rules: {
       "*.css": {

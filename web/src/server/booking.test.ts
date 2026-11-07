@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
 import { one, resetDb, run } from "./db.ts";
-import { grantRole, register, requestOtp, requireAuth, SESSION_COOKIE, verifyOtp, type Auth } from "./auth.ts";
+import { grantRole, type Auth } from "./auth.ts";
+import { testUser } from "./testing.ts";
 import { availability, bookingHistory, cancelBooking, clinicUpdateBooking, myBookings, requestBooking, rescheduleBooking } from "./booking.ts";
 import { searchProviders } from "./providers.ts";
 import { seedDemoDirectory } from "./seed.ts";
@@ -14,10 +15,7 @@ beforeEach(() => {
 });
 
 function user(email: string): Auth {
-  const v = verifyOtp(email, requestOtp(email).devCode!);
-  assert.ok(v.ok && "ticket" in v);
-  const { token } = register({ ticket: v.ticket, name: "Test " + email.split("@")[0], accountType: "patient", consents: { terms: true, privacy: true } });
-  return requireAuth(new Request("http://x/", { headers: { cookie: `${SESSION_COOKIE}=${token}` } }));
+  return testUser(email, { name: "Test " + email.split("@")[0] });
 }
 const status = (fn: () => unknown) => {
   try {

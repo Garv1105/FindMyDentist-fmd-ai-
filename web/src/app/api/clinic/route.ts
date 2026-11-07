@@ -10,6 +10,7 @@ export const GET = handler(async (req) => {
     seedDemoDirectory();
     seedDemoClinic();
   });
-  return Response.json({ items: myClinics(requireAuth(req)) });
+  return Response.json({ items: myClinics(await requireAuth(req)) });
 });
-export const POST = handler(async (req) => Response.json(createWorkspace(requireAuth(req), await body(req)), { status: 201 }));
+// re-read the FastAPI account first: the clinic was created there a moment ago, and only its owner may set it up
+export const POST = handler(async (req) => Response.json(createWorkspace(await requireAuth(req, { fresh: true }), await body(req)), { status: 201 }));
