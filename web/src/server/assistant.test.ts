@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
 import { one, resetDb } from "./db.ts";
-import { register, requestOtp, requireAuth, SESSION_COOKIE, updateConsents, verifyOtp, type Auth } from "./auth.ts";
+import { updateConsents, type Auth } from "./auth.ts";
+import { testUser } from "./testing.ts";
 import { chat, deleteConversation, getConversation, guardReply, isUrgent, listConversations } from "./assistant.ts";
 import type { HttpError } from "./http.ts";
 
@@ -9,10 +10,7 @@ process.env.FMD_DB = ":memory:";
 beforeEach(() => resetDb());
 
 function user(email: string, aiHistory: boolean): Auth {
-  const v = verifyOtp(email, requestOtp(email).devCode!);
-  assert.ok(v.ok && "ticket" in v);
-  const { token } = register({ ticket: v.ticket, name: "Test User", accountType: "patient", consents: { terms: true, privacy: true, ai_history: aiHistory } });
-  return requireAuth(new Request("http://x/", { headers: { cookie: `${SESSION_COOKIE}=${token}` } }));
+  return testUser(email, { consents: { ai_history: aiHistory } });
 }
 const status = async (fn: () => Promise<unknown> | unknown) => {
   try {

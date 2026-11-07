@@ -4,5 +4,5 @@ import { body, handler } from "@/server/http";
 
 export const POST = handler<RouteContext<"/api/posts/[id]/react">>(async (req, ctx) => {
   const what = (await body(req)).what === "save" ? "save" : "like";
-  return Response.json(toggle(requireAuth(req), (await ctx.params).id, what));
+  return Response.json(toggle(await requireAuth(req), (await ctx.params).id, what));
 });

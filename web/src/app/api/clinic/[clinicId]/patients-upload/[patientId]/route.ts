@@ -7,5 +7,5 @@ export const POST = handler<RouteContext<"/api/clinic/[clinicId]/patients-upload
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
   if (!(file instanceof File)) throw bad("Choose a file.");
-  return Response.json(uploadPatientFile(requireAuth(req), clinicId, patientId, new Uint8Array(await file.arrayBuffer()), form?.get("title")), { status: 201 });
+  return Response.json(uploadPatientFile(await requireAuth(req), clinicId, patientId, new Uint8Array(await file.arrayBuffer()), form?.get("title")), { status: 201 });
 });

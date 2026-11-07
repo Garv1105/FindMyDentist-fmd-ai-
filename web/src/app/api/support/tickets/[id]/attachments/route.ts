@@ -3,7 +3,7 @@ import { bad, handler } from "@/server/http";
 import { attach } from "@/server/support";
 
 export const POST = handler<RouteContext<"/api/support/tickets/[id]/attachments">>(async (req, ctx) => {
-  const a = requireAuth(req);
+  const a = await requireAuth(req);
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
   if (!(file instanceof File)) throw bad("Choose a file.");

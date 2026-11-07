@@ -1,7 +1,13 @@
-import { createHash, randomBytes, randomInt, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { all, audit, one, run, tx } from "./db.ts";
-import { deliverOtp, exposeDevCode } from "./adapters/otp.ts";
 import { bad, forbidden, HttpError, readCookie, unauthenticated } from "./http.ts";
+
+/*
+ * Who is signed in comes from the FastAPI service (server/): it owns sign-up, login, sessions, MFA, email, dentist
+ * profiles and clinic membership. This app trusts its access cookie (a JWT it signs) and keeps a cached `users` row per
+ * FastAPI user - same uuid - so every table here that points at users(id) keeps working. The cache is refreshed from
+ * GET /api/v1/auth/me at most every SYNC_MS (or on demand), which also brings clinic roles across.
+ */
 
 export const ACCOUNT_TYPES = ["patient", "dentist", "student", "company"] as const;
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
@@ -16,16 +22,20 @@ export const CONSENT_PURPOSES = ["terms", "privacy", "comms_appointments", "comm
 export type ConsentPurpose = (typeof CONSENT_PURPOSES)[number];
 export const POLICY_VERSION = "2026-10-draft"; // ponytail: single policy version string; versioned policy table when legal publishes texts
 
-export const SESSION_COOKIE = "fmd_session";
-const SESSION_MS = 30 * 24 * 3600_000;
-const OTP_MS = 10 * 60_000;
-const OTP_MAX_ATTEMPTS = 5;
-const OTP_MAX_PER_WINDOW = 5;
-const OTP_WINDOW_MS = 15 * 60_000;
-const TICKET_MS = 15 * 60_000;
+export const ACCESS_COOKIE = "fmd_access";
+const API_URL = () => process.env.API_URL ?? "http://localhost:8000";
+// ponytail: a session revoked in FastAPI stays usable here until its 15-minute access token expires; FastAPI itself
+// rejects it at once. Check /auth/me on every request if that window matters.
+const SYNC_MS = 5 * 60_000;
 
-const sha = (s: string) => createHash("sha256").update(s).digest("hex");
-const same = (a: string, b: string) => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
+/** FastAPI clinic roles → this app's clinic roles (front desk = FastAPI's receptionist). */
+const CLINIC_ROLES: Record<string, Role> = {
+  owner: "clinic_owner",
+  dentist: "clinic_dentist",
+  receptionist: "clinic_front_desk",
+  finance: "clinic_finance",
+  assistant: "clinic_assistant",
+};
 
 export type User = {
   id: string;
@@ -37,181 +47,167 @@ export type User = {
   status: "active" | "deletion_requested" | "disabled";
   created_at: number;
 };
+const USER_COLS = "id, email, phone, name, account_type, language, status, created_at";
 
-/** Normalise an email or Indian mobile number; anything else is rejected. */
-export function normaliseTarget(raw: unknown): { target: string; kind: "email" | "phone" } {
-  if (typeof raw !== "string") throw bad("Enter your email or mobile number.");
-  const s = raw.trim();
-  if (/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(s) && s.length <= 254) return { target: s.toLowerCase(), kind: "email" };
-  const digits = s.replace(/[\s-]/g, "").replace(/^(\+91|91|0)(?=\d{10}$)/, "");
-  if (/^[6-9]\d{9}$/.test(digits)) return { target: `+91${digits}`, kind: "phone" };
-  throw bad("Enter a valid email address or 10-digit Indian mobile number.");
+/** What FastAPI's GET /api/v1/auth/me returns (the fields used here). */
+export type ApiMe = {
+  id: string;
+  full_name: string;
+  phone: string;
+  email: string | null;
+  email_verified: boolean;
+  mfa_enabled: boolean;
+  mfa_methods?: string[];
+  city: string | null;
+  dentist_profile: { council: string; registration_no: string; verification_status: string } | null;
+  workspaces: { clinic_id: string; clinic_name: string; role: string }[];
+};
+
+/* ---------------- the FastAPI access token ---------------- */
+
+/** FastAPI signs with HMAC-SHA256(SECRET_KEY, "fmd-access-jwt-v1") (server/app/core/security.py). */
+const signingKey = () => {
+  const secret = process.env.FMD_API_JWT_SECRET;
+  return secret ? createHmac("sha256", secret).update("fmd-access-jwt-v1").digest() : null;
+};
+
+/** The token's user and session ids, or null unless it is FastAPI's, unexpired and untampered. */
+export function verifyAccess(token: string): { sub: string; sid: string } | null {
+  const key = signingKey();
+  const parts = token.split(".");
+  if (!key || parts.length !== 3) return null;
+  const [h, p, s] = parts;
+  const want = createHmac("sha256", key).update(`${h}.${p}`).digest();
+  const got = Buffer.from(s, "base64url");
+  if (got.length !== want.length || !timingSafeEqual(got, want)) return null;
+  try {
+    const header = JSON.parse(Buffer.from(h, "base64url").toString());
+    const c = JSON.parse(Buffer.from(p, "base64url").toString());
+    const aud = Array.isArray(c.aud) ? c.aud : [c.aud];
+    if (header.alg !== "HS256" || c.iss !== "fmd-api" || !aud.includes("fmd")) return null;
+    if (typeof c.exp !== "number" || c.exp * 1000 <= Date.now()) return null;
+    if (typeof c.sub !== "string" || typeof c.sid !== "string") return null;
+    return { sub: c.sub, sid: c.sid };
+  } catch {
+    return null;
+  }
 }
 
-export function requestOtp(rawTarget: unknown) {
-  const { target, kind } = normaliseTarget(rawTarget);
-  const now = Date.now();
-  const recent = one<{ n: number }>("SELECT COUNT(*) AS n FROM otp_challenges WHERE target = ? AND created_at > ?", target, now - OTP_WINDOW_MS)!.n;
-  if (recent >= OTP_MAX_PER_WINDOW) throw new HttpError(429, "rate_limited", "Too many codes requested. Please wait 15 minutes.");
-  const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
-  run(
-    "INSERT INTO otp_challenges (id, target, code_hash, created_at, expires_at) VALUES (?, ?, ?, ?, ?)",
-    randomUUID(),
-    target,
-    sha(`${target}:${code}`),
-    now,
-    now + OTP_MS,
-  );
-  const delivery = deliverOtp(target, code);
-  return { target, kind, delivery, devCode: !delivery.configured && exposeDevCode() ? code : undefined };
+function accessToken(req: Request) {
+  const bearer = req.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
+  return readCookie(req, ACCESS_COOKIE) ?? bearer;
 }
 
-type Challenge = { id: string; code_hash: string; attempts: number; expires_at: number };
+/** FastAPI's view of the user: null when it rejects the token, "unreachable" when it can't be asked. */
+async function fetchMe(token: string): Promise<ApiMe | null | "unreachable"> {
+  try {
+    const res = await fetch(`${API_URL()}/api/v1/auth/me`, { headers: { cookie: `${ACCESS_COOKIE}=${token}` }, cache: "no-store" });
+    if (res.status === 401 || res.status === 403) return null;
+    if (!res.ok) return "unreachable";
+    return (await res.json()) as ApiMe;
+  } catch {
+    return "unreachable";
+  }
+}
 
-/**
- * Verify a code. Existing account → session. New target → a short-lived signup ticket,
- * so we never reveal whether an account exists before the code is proven.
- */
-export function verifyOtp(rawTarget: unknown, rawCode: unknown, userAgent = "") {
-  const { target } = normaliseTarget(rawTarget);
-  const code = typeof rawCode === "string" ? rawCode.trim() : "";
-  if (!/^\d{6}$/.test(code)) throw bad("Enter the 6-digit code.");
+/** Mirror a FastAPI user into this app: profile, account type, staff roles, clinic roles, first consents. */
+export function storeMe(me: ApiMe): User {
   const now = Date.now();
+  // only a verified email identifies someone here (staff bootstrap goes by email)
+  const email = me.email_verified && me.email ? me.email.toLowerCase() : null;
   return tx(() => {
-    const c = one<Challenge>(
-      "SELECT id, code_hash, attempts, expires_at FROM otp_challenges WHERE target = ? AND consumed_at IS NULL ORDER BY created_at DESC LIMIT 1",
-      target,
-    );
-    if (!c || c.expires_at < now) throw new HttpError(400, "code_expired", "That code has expired. Request a new one.");
-    if (c.attempts >= OTP_MAX_ATTEMPTS) throw new HttpError(429, "too_many_attempts", "Too many attempts. Request a new code.");
-    if (!same(c.code_hash, sha(`${target}:${code}`))) {
-      run("UPDATE otp_challenges SET attempts = attempts + 1 WHERE id = ?", c.id);
-      return { ok: false as const };
-    }
-    const user = findUserByTarget(target);
-    if (user) {
-      run("UPDATE otp_challenges SET consumed_at = ? WHERE id = ?", now, c.id);
-      if (user.status === "disabled") throw forbidden();
-      return { ok: true as const, ...createSession(user.id, userAgent) };
-    }
-    const ticket = randomBytes(24).toString("base64url");
-    run("UPDATE otp_challenges SET consumed_at = ?, ticket_hash = ?, ticket_expires_at = ? WHERE id = ?", now, sha(ticket), now + TICKET_MS, c.id);
-    return { ok: true as const, needsProfile: true as const, ticket };
-  });
-}
-
-/** Create the account for a verified target. Terms and privacy are required; the rest are opt-in. */
-export function register(input: {
-  ticket: unknown;
-  name: unknown;
-  accountType: unknown;
-  consents: Partial<Record<ConsentPurpose, boolean>>;
-  userAgent?: string;
-}) {
-  if (typeof input.ticket !== "string" || !input.ticket) throw bad("Your verification has expired. Start again.");
-  if (!ACCOUNT_TYPES.includes(input.accountType as AccountType)) throw bad("Choose an account type.");
-  const name = typeof input.name === "string" ? input.name.trim() : "";
-  if (name.length < 2 || name.length > 80) throw bad("Enter your name (2–80 characters).");
-  if (!input.consents.terms || !input.consents.privacy) throw bad("Please accept the terms and privacy notice to continue.");
-  const now = Date.now();
-  return tx(() => {
-    const t = one<{ id: string; target: string }>(
-      "SELECT id, target FROM otp_challenges WHERE ticket_hash = ? AND ticket_expires_at > ?",
-      sha(input.ticket as string),
-      now,
-    );
-    if (!t) throw new HttpError(400, "ticket_expired", "Your verification has expired. Start again.");
-    run("UPDATE otp_challenges SET ticket_hash = NULL WHERE id = ?", t.id); // single use
-    if (findUserByTarget(t.target)) throw new HttpError(409, "exists", "An account already exists. Please sign in.");
-    const id = randomUUID();
-    const isEmail = t.target.includes("@");
+    const cached = one<User>(`SELECT ${USER_COLS} FROM users WHERE id = ?`, me.id);
+    const accountType: AccountType = me.dentist_profile ? "dentist" : (cached?.account_type ?? "patient");
+    // an older local-only account holding the same email or phone gives it up (FastAPI is the source of truth)
+    if (email) run("UPDATE users SET email = NULL WHERE email = ? AND id != ? AND phone IS NOT NULL", email, me.id);
+    run("UPDATE users SET phone = NULL WHERE phone = ? AND id != ? AND email IS NOT NULL", me.phone, me.id);
+    const extra = JSON.stringify({
+      emailVerified: me.email_verified,
+      pendingEmail: me.email_verified ? null : me.email,
+      mfaEnabled: me.mfa_enabled,
+      mfaMethods: me.mfa_methods ?? [],
+      city: me.city,
+      dentistProfile: me.dentist_profile,
+      workspaces: me.workspaces,
+    });
     run(
-      "INSERT INTO users (id, email, phone, name, account_type, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      id,
-      isEmail ? t.target : null,
-      isEmail ? null : t.target,
-      name,
-      input.accountType as string,
+      `INSERT INTO users (id, email, phone, name, account_type, created_at, updated_at, synced_at, api_me)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET email = excluded.email, phone = excluded.phone, name = excluded.name,
+         account_type = excluded.account_type, updated_at = excluded.updated_at, synced_at = excluded.synced_at, api_me = excluded.api_me`,
+      me.id,
+      email,
+      me.phone,
+      me.full_name,
+      accountType,
       now,
       now,
+      now,
+      extra,
     );
-    grantRole(id, input.accountType as Role, null);
-    for (const r of bootstrapRoles(t.target)) grantRole(id, r, null);
-    for (const p of CONSENT_PURPOSES) recordConsent(id, p, Boolean(input.consents[p]));
-    audit(id, "user.registered", "user", id, { accountType: input.accountType });
-    return createSession(id, input.userAgent ?? "");
+    if (!cached) {
+      // terms and privacy were accepted at FastAPI sign-up; the optional purposes start off
+      for (const p of CONSENT_PURPOSES) recordConsent(me.id, p, p === "terms" || p === "privacy");
+      audit(me.id, "user.linked", "user", me.id);
+    }
+    // account type is one role at a time
+    run(`DELETE FROM user_roles WHERE user_id = ? AND role IN (${ACCOUNT_TYPES.map(() => "?").join(",")}) AND role != ?`, me.id, ...ACCOUNT_TYPES, accountType);
+    grantRole(me.id, accountType, null);
+    if (email) for (const r of bootstrapRoles(email)) grantRole(me.id, r, null);
+    // clinic roles mirror FastAPI's active memberships exactly
+    run("DELETE FROM user_roles WHERE user_id = ? AND role LIKE 'clinic_%'", me.id);
+    for (const w of me.workspaces) {
+      const role = CLINIC_ROLES[w.role];
+      if (role) run("INSERT OR IGNORE INTO user_roles (user_id, role, org_id, granted_at) VALUES (?, ?, ?, ?)", me.id, role, w.clinic_id, now);
+    }
+    return one<User>(`SELECT ${USER_COLS} FROM users WHERE id = ?`, me.id)!;
   });
 }
 
-/** FMD staff accounts are bootstrapped from env (comma-separated emails), not self-selected. */
-function bootstrapRoles(target: string): Role[] {
+/** FMD staff accounts are bootstrapped from env (comma-separated verified emails), not self-selected. */
+function bootstrapRoles(email: string): Role[] {
   const list = (v?: string) => (v ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
   const roles: Role[] = [];
-  if (list(process.env.FMD_OPS_EMAILS).includes(target)) roles.push("fmd_ops");
-  if (list(process.env.FMD_ADMIN_EMAILS).includes(target)) roles.push("super_admin");
-  if (list(process.env.FMD_ACCOUNTANT_EMAILS).includes(target)) roles.push("accountant");
+  if (list(process.env.FMD_OPS_EMAILS).includes(email)) roles.push("fmd_ops");
+  if (list(process.env.FMD_ADMIN_EMAILS).includes(email)) roles.push("super_admin");
+  if (list(process.env.FMD_ACCOUNTANT_EMAILS).includes(email)) roles.push("accountant");
   return roles;
 }
 
 export function grantRole(userId: string, role: Role, by: string | null, orgId = "") {
-  run("INSERT OR IGNORE INTO user_roles (user_id, role, org_id, granted_at, granted_by) VALUES (?, ?, ?, ?, ?)", userId, role, orgId, Date.now(), by);
-  audit(by, "role.granted", "user", userId, { role, orgId });
+  const r = run("INSERT OR IGNORE INTO user_roles (user_id, role, org_id, granted_at, granted_by) VALUES (?, ?, ?, ?, ?)", userId, role, orgId, Date.now(), by);
+  if (r.changes) audit(by, "role.granted", "user", userId, { role, orgId });
 }
 
 export function rolesOf(userId: string): { role: Role; org_id: string }[] {
   return all("SELECT role, org_id FROM user_roles WHERE user_id = ?", userId);
 }
 
-function findUserByTarget(target: string) {
-  return one<User>(`SELECT * FROM users WHERE ${target.includes("@") ? "email" : "phone"} = ?`, target);
-}
-
-/* ---------------- sessions ---------------- */
-
-function createSession(userId: string, userAgent: string) {
-  const token = randomBytes(32).toString("base64url");
-  const now = Date.now();
-  run(
-    "INSERT INTO sessions (id, user_id, created_at, last_seen_at, expires_at, user_agent) VALUES (?, ?, ?, ?, ?, ?)",
-    sha(token),
-    userId,
-    now,
-    now,
-    now + SESSION_MS,
-    userAgent.slice(0, 200),
-  );
-  audit(userId, "session.created", "user", userId);
-  return { token, maxAge: SESSION_MS / 1000 };
-}
-
-export function sessionCookie(token: string, maxAge: number) {
-  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-  return `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(maxAge)}${secure}`;
-}
-export const clearSessionCookie = () => `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
+/* ---------------- the signed-in user ---------------- */
 
 export type Auth = { user: User; roles: Role[]; sessionId: string };
 
-/** Resolve the signed-in user, or null. Every protected service call starts here. */
-export function currentAuth(req: Request): Auth | null {
-  const token = readCookie(req, SESSION_COOKIE);
-  if (!token) return null;
-  const sid = sha(token);
-  const now = Date.now();
-  const s = one<{ user_id: string; last_seen_at: number }>(
-    "SELECT user_id, last_seen_at FROM sessions WHERE id = ? AND revoked_at IS NULL AND expires_at > ?",
-    sid,
-    now,
-  );
-  if (!s) return null;
-  const user = one<User>("SELECT * FROM users WHERE id = ?", s.user_id);
-  if (!user || user.status === "disabled") return null;
-  if (now - s.last_seen_at > 5 * 60_000) run("UPDATE sessions SET last_seen_at = ? WHERE id = ?", now, sid);
-  return { user, roles: rolesOf(user.id).map((r) => r.role), sessionId: sid };
+/**
+ * Resolve the signed-in user, or null. Every protected service call starts here. `fresh` re-reads FastAPI now
+ * (after sign-in, or a change made there) instead of trusting a cache up to SYNC_MS old.
+ */
+export async function currentAuth(req: Request, { fresh = false } = {}): Promise<Auth | null> {
+  const token = accessToken(req);
+  const claims = token ? verifyAccess(token) : null;
+  if (!token || !claims) return null;
+  let user = one<User & { synced_at: number }>(`SELECT ${USER_COLS}, synced_at FROM users WHERE id = ?`, claims.sub) ?? null;
+  if (fresh || !user || Date.now() - user.synced_at > SYNC_MS) {
+    const me = await fetchMe(token);
+    if (me === null) return null; // FastAPI no longer accepts this session
+    if (me !== "unreachable" && me.id === claims.sub) user = { ...storeMe(me), synced_at: Date.now() };
+  }
+  if (!user || user.status === "disabled") return null; // never seen before and FastAPI unreachable: signed out
+  const plain: User = { id: user.id, email: user.email, phone: user.phone, name: user.name, account_type: user.account_type, language: user.language, status: user.status, created_at: user.created_at };
+  return { user: plain, roles: rolesOf(user.id).map((r) => r.role), sessionId: claims.sid };
 }
 
-export function requireAuth(req: Request): Auth {
-  const a = currentAuth(req);
+export async function requireAuth(req: Request, opts?: { fresh?: boolean }): Promise<Auth> {
+  const a = await currentAuth(req, opts);
   if (!a) throw unauthenticated();
   return a;
 }
@@ -221,30 +217,6 @@ export function requireRole(a: Auth, ...roles: Role[]) {
     audit(a.user.id, "access.denied", "role", null, { needed: roles });
     throw forbidden();
   }
-}
-
-export function listSessions(a: Auth) {
-  return all<{ id: string; created_at: number; last_seen_at: number; user_agent: string }>(
-    "SELECT id, created_at, last_seen_at, user_agent FROM sessions WHERE user_id = ? AND revoked_at IS NULL AND expires_at > ? ORDER BY last_seen_at DESC",
-    a.user.id,
-    Date.now(),
-  ).map((s) => ({ ref: s.id.slice(0, 12), current: s.id === a.sessionId, createdAt: s.created_at, lastSeenAt: s.last_seen_at, device: s.user_agent }));
-}
-
-/** Revoke one of *your own* sessions by its public ref (or all others with ref "others"). */
-export function revokeSession(a: Auth, ref: string) {
-  const now = Date.now();
-  if (ref === "others") {
-    run("UPDATE sessions SET revoked_at = ? WHERE user_id = ? AND id != ? AND revoked_at IS NULL", now, a.user.id, a.sessionId);
-  } else {
-    if (!/^[0-9a-f]{12}$/.test(ref)) throw bad("Unknown session.");
-    run("UPDATE sessions SET revoked_at = ? WHERE user_id = ? AND substr(id, 1, 12) = ? AND revoked_at IS NULL", now, a.user.id, ref);
-  }
-  audit(a.user.id, "session.revoked", "user", a.user.id, { ref });
-}
-
-export function signOut(a: Auth) {
-  run("UPDATE sessions SET revoked_at = ? WHERE id = ?", Date.now(), a.sessionId);
 }
 
 /* ---------------- profile, consent, deletion ---------------- */
@@ -285,14 +257,13 @@ export function updateConsents(a: Auth, changes: Partial<Record<ConsentPurpose, 
   return currentConsents(a.user.id);
 }
 
-export function updateProfile(a: Auth, input: { name?: unknown; language?: unknown }) {
-  const name = input.name === undefined ? a.user.name : typeof input.name === "string" ? input.name.trim() : "";
-  if (name.length < 2 || name.length > 80) throw bad("Enter your name (2–80 characters).");
+/** Language is this app's; the name belongs to the FastAPI account (set at sign-up). */
+export function updateProfile(a: Auth, input: { language?: unknown }) {
   const language = input.language === undefined ? a.user.language : String(input.language);
   if (!["en", "hi", "kn", "te", "ta"].includes(language)) throw bad("Unsupported language.");
-  run("UPDATE users SET name = ?, language = ?, updated_at = ? WHERE id = ?", name, language, Date.now(), a.user.id);
+  run("UPDATE users SET language = ?, updated_at = ? WHERE id = ?", language, Date.now(), a.user.id);
   audit(a.user.id, "profile.updated", "user", a.user.id);
-  return { ...a.user, name, language };
+  return { ...a.user, language };
 }
 
 export function requestDeletion(a: Auth, reason: unknown) {
@@ -313,9 +284,10 @@ export function requestDeletion(a: Auth, reason: unknown) {
   return { reference: `DEL-${id.slice(0, 8).toUpperCase()}` };
 }
 
-/** What a client may see about the signed-in user. */
+/** What a client may see about the signed-in user: this app's view plus the FastAPI account's. */
 export function publicMe(a: Auth) {
   const { user } = a;
+  const api = JSON.parse(one<{ api_me: string }>("SELECT api_me FROM users WHERE id = ?", user.id)?.api_me ?? "{}");
   return {
     id: user.id,
     name: user.name,
@@ -326,5 +298,11 @@ export function publicMe(a: Auth) {
     status: user.status,
     roles: a.roles,
     consents: currentConsents(user.id),
+    emailVerified: Boolean(api.emailVerified),
+    pendingEmail: (api.pendingEmail as string | null) ?? null,
+    mfaEnabled: Boolean(api.mfaEnabled),
+    city: (api.city as string | null) ?? null,
+    dentistProfile: (api.dentistProfile as ApiMe["dentist_profile"]) ?? null,
+    workspaces: (api.workspaces as ApiMe["workspaces"]) ?? [],
   };
 }
