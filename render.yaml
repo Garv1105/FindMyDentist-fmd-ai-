@@ -1,0 +1,67 @@
+services:
+  - type: web
+    name: fmd-api
+    runtime: docker
+    rootDir: server
+    dockerfilePath: ./Dockerfile
+    region: singapore
+    plan: starter
+    healthCheckPath: /api/v1/health
+    preDeployCommand: alembic upgrade head
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: fmd-redis
+          property: connectionString
+      - key: CLINIC_OS_URL
+        value: https://clinic.fmd.in
+      - key: COOKIE_DOMAIN
+        value: .fmd.in
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: CORS_ORIGINS
+        value: '["https://app.fmd.in","https://clinic.fmd.in"]'
+      - key: ALLOWED_ORIGINS
+        value: '["https://app.fmd.in","https://clinic.fmd.in"]'
+      - key: EMAIL_PROVIDER
+        value: ses
+      - key: EMAIL_FROM
+        value: FMD <no-reply@fmd.in>
+      - key: AWS_REGION
+        value: ap-south-1
+      - key: SMS_PROVIDER
+        value: msg91
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_SSLMODE
+        value: verify-full
+      - key: DB_SSLROOTCERT
+        value: certs/rds-global-bundle.pem
+      - key: DB_HOST
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: MSG91_AUTH_KEY
+        sync: false
+      - key: MSG91_TEMPLATES
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+
+  - type: redis
+    name: fmd-redis
+    region: singapore
+    plan: starter
+    maxmemoryPolicy: noeviction
+    ipAllowList: []
