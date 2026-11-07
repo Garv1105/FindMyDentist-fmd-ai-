@@ -3,7 +3,7 @@
 import { Building2 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Notice, Page } from "@/components/Page";
 import { accountChanged, api, CLINIC_ROLE_LABELS, useMe, type ApiClinicRole, type Me } from "@/lib/me";
 
@@ -14,6 +14,21 @@ type Preview = { clinic_name: string; clinic_city: string; role: ApiClinicRole; 
  * address; accepting it adds that email to the account if it has none verified yet.
  */
 export default function InvitePage() {
+  // the token comes from the URL, so this renders on request (Cache Components: dynamic data inside Suspense)
+  return (
+    <Suspense
+      fallback={
+        <Page narrow>
+          <p className="text-[13px] text-ink-4">Loading…</p>
+        </Page>
+      }
+    >
+      <Invite />
+    </Suspense>
+  );
+}
+
+function Invite() {
   const { token } = useParams<{ token: string }>();
   const me = useMe();
   const router = useRouter();
