@@ -3,6 +3,7 @@ from datetime import UTC, datetime, timedelta
 from httpx import AsyncClient
 from sqlalchemy import text
 
+from app.core.config import get_settings
 from app.db.session import engine
 
 from .helpers import OTP, anon, new_email, new_phone, register, signed_in
@@ -22,7 +23,7 @@ async def invite(c: AsyncClient, clinic_id: str, email: str, role: str) -> str:
     )
     assert r.status_code == 201, r.text
     url = r.json()["url"]
-    assert url.startswith("http://localhost:3001/invite/")
+    assert url.startswith(f"{get_settings().clinic_os_url}/invite/")
     return url.rsplit("/", 1)[1]
 
 

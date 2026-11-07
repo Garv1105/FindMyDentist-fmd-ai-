@@ -12,7 +12,8 @@ class Settings(BaseSettings):
 
     app_name: str = "FMD API"
     app_env: Literal["local", "test", "staging", "production"] = "local"
-    clinic_os_url: str = "http://localhost:3001"
+    # where emailed clinic invitations open: the FMD app (web/), at /invite/{token}
+    clinic_os_url: str = "http://localhost:3000"
     invite_ttl_days: int = 7
 
     redis_url: str = "redis://localhost:6379/0"
