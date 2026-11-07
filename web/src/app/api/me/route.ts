@@ -11,9 +11,10 @@ export const GET = handler(async (req) => {
   return Response.json({ user: a ? publicMe(a) : null });
 });
 
-/** This app's own preferences (language). Name, phone and email are changed through the FastAPI account. */
+/** This app's own choices (language; patient, student or company). Name, phone and email belong to the FastAPI account. */
 export const PATCH = handler(async (req) => {
   const a = await requireAuth(req);
-  const user = updateProfile(a, { language: (await body(req)).language });
+  const b = await body(req);
+  const user = updateProfile(a, { language: b.language, accountType: b.accountType });
   return Response.json({ user: publicMe({ ...a, user }) });
 });
