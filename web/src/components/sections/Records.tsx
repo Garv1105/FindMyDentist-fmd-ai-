@@ -7,7 +7,7 @@ import { useState, useSyncExternalStore, type ReactNode } from "react";
 import MascotArt from "@/components/MascotArt";
 import Image from "next/image";
 import Link from "next/link";
-import { Container, Reveal } from "../ui";
+import { Container, Reveal, rest, useLoop } from "../ui";
 import { Atmosphere } from "./LowerWorld";
 
 /* Demo documents for a fictitious clinic and patient (public/img/records) - no real patient data is depicted. */
@@ -129,10 +129,11 @@ const PANE_START = [1, 5, 9];
 
 function GuideHud({ hot }: { hot: number | null }) {
   const reduced = useReducedMotion();
+  const { ref, on: orbiting } = useLoop();
   const lit = hot === null ? null : HUD_FOR[hot].pane;
   const say = hot === null ? IDLE_SAY : HUD_FOR[hot].say;
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 hidden lg:block">
+    <div ref={ref} aria-hidden className="pointer-events-none absolute inset-0 hidden lg:block">
       {/* the speech bubble, just above his head (positioned by the wrapper: .fmd-glass-pane sets its own position) */}
       <div className="absolute bottom-[133%] left-1/2 z-[4] -translate-x-1/2">
       <div className="fmd-glass-pane w-max max-w-[200px] rounded-[12px] px-3 py-1.5 text-center">
@@ -202,7 +203,7 @@ function GuideHud({ hot }: { hot: number | null }) {
               key={h.label}
               className="absolute left-0 top-0"
               initial={false}
-              animate={o}
+              animate={orbiting ? o : rest(Object.fromEntries(Object.entries(o).map(([k, v]) => [k, v[0]])))}
               transition={reduced ? { duration: 0 } : { duration: ORBIT.seconds, ease: "linear", repeat: Infinity }}
             >
               <span
@@ -224,19 +225,19 @@ function GuideHud({ hot }: { hot: number | null }) {
 const noSubscribe = () => () => {};
 
 function AmbientParticles() {
-  const reduced = useReducedMotion();
+  const { ref, on } = useLoop();
   // false on the server and while hydrating, true in the browser after: React switches over without an effect
   const mounted = useSyncExternalStore(noSubscribe, () => true, () => false);
-  if (!mounted || reduced) return null;
+  // the box always renders, so the in-view check has something to watch from the first paint
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 -z-[5] overflow-hidden">
-      {PARTICLES.map((p, i) => (
+    <div ref={ref} aria-hidden className="pointer-events-none absolute inset-0 -z-[5] overflow-hidden">
+      {mounted && PARTICLES.map((p, i) => (
         <motion.div
           key={i}
           className="absolute rounded-full bg-blue-100"
           style={{ left: `${p.left}%`, top: `${p.top}%`, width: p.size, height: p.size, boxShadow: bloom(p.size) }}
           initial={{ y: 0, x: -p.drift, opacity: 0 }}
-          animate={{ y: -p.rise, x: [-p.drift, p.drift, -p.drift], opacity: [0, p.peak, p.peak * 0.5, p.peak * 0.9, 0] }}
+          animate={on ? { y: -p.rise, x: [-p.drift, p.drift, -p.drift], opacity: [0, p.peak, p.peak * 0.5, p.peak * 0.9, 0] } : rest({ y: 0, x: -p.drift, opacity: 0 })}
           transition={{
             y: { duration: p.dur * SLOW, delay: p.delay, ease: "linear", repeat: Infinity },
             opacity: { duration: p.dur * SLOW, delay: p.delay, times: [0, 0.15, 0.45, 0.75, 1], ease: "easeInOut", repeat: Infinity },

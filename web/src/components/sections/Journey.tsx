@@ -4,7 +4,7 @@ import { AnimatePresence, motion, useInView, useReducedMotion } from "motion/rea
 import { BadgeCheck, EyeOff, History, LockKeyhole, Pause, Play, Scale, ShieldCheck } from "lucide-react";
 import MascotArt from "@/components/MascotArt";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { Container, Reveal } from "../ui";
+import { Container, Reveal, rest } from "../ui";
 import { Atmosphere } from "./LowerWorld";
 
 const STEPS = [
@@ -181,7 +181,7 @@ export default function Journey() {
               aria-hidden
               className="absolute inset-0"
               style={{ transformOrigin: ORIGIN }}
-              animate={reduced ? undefined : { rotate: 360 }}
+              animate={reduced || !inView ? rest({ rotate: 0 }) : { rotate: 360 }}
               transition={{ duration: 70, ease: "linear", repeat: Infinity }}
             >
               <svg className="size-full" viewBox={`0 0 ${W} ${H}`} fill="none">
@@ -241,7 +241,7 @@ export default function Journey() {
                             aria-hidden
                             className="absolute inset-0 rounded-full border border-blue-400 motion-reduce:hidden"
                             initial={{ scale: 1, opacity: 0.6 }}
-                            animate={{ scale: 1.9, opacity: 0 }}
+                            animate={inView ? { scale: 1.9, opacity: 0 } : rest({ scale: 1, opacity: 0.6 })}
                             transition={{ duration: 1.8, ease: "easeOut", repeat: Infinity }}
                           />
                         )}
