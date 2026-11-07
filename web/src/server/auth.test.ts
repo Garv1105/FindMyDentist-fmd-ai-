@@ -37,8 +37,8 @@ const ME: ApiMe = {
 let answer: ApiMe | number | "down" = ME;
 let calls = 0;
 const realFetch = globalThis.fetch;
-beforeEach(() => {
-  resetDb();
+beforeEach(async () => {
+  await resetDb();
   answer = ME;
   calls = 0;
   globalThis.fetch = (async () => {
@@ -75,9 +75,9 @@ test("only FastAPI's own, unexpired, untampered tokens are accepted", () => {
 
 test("first visit links the FastAPI account: same id, profile, clinic roles, consents", async () => {
   // this app's workspace w-1 is linked to FastAPI clinic c-1
-  const creator = testUser("owner@example.com");
-  run("INSERT INTO clinics (id, name, city, area, address, phone, hours, is_demo, created_at) VALUES ('w-1', 'Smile Studio', 'Bengaluru', 'Hebbal', '', '', '', 0, 0)");
-  run("INSERT INTO clinic_workspaces (clinic_id, status, created_by, created_at, api_clinic_id) VALUES ('w-1', 'active', ?, 0, 'c-1')", creator.user.id);
+  const creator = await testUser("owner@example.com");
+  await run("INSERT INTO clinics (id, name, city, area, address, phone, hours, is_demo, created_at) VALUES ('w-1', 'Smile Studio', 'Bengaluru', 'Hebbal', '', '', '', 0, 0)");
+  await run("INSERT INTO clinic_workspaces (clinic_id, status, created_by, created_at, api_clinic_id) VALUES ('w-1', 'active', ?, 0, 'c-1')", creator.user.id);
   const a = (await currentAuth(req(token())))!;
   assert.equal(a.user.id, USER_ID);
   assert.equal(a.user.name, "Asha Rao");
@@ -86,8 +86,8 @@ test("first visit links the FastAPI account: same id, profile, clinic roles, con
   assert.equal(a.sessionId, "sess-1");
   assert.ok(a.roles.includes("patient"));
   assert.ok(a.roles.includes("clinic_front_desk")); // FastAPI receptionist
-  assert.equal(one<{ org_id: string }>("SELECT org_id FROM user_roles WHERE user_id = ? AND role = 'clinic_front_desk'", USER_ID)!.org_id, "w-1");
-  const c = currentConsents(USER_ID);
+  assert.equal((await one<{ org_id: string }>("SELECT org_id FROM user_roles WHERE user_id = ? AND role = 'clinic_front_desk'", USER_ID))!.org_id, "w-1");
+  const c = await currentConsents(USER_ID);
   assert.equal(c.terms, true);
   assert.equal(c.comms_marketing, false);
 });
@@ -111,7 +111,7 @@ test("signed out when FastAPI rejects the session, or has never been reachable f
   answer = "down";
   assert.equal(await currentAuth(req(token())), null);
   assert.equal(await currentAuth(req()), null);
-  assert.equal(await status(() => requireAuth(req())), 401);
+  assert.equal(await status(async () => await requireAuth(req())), 401);
 });
 
 test("a known user stays signed in while FastAPI is briefly unreachable", async () => {
@@ -129,24 +129,24 @@ test("staff roles come from env, and only for a verified email", async () => {
 });
 
 test("requireRole denies and audits", async () => {
-  const a = testUser("o@example.com");
-  assert.equal(await status(() => requireRole(a, "fmd_ops")), 403);
-  assert.equal(one<{ n: number }>("SELECT COUNT(*) n FROM audit_events WHERE action = 'access.denied'")!.n, 1);
+  const a = await testUser("o@example.com");
+  assert.equal(await status(async () => await requireRole(a, "fmd_ops")), 403);
+  assert.equal((await one<{ n: number }>("SELECT COUNT(*) n FROM audit_events WHERE action = 'access.denied'"))!.n, 1);
 });
 
-test("consents: marketing is separate from appointments; terms cannot be withdrawn here; history kept", () => {
-  const a = testUser("asha@example.com");
-  assert.equal(currentConsents(a.user.id).comms_marketing, false);
-  const c = updateConsents(a, { comms_marketing: true, terms: false } as never);
+test("consents: marketing is separate from appointments; terms cannot be withdrawn here; history kept", async () => {
+  const a = await testUser("asha@example.com");
+  assert.equal((await currentConsents(a.user.id)).comms_marketing, false);
+  const c = await updateConsents(a, { comms_marketing: true, terms: false } as never);
   assert.equal(c.comms_marketing, true);
   assert.equal(c.comms_appointments, false);
   assert.equal(c.terms, true);
-  assert.equal(one<{ n: number }>("SELECT COUNT(*) n FROM consents WHERE user_id = ? AND purpose = 'comms_marketing'", a.user.id)!.n, 2);
+  assert.equal((await one<{ n: number }>("SELECT COUNT(*) n FROM consents WHERE user_id = ? AND purpose = 'comms_marketing'", a.user.id))!.n, 2);
 });
 
 test("deletion request is recorded once", async () => {
-  const a = testUser("asha@example.com");
-  assert.match(requestDeletion(a, "moving").reference, /^DEL-/);
-  assert.equal(await status(() => requestDeletion(testUser("b@example.com"), "")), 200);
-  assert.equal(await status(() => requestDeletion(a, "")), 409);
+  const a = await testUser("asha@example.com");
+  assert.match((await requestDeletion(a, "moving")).reference, /^DEL-/);
+  assert.equal(await status(async () => await requestDeletion(await testUser("b@example.com"), "")), 200);
+  assert.equal(await status(async () => await requestDeletion(a, "")), 409);
 });

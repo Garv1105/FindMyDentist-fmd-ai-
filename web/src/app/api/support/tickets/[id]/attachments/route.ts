@@ -7,5 +7,5 @@ export const POST = handler<RouteContext<"/api/support/tickets/[id]/attachments"
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
   if (!(file instanceof File)) throw bad("Choose a file.");
-  return Response.json(attach(a, (await ctx.params).id, new Uint8Array(await file.arrayBuffer())), { status: 201 });
+  return Response.json(await attach(a, (await ctx.params).id, new Uint8Array(await file.arrayBuffer())), { status: 201 });
 });

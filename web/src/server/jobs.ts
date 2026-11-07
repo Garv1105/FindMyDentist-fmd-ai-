@@ -42,9 +42,9 @@ const t = (v: unknown, min: number, max: number, field: string, optional = false
 };
 
 /** Posting permission (MAIN-48): verified dentists and company accounts. */
-function canPost(a: Auth) {
+async function canPost(a: Auth) {
   if (a.user.account_type === "company") return true;
-  return !!one("SELECT 1 FROM dentists WHERE user_id = ? AND verification_status = 'verified'", a.user.id);
+  return !!await one("SELECT 1 FROM dentists WHERE user_id = ? AND verification_status = 'verified'", a.user.id);
 }
 
 function applyValue(method: string, raw: unknown) {
@@ -55,8 +55,8 @@ function applyValue(method: string, raw: unknown) {
   throw bad(method === "url" ? "Enter an https:// application link." : method === "email" ? "Enter a valid application email." : "Enter a valid 10-digit mobile number.");
 }
 
-export function postJob(a: Auth, input: Record<string, unknown>) {
-  if (!canPost(a)) throw new HttpError(403, "forbidden", "Job posting is available to verified dentists and dental company accounts.");
+export async function postJob(a: Auth, input: Record<string, unknown>) {
+  if (!await canPost(a)) throw new HttpError(403, "forbidden", "Job posting is available to verified dentists and dental company accounts.");
   const role = typeof input.roleType === "string" && input.roleType in ROLE_TYPES ? input.roleType : null;
   if (!role) throw bad("Choose a role type.");
   const city = typeof input.city === "string" && (CITIES as readonly string[]).includes(input.city) ? input.city : null;
@@ -65,15 +65,15 @@ export function postJob(a: Auth, input: Record<string, unknown>) {
   if (!method) throw bad("Choose how candidates apply.");
   const id = randomUUID();
   const now = Date.now();
-  run(
+  await run(
     `INSERT INTO jobs (id, poster_user_id, org_name, title, role_type, city, area, description, requirements, compensation, apply_method, apply_value, created_at, expires_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     id, a.user.id, t(input.orgName, 2, 120, "Clinic or company name"), t(input.title, 5, 120, "Title"), role, city, t(input.area, 0, 80, "Area", true),
     t(input.description, 30, 4000, "Description"), t(input.requirements, 0, 2000, "Requirements", true), t(input.compensation, 0, 120, "Compensation", true),
     method, applyValue(method, input.applyValue), now, now + LISTING_DAYS * 86400_000,
   );
-  audit(a.user.id, "job.posted", "job", id);
-  return view(one<JobRow>("SELECT * FROM jobs WHERE id = ?", id)!, a);
+  await audit(a.user.id, "job.posted", "job", id);
+  return view((await one<JobRow>("SELECT * FROM jobs WHERE id = ?", id))!, a);
 }
 
 function view(j: JobRow, a: Auth | null) {
@@ -98,35 +98,35 @@ function view(j: JobRow, a: Auth | null) {
   };
 }
 
-export function searchJobs(a: Auth | null, f: { q?: string; city?: string; role?: string } = {}) {
+export async function searchJobs(a: Auth | null, f: { q?: string; city?: string; role?: string } = {}) {
   const q = (f.q ?? "").trim().toLowerCase().slice(0, 80);
-  return all<JobRow>("SELECT * FROM jobs WHERE status = 'active' AND expires_at > ? ORDER BY created_at DESC LIMIT 100", Date.now())
+  return (await all<JobRow>("SELECT * FROM jobs WHERE status = 'active' AND expires_at > ? ORDER BY created_at DESC LIMIT 100", Date.now()))
     .filter((j) => !f.city || j.city === f.city)
     .filter((j) => !f.role || j.role_type === f.role)
     .filter((j) => !q || `${j.title} ${j.org_name} ${j.area} ${j.description}`.toLowerCase().includes(q))
     .map((j) => view(j, a));
 }
 
-export function myJobs(a: Auth) {
-  return all<JobRow>("SELECT * FROM jobs WHERE poster_user_id = ? ORDER BY created_at DESC", a.user.id).map((j) => view(j, a));
+export async function myJobs(a: Auth) {
+  return (await all<JobRow>("SELECT * FROM jobs WHERE poster_user_id = ? ORDER BY created_at DESC", a.user.id)).map((j) => view(j, a));
 }
 
 /** Renew (+30 days from now) or close. Only the poster; removed listings can't be revived. */
-export function updateJob(a: Auth, id: string, action: unknown) {
-  const j = one<JobRow>("SELECT * FROM jobs WHERE id = ?", id);
+export async function updateJob(a: Auth, id: string, action: unknown) {
+  const j = await one<JobRow>("SELECT * FROM jobs WHERE id = ?", id);
   if (!j || j.poster_user_id !== a.user.id) throw notFound("Listing not found.");
   if (j.status === "removed") throw new HttpError(409, "removed", "This listing was removed by moderators and can't be changed.");
-  if (action === "renew") run("UPDATE jobs SET status = 'active', expires_at = ? WHERE id = ?", Date.now() + LISTING_DAYS * 86400_000, id);
-  else if (action === "close") run("UPDATE jobs SET status = 'closed' WHERE id = ?", id);
+  if (action === "renew") await run("UPDATE jobs SET status = 'active', expires_at = ? WHERE id = ?", Date.now() + LISTING_DAYS * 86400_000, id);
+  else if (action === "close") await run("UPDATE jobs SET status = 'closed' WHERE id = ?", id);
   else throw bad("Choose renew or close.");
-  audit(a.user.id, `job.${String(action)}`, "job", id);
-  return view(one<JobRow>("SELECT * FROM jobs WHERE id = ?", id)!, a);
+  await audit(a.user.id, `job.${String(action)}`, "job", id);
+  return view((await one<JobRow>("SELECT * FROM jobs WHERE id = ?", id))!, a);
 }
 
 /** Employer verification is a deliberate staff decision, never implied (MAIN-50). */
-export function verifyEmployer(a: Auth, id: string) {
-  requireRole(a, "fmd_ops", "super_admin");
-  if (!one("SELECT 1 FROM jobs WHERE id = ?", id)) throw notFound("Listing not found.");
-  run("UPDATE jobs SET employer_verified = 1 WHERE id = ?", id);
-  audit(a.user.id, "job.employer_verified", "job", id);
+export async function verifyEmployer(a: Auth, id: string) {
+  await requireRole(a, "fmd_ops", "super_admin");
+  if (!await one("SELECT 1 FROM jobs WHERE id = ?", id)) throw notFound("Listing not found.");
+  await run("UPDATE jobs SET employer_verified = 1 WHERE id = ?", id);
+  await audit(a.user.id, "job.employer_verified", "job", id);
 }

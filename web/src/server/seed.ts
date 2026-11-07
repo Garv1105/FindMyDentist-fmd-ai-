@@ -28,57 +28,57 @@ const DENTISTS = [
   { name: "Dr. Kavya Reddy", photo: "", specialty: "Prosthodontist", exp: 6, q: ["BDS", "MDS (Prosthodontics)"], l: ["English", "Telugu", "Hindi"], s: ["Consultation", "Dentures", "Crowns & Bridges"], clinic: "ind", fee: "₹500 consultation (demo)", v: "verified" },
 ];
 
-export function seedDemoDirectory() {
-  if (one("SELECT 1 FROM dentists LIMIT 1")) {
-    topUpDemoSlots();
+export async function seedDemoDirectory() {
+  if (await one("SELECT 1 FROM dentists LIMIT 1")) {
+    await topUpDemoSlots();
     return false;
   }
   const now = Date.now();
   const c_live = new Set(["kor", "jay"]); // two demo clinics get a labelled demo schedule; the rest are request-only
-  tx(() => {
+  await tx(async () => {
     const clinicIds = new Map<string, string>();
     for (const c of CLINICS) {
       const id = randomUUID();
       clinicIds.set(c.key, id);
-      run(
+      await run(
         "INSERT INTO clinics (id, name, city, area, address, phone, hours, is_demo, created_at) VALUES (?, ?, 'Bengaluru', ?, ?, '', ?, 1, ?)",
         id, c.name, c.area, c.address, c.hours, now,
       );
     }
     for (const d of DENTISTS) {
       const id = randomUUID();
-      run(
+      await run(
         `INSERT INTO dentists (id, name, photo, specialty, experience_years, qualifications, languages, bio, verification_status, verification_checks, verified_at, is_demo, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
         id, d.name, d.photo, d.specialty, d.exp, JSON.stringify(d.q), JSON.stringify(d.l),
         `${d.name.replace("Dr. ", "")} is a demo ${d.specialty.toLowerCase()} profile used for design review.`,
         d.v, d.v === "verified" ? DEMO_CHECK : "", d.v === "verified" ? now : null, now,
       );
-      run("INSERT INTO dentist_clinics (dentist_id, clinic_id, fee_note) VALUES (?, ?, ?)", id, clinicIds.get(d.clinic)!, d.fee);
-      for (const s of d.s) run("INSERT INTO dentist_services (dentist_id, service) VALUES (?, ?)", id, s);
+      await run("INSERT INTO dentist_clinics (dentist_id, clinic_id, fee_note) VALUES (?, ?, ?)", id, clinicIds.get(d.clinic)!, d.fee);
+      for (const s of d.s) await run("INSERT INTO dentist_services (dentist_id, service) VALUES (?, ?)", id, s);
       if (d.sponsor)
-        run("INSERT INTO placements (id, dentist_id, kind, sponsor, starts_at, ends_at) VALUES (?, ?, 'sponsored', ?, ?, ?)", randomUUID(), id, d.sponsor, now - 86400_000, now + 365 * 86400_000);
+        await run("INSERT INTO placements (id, dentist_id, kind, sponsor, starts_at, ends_at) VALUES (?, ?, 'sponsored', ?, ?, ?)", randomUUID(), id, d.sponsor, now - 86400_000, now + 365 * 86400_000);
     }
     for (const key of c_live)
-      run(
+      await run(
         "INSERT INTO clinic_booking_policies (clinic_id, live_schedule, schedule_source, min_notice_minutes, cancellation_terms) VALUES (?, 1, 'demo', 120, ?)",
         clinicIds.get(key)!,
         "Demo terms: free cancellation up to 4 hours before the appointment.",
       );
   });
-  topUpDemoSlots();
+  await topUpDemoSlots();
   return true;
 }
 
 /** Keep 14 days of demo slots ahead (IST, Mon–Sat, 10:00–13:00 and 15:00–18:00, 30 min). */
-export function topUpDemoSlots(now = Date.now()) {
-  const pairs = all<{ dentist_id: string; clinic_id: string }>(
+export async function topUpDemoSlots(now = Date.now()) {
+  const pairs = await all<{ dentist_id: string; clinic_id: string }>(
     "SELECT dc.dentist_id, dc.clinic_id FROM dentist_clinics dc JOIN clinic_booking_policies p ON p.clinic_id = dc.clinic_id WHERE p.schedule_source = 'demo'",
   );
-  if (!pairs.length || one("SELECT 1 FROM slots WHERE starts_at > ? LIMIT 1", now + 7 * 86400_000)) return;
+  if (!pairs.length || await one("SELECT 1 FROM slots WHERE starts_at > ? LIMIT 1", now + 7 * 86400_000)) return;
   const IST = 5.5 * 3600_000;
   const dayStart = (t: number) => Math.floor((t + IST) / 86400_000) * 86400_000 - IST; // midnight IST
-  tx(() => {
+  await tx(async () => {
     for (let day = 0; day < 14; day++) {
       const d0 = dayStart(now) + day * 86400_000;
       if (new Date(d0 + IST).getUTCDay() === 0) continue; // Sunday closed
@@ -86,8 +86,8 @@ export function topUpDemoSlots(now = Date.now()) {
         const start = d0 + h * 3600_000;
         if (start < now) continue;
         for (const p of pairs) {
-          if (one("SELECT 1 FROM slots WHERE dentist_id = ? AND starts_at = ?", p.dentist_id, start)) continue;
-          run("INSERT INTO slots (id, clinic_id, dentist_id, starts_at, ends_at, created_at) VALUES (?, ?, ?, ?, ?, ?)", randomUUID(), p.clinic_id, p.dentist_id, start, start + 30 * 60_000, now);
+          if (await one("SELECT 1 FROM slots WHERE dentist_id = ? AND starts_at = ?", p.dentist_id, start)) continue;
+          await run("INSERT INTO slots (id, clinic_id, dentist_id, starts_at, ends_at, created_at) VALUES (?, ?, ?, ?, ?, ?)", randomUUID(), p.clinic_id, p.dentist_id, start, start + 30 * 60_000, now);
         }
       }
     }
@@ -103,20 +103,20 @@ const DEMO_POSTS: { by: string; kind: string; topic: string; title: string; body
   { by: "Dr. Sneha Iyer", kind: "education", topic: "Implants", title: "What happens during implant treatment", body: "Implant treatment is staged: assessment and imaging, placing the implant, a healing period while bone bonds to it, then the crown. Timelines vary from a few months upwards depending on bone and gum health." },
 ];
 
-export function seedDemoContent() {
-  if (one("SELECT 1 FROM posts LIMIT 1")) return false;
+export async function seedDemoContent() {
+  if (await one("SELECT 1 FROM posts LIMIT 1")) return false;
   const now = Date.now();
-  tx(() => {
-    DEMO_POSTS.forEach((p, i) => {
-      const d = one<{ id: string }>("SELECT id FROM dentists WHERE name = ?", p.by);
-      if (!d) return;
+  await tx(async () => {
+    for (const [i, p] of DEMO_POSTS.entries()) {
+      const d = await one<{ id: string }>("SELECT id FROM dentists WHERE name = ?", p.by);
+      if (!d) continue;
       const id = randomUUID();
-      run(
+      await run(
         "INSERT INTO posts (id, author_dentist_id, kind, topic, title, body, status, is_demo, created_at, published_at) VALUES (?, ?, ?, ?, ?, ?, 'published', 1, ?, ?)",
         id, d.id, p.kind, p.topic, p.title, p.body, now - i * 86400_000, now - i * 86400_000,
       );
-      (p.options ?? []).forEach((label, j) => run("INSERT INTO poll_options (id, post_id, label, position) VALUES (?, ?, ?, ?)", randomUUID(), id, label, j));
-    });
+      for (const [j, label] of (p.options ?? []).entries()) await run("INSERT INTO poll_options (id, post_id, label, position) VALUES (?, ?, ?, ?)", randomUUID(), id, label, j);
+    }
   });
   return true;
 }

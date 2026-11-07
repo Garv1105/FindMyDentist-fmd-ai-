@@ -124,7 +124,7 @@ function newReference() {
   return "CQ-" + Array.from(b, (x) => A[x % A.length]).join("");
 }
 
-export function submitEnquiry(input: Record<string, unknown>, auth: Auth | null) {
+export async function submitEnquiry(input: Record<string, unknown>, auth: Auth | null) {
   if (input.consent !== true) throw bad("Please agree to be contacted about this request.");
   const method = pick(input.contactMethod, CONTACT_METHODS, "how we should contact you");
   const e = {
@@ -138,46 +138,46 @@ export function submitEnquiry(input: Record<string, unknown>, auth: Auth | null)
   };
   const now = Date.now();
   // abuse guard: at most 3 open requests per contact in 24h
-  const recent = one<{ n: number }>(
+  const recent = (await one<{ n: number }>(
     "SELECT COUNT(*) AS n FROM concierge_enquiries WHERE contact_value = ? AND created_at > ? AND status NOT IN ('closed','cancelled')",
     e.contact_value,
     now - 24 * 3600_000,
-  )!.n;
+  ))!.n;
   if (recent >= 3) throw new HttpError(429, "rate_limited", "You already have open requests. Our team will be in touch about those first.");
 
   const id = randomUUID();
   const reference = newReference();
-  tx(() => {
-    run(
+  await tx(async () => {
+    await run(
       `INSERT INTO concierge_enquiries (id, reference, user_id, name, contact_method, contact_value, need, area, timing, notes, consent_version, next_action_due, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       id, reference, auth?.user.id ?? null, e.name, e.contact_method, e.contact_value, e.need, e.area, e.timing, e.notes, CONSENT_VERSION,
       now + FIRST_CONTACT_HOURS * 3600_000, now, now,
     );
-    event(id, auth?.user.id ?? null, { kind: "created", to_status: "new" });
-    audit(auth?.user.id ?? null, "concierge.submitted", "concierge_enquiry", id);
+    await event(id, auth?.user.id ?? null, { kind: "created", to_status: "new" });
+    await audit(auth?.user.id ?? null, "concierge.submitted", "concierge_enquiry", id);
   });
   return { reference, status: "new" as Status, statusLabel: STATUS_LABEL.new };
 }
 
 /** A patient's own requests: status only, never internal notes. */
-export function myEnquiries(a: Auth) {
-  return all<Pick<Enquiry, "reference" | "need" | "status" | "created_at" | "updated_at">>(
+export async function myEnquiries(a: Auth) {
+  return (await all<Pick<Enquiry, "reference" | "need" | "status" | "created_at" | "updated_at">>(
     "SELECT reference, need, status, created_at, updated_at FROM concierge_enquiries WHERE user_id = ? ORDER BY created_at DESC",
     a.user.id,
-  ).map((r) => ({ reference: r.reference, need: r.need, status: r.status, statusLabel: STATUS_LABEL[r.status], createdAt: r.created_at, updatedAt: r.updated_at }));
+  )).map((r) => ({ reference: r.reference, need: r.need, status: r.status, statusLabel: STATUS_LABEL[r.status], createdAt: r.created_at, updatedAt: r.updated_at }));
 }
 
 /* ---------------- coordinator side ---------------- */
 
-const requireOps = (a: Auth) => requireRole(a, "fmd_ops", "super_admin");
+const requireOps = async (a: Auth) => await requireRole(a, "fmd_ops", "super_admin");
 
-function event(
+async function event(
   enquiryId: string,
   actorId: string | null,
   e: { kind: string; from_status?: Status; to_status?: Status; channel?: string; result?: string; body?: string },
 ) {
-  run(
+  await run(
     "INSERT INTO concierge_events (id, enquiry_id, at, actor_id, kind, from_status, to_status, channel, result, body) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     randomUUID(), enquiryId, Date.now(), actorId, e.kind, e.from_status ?? null, e.to_status ?? null, e.channel ?? null, e.result ?? null, e.body ?? "",
   );
@@ -185,10 +185,10 @@ function event(
 
 const isOverdue = (e: Pick<Enquiry, "status" | "next_action_due">, now = Date.now()) => !TERMINAL.includes(e.status) && e.next_action_due < now;
 
-export function listQueue(a: Auth, f: { status?: string; overdue?: boolean; mine?: boolean } = {}) {
-  requireOps(a);
+export async function listQueue(a: Auth, f: { status?: string; overdue?: boolean; mine?: boolean } = {}) {
+  await requireOps(a);
   const now = Date.now();
-  const rows = all<Enquiry & { assignee_name: string | null }>(
+  const rows = await all<Enquiry & { assignee_name: string | null }>(
     `SELECT e.*, u.name AS assignee_name FROM concierge_enquiries e LEFT JOIN users u ON u.id = e.assignee_id ORDER BY e.next_action_due ASC`,
   );
   const items = rows
@@ -234,16 +234,16 @@ function metrics(rows: Enquiry[], now: number) {
   };
 }
 
-export function enquiryDetail(a: Auth, id: string) {
-  requireOps(a);
-  const e = one<Enquiry>("SELECT * FROM concierge_enquiries WHERE id = ?", id);
+export async function enquiryDetail(a: Auth, id: string) {
+  await requireOps(a);
+  const e = await one<Enquiry>("SELECT * FROM concierge_enquiries WHERE id = ?", id);
   if (!e) throw notFound("Request not found.");
-  audit(a.user.id, "concierge.viewed", "concierge_enquiry", id); // access to contact details is logged
-  const events = all<{ at: number; kind: string; from_status: Status | null; to_status: Status | null; channel: string | null; result: string | null; body: string; actor: string | null }>(
+  await audit(a.user.id, "concierge.viewed", "concierge_enquiry", id); // access to contact details is logged
+  const events = await all<{ at: number; kind: string; from_status: Status | null; to_status: Status | null; channel: string | null; result: string | null; body: string; actor: string | null }>(
     "SELECT ev.at, ev.kind, ev.from_status, ev.to_status, ev.channel, ev.result, ev.body, u.name AS actor FROM concierge_events ev LEFT JOIN users u ON u.id = ev.actor_id WHERE ev.enquiry_id = ? ORDER BY ev.at ASC",
     id,
   );
-  const coordinators = all<{ id: string; name: string }>(
+  const coordinators = await all<{ id: string; name: string }>(
     "SELECT DISTINCT u.id, u.name FROM users u JOIN user_roles r ON r.user_id = u.id WHERE r.role IN ('fmd_ops','super_admin') AND u.status = 'active' ORDER BY u.name",
   );
   return {
@@ -254,14 +254,14 @@ export function enquiryDetail(a: Auth, id: string) {
 }
 
 /** All coordinator actions go through here: one permission check, one transaction, one audit entry. */
-export function act(a: Auth, id: string, input: Record<string, unknown>) {
-  requireOps(a);
+export async function act(a: Auth, id: string, input: Record<string, unknown>) {
+  await requireOps(a);
   const now = Date.now();
-  return tx(() => {
-    const e = one<Enquiry>("SELECT * FROM concierge_enquiries WHERE id = ?", id);
+  return await tx(async () => {
+    const e = await one<Enquiry>("SELECT * FROM concierge_enquiries WHERE id = ?", id);
     if (!e) throw notFound("Request not found.");
     const type = input.type;
-    const touch = (sql: string, ...p: (string | number | null)[]) => run(`UPDATE concierge_enquiries SET ${sql}, updated_at = ? WHERE id = ?`, ...p, now, id);
+    const touch = async (sql: string, ...p: (string | number | null)[]) => await run(`UPDATE concierge_enquiries SET ${sql}, updated_at = ? WHERE id = ?`, ...p, now, id);
 
     if (TERMINAL.includes(e.status) && type !== "note") throw new HttpError(409, "closed", "This request is closed. Only notes can be added.");
 
@@ -275,59 +275,59 @@ export function act(a: Auth, id: string, input: Record<string, unknown>) {
           if (input.patientConfirmed !== true || note.length < 10) throw bad("Record what the patient confirmed (clinic, time, fees) and tick that they agreed.");
         }
         if ((to === "closed" || to === "cancelled") && note.length < 3) throw bad("Add the outcome or reason before closing.");
-        if (to === "contacted" && !e.first_contact_at) touch("first_contact_at = ?", now);
-        touch("status = ?", to);
-        if (to === "closed" || to === "cancelled") touch("outcome = ?", note);
-        event(id, a.user.id, { kind: "status", from_status: e.status, to_status: to, body: note });
+        if (to === "contacted" && !e.first_contact_at) await touch("first_contact_at = ?", now);
+        await touch("status = ?", to);
+        if (to === "closed" || to === "cancelled") await touch("outcome = ?", note);
+        await event(id, a.user.id, { kind: "status", from_status: e.status, to_status: to, body: note });
         break;
       }
       case "attempt": {
         const channel = pick(input.channel, CONTACT_METHODS, "a channel");
         const result = pick(input.result, ["reached", "no_answer", "left_message", "wrong_number"] as const, "the result");
         const note = text(input.note, "Note", 0, 1000, true);
-        event(id, a.user.id, { kind: "contact_attempt", channel, result, body: note });
+        await event(id, a.user.id, { kind: "contact_attempt", channel, result, body: note });
         if (result === "reached") {
-          if (!e.first_contact_at) touch("first_contact_at = ?", now);
+          if (!e.first_contact_at) await touch("first_contact_at = ?", now);
           if (e.status === "new" || e.status === "contact_attempted") {
-            touch("status = ?", "contacted");
-            event(id, a.user.id, { kind: "status", from_status: e.status, to_status: "contacted" });
+            await touch("status = ?", "contacted");
+            await event(id, a.user.id, { kind: "status", from_status: e.status, to_status: "contacted" });
           }
         } else if (e.status === "new") {
-          touch("status = ?", "contact_attempted");
-          event(id, a.user.id, { kind: "status", from_status: "new", to_status: "contact_attempted" });
+          await touch("status = ?", "contact_attempted");
+          await event(id, a.user.id, { kind: "status", from_status: "new", to_status: "contact_attempted" });
         }
         break;
       }
       case "note": {
-        event(id, a.user.id, { kind: "note", body: text(input.note, "Note", 1, 2000) });
-        touch("status = status");
+        await event(id, a.user.id, { kind: "note", body: text(input.note, "Note", 1, 2000) });
+        await touch("status = status");
         break;
       }
       case "assign": {
         const to = typeof input.assigneeId === "string" ? input.assigneeId : "";
-        const ok = one("SELECT 1 FROM user_roles WHERE user_id = ? AND role IN ('fmd_ops','super_admin')", to);
+        const ok = await one("SELECT 1 FROM user_roles WHERE user_id = ? AND role IN ('fmd_ops','super_admin')", to);
         if (!ok) throw bad("Choose a coordinator.");
-        touch("assignee_id = ?", to);
-        event(id, a.user.id, { kind: "assigned", body: to === e.assignee_id ? "Re-confirmed" : e.assignee_id ? "Reassigned" : "Assigned", result: to });
+        await touch("assignee_id = ?", to);
+        await event(id, a.user.id, { kind: "assigned", body: to === e.assignee_id ? "Re-confirmed" : e.assignee_id ? "Reassigned" : "Assigned", result: to });
         break;
       }
       case "next": {
         const action = text(input.nextAction, "Next action", 3, 200);
         const due = Number(input.dueAt);
         if (!Number.isFinite(due) || due < now - 60_000) throw bad("Choose a due time in the future.");
-        touch("next_action = ?, next_action_due = ?", action, due);
-        event(id, a.user.id, { kind: "next_action", body: action, result: String(due) });
+        await touch("next_action = ?, next_action_due = ?", action, due);
+        await event(id, a.user.id, { kind: "next_action", body: action, result: String(due) });
         break;
       }
       case "priority": {
         const p = pick(input.priority, ["normal", "high"] as const, "a priority");
-        touch("priority = ?", p);
-        event(id, a.user.id, { kind: "priority", body: p });
+        await touch("priority = ?", p);
+        await event(id, a.user.id, { kind: "priority", body: p });
         break;
       }
       default:
         throw bad("Unknown action.");
     }
-    audit(a.user.id, `concierge.${String(type)}`, "concierge_enquiry", id);
+    await audit(a.user.id, `concierge.${String(type)}`, "concierge_enquiry", id);
   });
 }

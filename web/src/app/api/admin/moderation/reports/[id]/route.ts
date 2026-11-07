@@ -4,6 +4,6 @@ import { body, handler } from "@/server/http";
 
 export const POST = handler<RouteContext<"/api/admin/moderation/reports/[id]">>(async (req, ctx) => {
   const a = await requireAuth(req);
-  decideReport(a, (await ctx.params).id, await body(req));
-  return Response.json(reviewQueue(a));
+  await decideReport(a, (await ctx.params).id, await body(req));
+  return Response.json(await reviewQueue(a));
 });

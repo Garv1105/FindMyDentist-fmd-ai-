@@ -8,13 +8,13 @@ import { body, handler } from "@/server/http";
 export const GET = handler(async (req) => {
   const fresh = new URL(req.url).searchParams.get("fresh") === "1";
   const a = await currentAuth(req, { fresh });
-  return Response.json({ user: a ? publicMe(a) : null });
+  return Response.json({ user: a ? await publicMe(a) : null });
 });
 
 /** This app's own choices (language; patient, student or company). Name, phone and email belong to the FastAPI account. */
 export const PATCH = handler(async (req) => {
   const a = await requireAuth(req);
   const b = await body(req);
-  const user = updateProfile(a, { language: b.language, accountType: b.accountType });
-  return Response.json({ user: publicMe({ ...a, user }) });
+  const user = await updateProfile(a, { language: b.language, accountType: b.accountType });
+  return Response.json({ user: await publicMe({ ...a, user }) });
 });

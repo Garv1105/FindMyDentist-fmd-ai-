@@ -111,16 +111,16 @@ async function fetchMe(token: string): Promise<ApiMe | null | "unreachable"> {
 }
 
 /** Mirror a FastAPI user into this app: profile, account type, staff roles, clinic roles, first consents. */
-export function storeMe(me: ApiMe): User {
+export async function storeMe(me: ApiMe): Promise<User> {
   const now = Date.now();
   // only a verified email identifies someone here (staff bootstrap goes by email)
   const email = me.email_verified && me.email ? me.email.toLowerCase() : null;
-  return tx(() => {
-    const cached = one<User>(`SELECT ${USER_COLS} FROM users WHERE id = ?`, me.id);
+  return await tx(async () => {
+    const cached = await one<User>(`SELECT ${USER_COLS} FROM users WHERE id = ?`, me.id);
     const accountType: AccountType = me.dentist_profile ? "dentist" : (cached?.account_type ?? "patient");
     // an older local-only account holding the same email or phone gives it up (FastAPI is the source of truth)
-    if (email) run("UPDATE users SET email = NULL WHERE email = ? AND id != ? AND phone IS NOT NULL", email, me.id);
-    run("UPDATE users SET phone = NULL WHERE phone = ? AND id != ? AND email IS NOT NULL", me.phone, me.id);
+    if (email) await run("UPDATE users SET email = NULL WHERE email = ? AND id != ? AND phone IS NOT NULL", email, me.id);
+    await run("UPDATE users SET phone = NULL WHERE phone = ? AND id != ? AND email IS NOT NULL", me.phone, me.id);
     const extra = JSON.stringify({
       emailVerified: me.email_verified,
       pendingEmail: me.email_verified ? null : me.email,
@@ -130,7 +130,7 @@ export function storeMe(me: ApiMe): User {
       dentistProfile: me.dentist_profile,
       workspaces: me.workspaces,
     });
-    run(
+    await run(
       `INSERT INTO users (id, email, phone, name, account_type, created_at, updated_at, synced_at, api_me)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET email = excluded.email, phone = excluded.phone, name = excluded.name,
@@ -147,22 +147,22 @@ export function storeMe(me: ApiMe): User {
     );
     if (!cached) {
       // terms and privacy were accepted at FastAPI sign-up; the optional purposes start off
-      for (const p of CONSENT_PURPOSES) recordConsent(me.id, p, p === "terms" || p === "privacy");
-      audit(me.id, "user.linked", "user", me.id);
+      for (const p of CONSENT_PURPOSES) await recordConsent(me.id, p, p === "terms" || p === "privacy");
+      await audit(me.id, "user.linked", "user", me.id);
     }
     // account type is one role at a time
-    run(`DELETE FROM user_roles WHERE user_id = ? AND role IN (${ACCOUNT_TYPES.map(() => "?").join(",")}) AND role != ?`, me.id, ...ACCOUNT_TYPES, accountType);
-    grantRole(me.id, accountType, null);
-    if (email) for (const r of bootstrapRoles(email)) grantRole(me.id, r, null);
+    await run(`DELETE FROM user_roles WHERE user_id = ? AND role IN (${ACCOUNT_TYPES.map(() => "?").join(",")}) AND role != ?`, me.id, ...ACCOUNT_TYPES, accountType);
+    await grantRole(me.id, accountType, null);
+    if (email) for (const r of bootstrapRoles(email)) await grantRole(me.id, r, null);
     // clinic roles mirror FastAPI's active memberships exactly, on the workspace linked to each FastAPI clinic (a
     // clinic without a workspace here yet gets its role once the workspace is set up)
-    run("DELETE FROM user_roles WHERE user_id = ? AND role LIKE 'clinic_%'", me.id);
+    await run("DELETE FROM user_roles WHERE user_id = ? AND role LIKE 'clinic_%'", me.id);
     for (const w of me.workspaces) {
       const role = CLINIC_ROLES[w.role];
-      const local = one<{ clinic_id: string }>("SELECT clinic_id FROM clinic_workspaces WHERE api_clinic_id = ?", w.clinic_id);
-      if (role && local) run("INSERT OR IGNORE INTO user_roles (user_id, role, org_id, granted_at) VALUES (?, ?, ?, ?)", me.id, role, local.clinic_id, now);
+      const local = await one<{ clinic_id: string }>("SELECT clinic_id FROM clinic_workspaces WHERE api_clinic_id = ?", w.clinic_id);
+      if (role && local) await run("INSERT INTO user_roles (user_id, role, org_id, granted_at) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING", me.id, role, local.clinic_id, now);
     }
-    return one<User>(`SELECT ${USER_COLS} FROM users WHERE id = ?`, me.id)!;
+    return (await one<User>(`SELECT ${USER_COLS} FROM users WHERE id = ?`, me.id))!;
   });
 }
 
@@ -176,13 +176,13 @@ function bootstrapRoles(email: string): Role[] {
   return roles;
 }
 
-export function grantRole(userId: string, role: Role, by: string | null, orgId = "") {
-  const r = run("INSERT OR IGNORE INTO user_roles (user_id, role, org_id, granted_at, granted_by) VALUES (?, ?, ?, ?, ?)", userId, role, orgId, Date.now(), by);
-  if (r.changes) audit(by, "role.granted", "user", userId, { role, orgId });
+export async function grantRole(userId: string, role: Role, by: string | null, orgId = "") {
+  const r = await run("INSERT INTO user_roles (user_id, role, org_id, granted_at, granted_by) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING", userId, role, orgId, Date.now(), by);
+  if (r.changes) await audit(by, "role.granted", "user", userId, { role, orgId });
 }
 
-export function rolesOf(userId: string): { role: Role; org_id: string }[] {
-  return all("SELECT role, org_id FROM user_roles WHERE user_id = ?", userId);
+export async function rolesOf(userId: string): Promise<{ role: Role; org_id: string }[]> {
+  return await all("SELECT role, org_id FROM user_roles WHERE user_id = ?", userId);
 }
 
 /* ---------------- the signed-in user ---------------- */
@@ -197,15 +197,15 @@ export async function currentAuth(req: Request, { fresh = false } = {}): Promise
   const token = accessToken(req);
   const claims = token ? verifyAccess(token) : null;
   if (!token || !claims) return null;
-  let user = one<User & { synced_at: number }>(`SELECT ${USER_COLS}, synced_at FROM users WHERE id = ?`, claims.sub) ?? null;
+  let user = await one<User & { synced_at: number }>(`SELECT ${USER_COLS}, synced_at FROM users WHERE id = ?`, claims.sub) ?? null;
   if (fresh || !user || Date.now() - user.synced_at > SYNC_MS) {
     const me = await fetchMe(token);
     if (me === null) return null; // FastAPI no longer accepts this session
-    if (me !== "unreachable" && me.id === claims.sub) user = { ...storeMe(me), synced_at: Date.now() };
+    if (me !== "unreachable" && me.id === claims.sub) user = { ...await storeMe(me), synced_at: Date.now() };
   }
   if (!user || user.status === "disabled") return null; // never seen before and FastAPI unreachable: signed out
   const plain: User = { id: user.id, email: user.email, phone: user.phone, name: user.name, account_type: user.account_type, language: user.language, status: user.status, created_at: user.created_at };
-  return { user: plain, roles: rolesOf(user.id).map((r) => r.role), sessionId: claims.sid };
+  return { user: plain, roles: (await rolesOf(user.id)).map((r) => r.role), sessionId: claims.sid };
 }
 
 export async function requireAuth(req: Request, opts?: { fresh?: boolean }): Promise<Auth> {
@@ -214,17 +214,17 @@ export async function requireAuth(req: Request, opts?: { fresh?: boolean }): Pro
   return a;
 }
 
-export function requireRole(a: Auth, ...roles: Role[]) {
+export async function requireRole(a: Auth, ...roles: Role[]) {
   if (!roles.some((r) => a.roles.includes(r))) {
-    audit(a.user.id, "access.denied", "role", null, { needed: roles });
+    await audit(a.user.id, "access.denied", "role", null, { needed: roles });
     throw forbidden();
   }
 }
 
 /* ---------------- profile, consent, deletion ---------------- */
 
-export function recordConsent(userId: string, purpose: ConsentPurpose, granted: boolean) {
-  run(
+export async function recordConsent(userId: string, purpose: ConsentPurpose, granted: boolean) {
+  await run(
     "INSERT INTO consents (id, user_id, purpose, granted, policy_version, created_at) VALUES (?, ?, ?, ?, ?, ?)",
     randomUUID(),
     userId,
@@ -236,8 +236,8 @@ export function recordConsent(userId: string, purpose: ConsentPurpose, granted: 
 }
 
 /** Latest decision per purpose (history is kept - consents are append-only). */
-export function currentConsents(userId: string): Record<ConsentPurpose, boolean> {
-  const rows = all<{ purpose: ConsentPurpose; granted: number }>(
+export async function currentConsents(userId: string): Promise<Record<ConsentPurpose, boolean>> {
+  const rows = await all<{ purpose: ConsentPurpose; granted: number }>(
     `SELECT c.purpose, c.granted FROM consents c
      WHERE c.user_id = ? AND c.created_at = (SELECT MAX(created_at) FROM consents WHERE user_id = c.user_id AND purpose = c.purpose)`,
     userId,
@@ -248,59 +248,59 @@ export function currentConsents(userId: string): Record<ConsentPurpose, boolean>
 }
 
 /** Only optional purposes can be changed here; withdrawing terms is an account-deletion request. */
-export function updateConsents(a: Auth, changes: Partial<Record<ConsentPurpose, boolean>>) {
-  const cur = currentConsents(a.user.id);
+export async function updateConsents(a: Auth, changes: Partial<Record<ConsentPurpose, boolean>>) {
+  const cur = await currentConsents(a.user.id);
   for (const p of ["comms_appointments", "comms_marketing", "ai_history"] as const) {
     if (typeof changes[p] === "boolean" && changes[p] !== cur[p]) {
-      recordConsent(a.user.id, p, changes[p]!);
-      audit(a.user.id, "consent.changed", "user", a.user.id, { purpose: p, granted: changes[p] });
+      await recordConsent(a.user.id, p, changes[p]!);
+      await audit(a.user.id, "consent.changed", "user", a.user.id, { purpose: p, granted: changes[p] });
     }
   }
-  return currentConsents(a.user.id);
+  return await currentConsents(a.user.id);
 }
 
 /**
  * This app's own choices: language, and patient / student / company. The name belongs to the FastAPI account, and
  * "dentist" comes from having a dentist profile there, so a dentist can't switch away here.
  */
-export function updateProfile(a: Auth, input: { language?: unknown; accountType?: unknown }) {
+export async function updateProfile(a: Auth, input: { language?: unknown; accountType?: unknown }) {
   const language = input.language === undefined ? a.user.language : String(input.language);
   if (!["en", "hi", "kn", "te", "ta"].includes(language)) throw bad("Unsupported language.");
   const accountType = input.accountType === undefined ? a.user.account_type : (String(input.accountType) as AccountType);
   if (accountType !== a.user.account_type) {
     if (a.user.account_type === "dentist" || !["patient", "student", "company"].includes(accountType)) throw bad("Choose patient, student or company.");
-    tx(() => {
-      run("DELETE FROM user_roles WHERE user_id = ? AND role = ?", a.user.id, a.user.account_type);
-      grantRole(a.user.id, accountType, a.user.id);
+    await tx(async () => {
+      await run("DELETE FROM user_roles WHERE user_id = ? AND role = ?", a.user.id, a.user.account_type);
+      await grantRole(a.user.id, accountType, a.user.id);
     });
   }
-  run("UPDATE users SET language = ?, account_type = ?, updated_at = ? WHERE id = ?", language, accountType, Date.now(), a.user.id);
-  audit(a.user.id, "profile.updated", "user", a.user.id);
+  await run("UPDATE users SET language = ?, account_type = ?, updated_at = ? WHERE id = ?", language, accountType, Date.now(), a.user.id);
+  await audit(a.user.id, "profile.updated", "user", a.user.id);
   return { ...a.user, language, account_type: accountType };
 }
 
-export function requestDeletion(a: Auth, reason: unknown) {
-  const open = one("SELECT id FROM deletion_requests WHERE user_id = ? AND status IN ('received','in_review')", a.user.id);
+export async function requestDeletion(a: Auth, reason: unknown) {
+  const open = await one("SELECT id FROM deletion_requests WHERE user_id = ? AND status IN ('received','in_review')", a.user.id);
   if (open) throw new HttpError(409, "exists", "A deletion request is already being processed.");
   const id = randomUUID();
-  tx(() => {
-    run(
+  await tx(async () => {
+    await run(
       "INSERT INTO deletion_requests (id, user_id, reason, created_at) VALUES (?, ?, ?, ?)",
       id,
       a.user.id,
       typeof reason === "string" ? reason.trim().slice(0, 500) : "",
       Date.now(),
     );
-    run("UPDATE users SET status = 'deletion_requested', updated_at = ? WHERE id = ?", Date.now(), a.user.id);
-    audit(a.user.id, "deletion.requested", "user", a.user.id);
+    await run("UPDATE users SET status = 'deletion_requested', updated_at = ? WHERE id = ?", Date.now(), a.user.id);
+    await audit(a.user.id, "deletion.requested", "user", a.user.id);
   });
   return { reference: `DEL-${id.slice(0, 8).toUpperCase()}` };
 }
 
 /** What a client may see about the signed-in user: this app's view plus the FastAPI account's. */
-export function publicMe(a: Auth) {
+export async function publicMe(a: Auth) {
   const { user } = a;
-  const api = JSON.parse(one<{ api_me: string }>("SELECT api_me FROM users WHERE id = ?", user.id)?.api_me ?? "{}");
+  const api = JSON.parse((await one<{ api_me: string }>("SELECT api_me FROM users WHERE id = ?", user.id))?.api_me ?? "{}");
   return {
     id: user.id,
     name: user.name,
@@ -310,21 +310,21 @@ export function publicMe(a: Auth) {
     language: user.language,
     status: user.status,
     roles: a.roles,
-    consents: currentConsents(user.id),
+    consents: await currentConsents(user.id),
     emailVerified: Boolean(api.emailVerified),
     pendingEmail: (api.pendingEmail as string | null) ?? null,
     mfaEnabled: Boolean(api.mfaEnabled),
     city: (api.city as string | null) ?? null,
     dentistProfile: (api.dentistProfile as ApiMe["dentist_profile"]) ?? null,
     // each FastAPI clinic with this app's workspace for it (null: not set up here yet)
-    workspaces: ((api.workspaces as ApiMe["workspaces"]) ?? []).map((w) => ({
+    workspaces: await Promise.all(((api.workspaces as ApiMe["workspaces"]) ?? []).map(async (w) => ({
       ...w,
-      workspace_id: one<{ clinic_id: string }>("SELECT clinic_id FROM clinic_workspaces WHERE api_clinic_id = ?", w.clinic_id)?.clinic_id ?? null,
-    })),
+      workspace_id: (await one<{ clinic_id: string }>("SELECT clinic_id FROM clinic_workspaces WHERE api_clinic_id = ?", w.clinic_id))?.clinic_id ?? null,
+    }))),
   };
 }
 
 /** The FastAPI clinics the signed-in user belongs to, as last synced (clinic id → role). */
-export function apiWorkspaces(a: Auth): ApiMe["workspaces"] {
-  return JSON.parse(one<{ api_me: string }>("SELECT api_me FROM users WHERE id = ?", a.user.id)?.api_me ?? "{}").workspaces ?? [];
+export async function apiWorkspaces(a: Auth): Promise<ApiMe["workspaces"]> {
+  return JSON.parse((await one<{ api_me: string }>("SELECT api_me FROM users WHERE id = ?", a.user.id))?.api_me ?? "{}").workspaces ?? [];
 }

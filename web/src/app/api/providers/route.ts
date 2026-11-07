@@ -5,13 +5,13 @@ import { seedDemoClinic } from "@/server/clinic/seed";
 import { seedDemoDirectory } from "@/server/seed";
 
 export const GET = handler(async (req) => {
-  devSeed(() => {
-    seedDemoDirectory();
-    seedDemoClinic();
+  await devSeed(async () => {
+    await seedDemoDirectory();
+    await seedDemoClinic();
   });
   const q = new URL(req.url).searchParams;
   return Response.json(
-    searchProviders({
+    await searchProviders({
       q: q.get("q") ?? undefined,
       city: q.get("city") ?? undefined,
       specialty: q.get("specialty") ?? undefined,

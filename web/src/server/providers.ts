@@ -61,10 +61,10 @@ const BASE = `SELECT d.*, c.id AS clinic_id, c.name AS clinic_name, c.city, c.ar
   LEFT JOIN dentist_clinics dc ON dc.dentist_id = d.id
   LEFT JOIN clinics c ON c.id = dc.clinic_id`;
 
-function servicesOf(ids: string[]) {
+async function servicesOf(ids: string[]) {
   const m = new Map<string, string[]>();
   if (!ids.length) return m;
-  const rows = all<{ dentist_id: string; service: string }>(
+  const rows = await all<{ dentist_id: string; service: string }>(
     `SELECT dentist_id, service FROM dentist_services WHERE dentist_id IN (${ids.map(() => "?").join(",")}) ORDER BY service`,
     ...ids,
   );
@@ -72,10 +72,10 @@ function servicesOf(ids: string[]) {
   return m;
 }
 
-function activeSponsors(ids: string[], now = Date.now()) {
+async function activeSponsors(ids: string[], now = Date.now()) {
   const m = new Map<string, string>();
   if (!ids.length) return m;
-  for (const r of all<{ dentist_id: string; sponsor: string }>(
+  for (const r of await all<{ dentist_id: string; sponsor: string }>(
     `SELECT dentist_id, sponsor FROM placements WHERE kind = 'sponsored' AND starts_at <= ? AND ends_at > ? AND dentist_id IN (${ids.map(() => "?").join(",")})`,
     now,
     now,
@@ -112,7 +112,7 @@ const PAGE_SIZE = 8;
  * Organic results are ranked on relevance + verification only. Sponsored profiles are returned
  * separately (at most 1 per page) so paid placement never silently changes organic order (MAIN-23, ANX-D-04).
  */
-export function searchProviders(input: SearchInput) {
+export async function searchProviders(input: SearchInput) {
   const city = input.city && (CITIES as readonly string[]).includes(input.city) ? input.city : undefined;
   const specialty = input.specialty && (SPECIALTIES as readonly string[]).includes(input.specialty) ? input.specialty : undefined;
   const service = input.service && (SERVICES as readonly string[]).includes(input.service) ? input.service : undefined;
@@ -145,7 +145,7 @@ export function searchProviders(input: SearchInput) {
     );
     params.push(...Array(5).fill(`%${q}%`));
   }
-  const rows = all<Row>(`${BASE}${where.length ? ` WHERE ${where.join(" AND ")}` : ""}`, ...params);
+  const rows = await all<Row>(`${BASE}${where.length ? ` WHERE ${where.join(" AND ")}` : ""}`, ...params);
 
   // one card per dentist (first clinic) - multi-clinic dentists list all clinics on the profile
   const seen = new Set<string>();
@@ -157,9 +157,9 @@ export function searchProviders(input: SearchInput) {
   );
 
   const ids = unique.map((r) => r.id);
-  const services = servicesOf(ids);
-  const sponsors = activeSponsors(ids);
-  const next = nextAvailableMap(ids);
+  const services = await servicesOf(ids);
+  const sponsors = await activeSponsors(ids);
+  const next = await nextAvailableMap(ids);
   const organic = unique.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((r) => toCard(r, services.get(r.id) ?? [], sponsors.get(r.id), next.get(r.id)));
   // a sponsored profile already on this page keeps its label there instead of appearing twice
   const onPage = new Set(organic.map((c) => c.id));
@@ -190,11 +190,11 @@ function suggest(f: { city?: string; specialty?: string; service?: string; langu
 
 /* ---------------- profile ---------------- */
 
-export function providerProfile(id: string) {
-  const rows = all<Row>(`${BASE} WHERE d.id = ?`, id);
+export async function providerProfile(id: string) {
+  const rows = await all<Row>(`${BASE} WHERE d.id = ?`, id);
   if (!rows.length) throw notFound("Profile not found.");
   const r = rows[0];
-  const card = toCard(r, servicesOf([id]).get(id) ?? [], activeSponsors([id]).get(id), nextAvailableMap([id]).get(id));
+  const card = toCard(r, (await servicesOf([id])).get(id) ?? [], (await activeSponsors([id])).get(id), (await nextAvailableMap([id])).get(id));
   return {
     ...card,
     qualifications: parse(r.qualifications),
@@ -211,25 +211,25 @@ export function providerProfile(id: string) {
         hours: x.hours ?? "",
         feeNote: x.fee_note || "Fee confirmed by the clinic",
       })),
-    claimed: !!one("SELECT 1 FROM dentists WHERE id = ? AND user_id IS NOT NULL", id),
+    claimed: !!await one("SELECT 1 FROM dentists WHERE id = ? AND user_id IS NOT NULL", id),
   };
 }
 
 /* ---------------- claim & verification (MAIN-24, ADM-02) ---------------- */
 
-export function submitClaim(a: Auth, dentistId: string, input: Record<string, unknown>) {
+export async function submitClaim(a: Auth, dentistId: string, input: Record<string, unknown>) {
   if (a.user.account_type !== "dentist") throw new HttpError(403, "forbidden", "Only dentist accounts can claim a profile.");
-  const d = one<{ user_id: string | null }>("SELECT user_id FROM dentists WHERE id = ?", dentistId);
+  const d = await one<{ user_id: string | null }>("SELECT user_id FROM dentists WHERE id = ?", dentistId);
   if (!d) throw notFound("Profile not found.");
   if (d.user_id) throw new HttpError(409, "claimed", "This profile has already been claimed.");
   const reg = typeof input.registrationNumber === "string" ? input.registrationNumber.trim() : "";
   const council = typeof input.council === "string" ? input.council.trim() : "";
   if (reg.length < 3 || reg.length > 40) throw bad("Enter your dental council registration number.");
   if (council.length < 3 || council.length > 80) throw bad("Enter the council you're registered with.");
-  if (one("SELECT 1 FROM profile_claims WHERE dentist_id = ? AND user_id = ? AND status = 'submitted'", dentistId, a.user.id))
+  if (await one("SELECT 1 FROM profile_claims WHERE dentist_id = ? AND user_id = ? AND status = 'submitted'", dentistId, a.user.id))
     throw new HttpError(409, "exists", "You already have a claim under review for this profile.");
   const id = randomUUID();
-  run(
+  await run(
     "INSERT INTO profile_claims (id, dentist_id, user_id, registration_number, council, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
     id,
     dentistId,
@@ -239,13 +239,13 @@ export function submitClaim(a: Auth, dentistId: string, input: Record<string, un
     typeof input.note === "string" ? input.note.trim().slice(0, 500) : "",
     Date.now(),
   );
-  audit(a.user.id, "claim.submitted", "dentist", dentistId);
+  await audit(a.user.id, "claim.submitted", "dentist", dentistId);
   return { claimId: id, status: "submitted" as const };
 }
 
-export function listClaims(a: Auth) {
-  requireRole(a, "fmd_ops", "super_admin");
-  return all<{ id: string; dentist_id: string; dentist_name: string; claimant: string; registration_number: string; council: string; note: string; status: string; created_at: number }>(
+export async function listClaims(a: Auth) {
+  await requireRole(a, "fmd_ops", "super_admin");
+  return await all<{ id: string; dentist_id: string; dentist_name: string; claimant: string; registration_number: string; council: string; note: string; status: string; created_at: number }>(
     `SELECT pc.id, pc.dentist_id, d.name AS dentist_name, u.name AS claimant, pc.registration_number, pc.council, pc.note, pc.status, pc.created_at
      FROM profile_claims pc JOIN dentists d ON d.id = pc.dentist_id JOIN users u ON u.id = pc.user_id
      ORDER BY pc.status = 'submitted' DESC, pc.created_at ASC`,
@@ -256,32 +256,32 @@ export function listClaims(a: Auth) {
  * Approve: link the profile to the dentist's account and mark verified, recording *what was checked*.
  * The badge text shown to patients is exactly `checks` - verification must reflect actual checks (MAIN-46).
  */
-export function decideClaim(a: Auth, claimId: string, input: Record<string, unknown>) {
-  requireRole(a, "fmd_ops", "super_admin");
+export async function decideClaim(a: Auth, claimId: string, input: Record<string, unknown>) {
+  await requireRole(a, "fmd_ops", "super_admin");
   const decision = input.decision;
   if (decision !== "approve" && decision !== "reject") throw bad("Choose approve or reject.");
   const reason = typeof input.reason === "string" ? input.reason.trim() : "";
   const checks = typeof input.checks === "string" ? input.checks.trim() : "";
   if (decision === "reject" && reason.length < 3) throw bad("Give a reason the dentist will see.");
   if (decision === "approve" && checks.length < 10) throw bad("Describe what was verified (e.g. registration confirmed with the state dental council on a date).");
-  tx(() => {
-    const c = one<{ dentist_id: string; user_id: string; status: string }>("SELECT dentist_id, user_id, status FROM profile_claims WHERE id = ?", claimId);
+  await tx(async () => {
+    const c = await one<{ dentist_id: string; user_id: string; status: string }>("SELECT dentist_id, user_id, status FROM profile_claims WHERE id = ?", claimId);
     if (!c) throw notFound("Claim not found.");
     if (c.status !== "submitted") throw new HttpError(409, "decided", "This claim has already been decided.");
     const now = Date.now();
-    run("UPDATE profile_claims SET status = ?, reviewer_id = ?, reason = ?, decided_at = ? WHERE id = ?", decision === "approve" ? "approved" : "rejected", a.user.id, reason, now, claimId);
+    await run("UPDATE profile_claims SET status = ?, reviewer_id = ?, reason = ?, decided_at = ? WHERE id = ?", decision === "approve" ? "approved" : "rejected", a.user.id, reason, now, claimId);
     if (decision === "approve") {
-      if (one("SELECT 1 FROM dentists WHERE id = ? AND user_id IS NOT NULL", c.dentist_id)) throw new HttpError(409, "claimed", "Profile already claimed.");
-      run("UPDATE dentists SET user_id = ?, verification_status = 'verified', verification_checks = ?, verified_at = ? WHERE id = ?", c.user_id, checks, now, c.dentist_id);
-      run("UPDATE profile_claims SET status = 'rejected', reason = 'Another claim was approved', decided_at = ? WHERE dentist_id = ? AND status = 'submitted'", now, c.dentist_id);
+      if (await one("SELECT 1 FROM dentists WHERE id = ? AND user_id IS NOT NULL", c.dentist_id)) throw new HttpError(409, "claimed", "Profile already claimed.");
+      await run("UPDATE dentists SET user_id = ?, verification_status = 'verified', verification_checks = ?, verified_at = ? WHERE id = ?", c.user_id, checks, now, c.dentist_id);
+      await run("UPDATE profile_claims SET status = 'rejected', reason = 'Another claim was approved', decided_at = ? WHERE dentist_id = ? AND status = 'submitted'", now, c.dentist_id);
     }
-    audit(a.user.id, `claim.${decision}`, "dentist", c.dentist_id, { claimId });
+    await audit(a.user.id, `claim.${decision}`, "dentist", c.dentist_id, { claimId });
   });
-  return listClaims(a);
+  return await listClaims(a);
 }
 
-export function myClaims(a: Auth) {
-  return all<{ id: string; dentist_name: string; status: string; reason: string; created_at: number }>(
+export async function myClaims(a: Auth) {
+  return await all<{ id: string; dentist_name: string; status: string; reason: string; created_at: number }>(
     "SELECT pc.id, d.name AS dentist_name, pc.status, pc.reason, pc.created_at FROM profile_claims pc JOIN dentists d ON d.id = pc.dentist_id WHERE pc.user_id = ? ORDER BY pc.created_at DESC",
     a.user.id,
   );
