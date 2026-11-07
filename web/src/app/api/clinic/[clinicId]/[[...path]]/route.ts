@@ -8,7 +8,7 @@ type Ctx = RouteContext<"/api/clinic/[clinicId]/[[...path]]">;
 /** All Clinic OS endpoints. Authorisation happens inside each service (requireClinic). */
 async function go(method: string, req: Request, ctx: Ctx) {
   const { clinicId, path } = await ctx.params;
-  return dispatch(method, path ?? [], {
+  return await dispatch(method, path ?? [], {
     a: await requireAuth(req),
     clinicId,
     body: method === "GET" ? {} : await body(req),
@@ -16,5 +16,5 @@ async function go(method: string, req: Request, ctx: Ctx) {
   });
 }
 
-export const GET = handler<Ctx>(async (req, ctx) => go("GET", req, ctx));
-export const POST = handler<Ctx>(async (req, ctx) => go("POST", req, ctx));
+export const GET = handler<Ctx>(async (req, ctx) => await go("GET", req, ctx));
+export const POST = handler<Ctx>(async (req, ctx) => await go("POST", req, ctx));

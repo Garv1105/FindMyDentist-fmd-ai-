@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { query } from "@/lib/db";
+import { isUniqueViolation, run } from "@/server/db";
 import nodemailer from "nodemailer";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -38,16 +38,12 @@ export async function POST(request: Request) {
     const cleanName = name.trim();
     const cleanCity = city?.trim() || null;
 
-    // 1. Save to Neon PostgreSQL
+    // 1. Save (public.waitlist, see migration 16)
     try {
-      await query(
-        `INSERT INTO waitlist (name, email, role, state, city) 
-         VALUES ($1, $2, $3, $4, $5)`,
-        [cleanName, cleanEmail, role, state, cleanCity]
-      );
-    } catch (dbError: any) {
-      // Handle unique constraint violation (duplicate email)
-      if (dbError.code === "23505") {
+      await run("INSERT INTO public.waitlist (name, email, role, state, city) VALUES (?, ?, ?, ?, ?)", cleanName, cleanEmail, role, state, cleanCity);
+    } catch (dbError) {
+      // the email is already on the list
+      if (isUniqueViolation(dbError)) {
         return NextResponse.json(
           { error: "This email is already on the waitlist!" },
           { status: 409 }

@@ -3,5 +3,5 @@ import { body, handler } from "@/server/http";
 
 export const POST = handler(async (req) => {
   const a = await requireAuth(req);
-  return Response.json(requestDeletion(a, (await body(req)).reason), { status: 201 });
+  return Response.json(await requestDeletion(a, (await body(req)).reason), { status: 201 });
 });

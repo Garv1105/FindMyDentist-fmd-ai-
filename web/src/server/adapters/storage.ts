@@ -1,40 +1,69 @@
 import { createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 /**
- * Private object storage adapter (OD-14: cloud vendor not chosen).
- * DEV implementation: files under ./.data/objects, outside /public, addressed by opaque keys.
- * A production adapter (S3-compatible, encrypted at rest) keeps the same interface.
+ * Private object storage (records, patient files, ticket attachments), addressed by opaque keys.
+ * - S3_BUCKET set: Amazon S3 (or S3-compatible: S3_ENDPOINT), server-side encrypted, under S3_PREFIX (default
+ *   "objects/"). Credentials from the standard AWS chain (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY, or a role);
+ *   region AWS_REGION (default ap-south-1). Keep the bucket private: files are only served through this app.
+ * - Otherwise (development, tests): files under ./.data/objects, outside /public.
  * Malware scanning is not available in this adapter - see PLT-07.
  */
 const root = () => (process.env.FMD_DB === ":memory:" ? join(process.cwd(), ".data", "test-objects") : join(process.cwd(), ".data", "objects"));
+const KEY = /^[0-9a-f-]{36}$/;
+
+const bucket = () => process.env.S3_BUCKET;
+const objectKey = (key: string) => `${process.env.S3_PREFIX ?? "objects/"}${key}`;
+let s3: S3Client | undefined;
+const client = () =>
+  (s3 ??= new S3Client({
+    region: process.env.AWS_REGION ?? "ap-south-1",
+    ...(process.env.S3_ENDPOINT && { endpoint: process.env.S3_ENDPOINT, forcePathStyle: true }),
+  }));
 
 export const storage = {
-  configured: false,
-  kind: "local-dev",
-  put(bytes: Uint8Array): string {
+  get configured() {
+    return Boolean(bucket());
+  },
+  get kind() {
+    return bucket() ? "s3" : "local-dev";
+  },
+  async put(bytes: Uint8Array): Promise<string> {
     const key = randomUUID();
-    mkdirSync(root(), { recursive: true });
-    writeFileSync(join(root(), key), bytes);
+    const b = bucket();
+    if (b) {
+      await client().send(new PutObjectCommand({ Bucket: b, Key: objectKey(key), Body: bytes, ServerSideEncryption: "AES256" }));
+    } else {
+      mkdirSync(root(), { recursive: true });
+      writeFileSync(join(root(), key), bytes);
+    }
     return key;
   },
-  get(key: string): Buffer {
-    if (!/^[0-9a-f-]{36}$/.test(key)) throw new Error("bad key");
-    return readFileSync(join(root(), key));
+  async get(key: string): Promise<Buffer> {
+    if (!KEY.test(key)) throw new Error("bad key");
+    const b = bucket();
+    if (!b) return readFileSync(join(root(), key));
+    const r = await client().send(new GetObjectCommand({ Bucket: b, Key: objectKey(key) }));
+    return Buffer.from(await r.Body!.transformToByteArray());
   },
-  remove(key: string) {
-    if (/^[0-9a-f-]{36}$/.test(key) && existsSync(join(root(), key))) rmSync(join(root(), key));
+  async remove(key: string) {
+    if (!KEY.test(key)) return;
+    const b = bucket();
+    if (b) await client().send(new DeleteObjectCommand({ Bucket: b, Key: objectKey(key) }));
+    else if (existsSync(join(root(), key))) rmSync(join(root(), key));
   },
 };
 
 /* ---------------- signed, expiring links ---------------- */
 
-/** Secret from env; in dev, a random per-machine secret is created once under .data. */
+/** Secret from env (required in production); in dev, a random per-machine secret is created once under .data. */
 function secret(): Buffer {
   if (process.env.FMD_SIGNING_SECRET) return Buffer.from(process.env.FMD_SIGNING_SECRET);
   const file = join(process.cwd(), ".data", "signing-secret");
   if (process.env.FMD_DB === ":memory:") return Buffer.from("test-secret-not-for-production");
+  if (process.env.NODE_ENV === "production") throw new Error("FMD_SIGNING_SECRET is not set: record links can't be signed.");
   if (!existsSync(file)) {
     mkdirSync(join(process.cwd(), ".data"), { recursive: true });
     writeFileSync(file, randomBytes(32).toString("hex"));

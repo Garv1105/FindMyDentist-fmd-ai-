@@ -43,8 +43,8 @@ function planView(p: Plan) {
 }
 
 /** Plans relevant to the signed-in account type. Clinic OS is listed separately - it is a different product. */
-export function catalogFor(a: Auth) {
-  const plans = all<Plan>("SELECT * FROM plans WHERE active = 1");
+export async function catalogFor(a: Auth) {
+  const plans = await all<Plan>("SELECT * FROM plans WHERE active = 1");
   const membership = plans.find((p) => p.product === "main_membership" && p.audience === a.user.account_type)!;
   return {
     membership: planView(membership),
@@ -54,15 +54,15 @@ export function catalogFor(a: Auth) {
   };
 }
 
-function activeSubs(userId: string, now = Date.now()) {
-  return all<Sub>("SELECT id, plan_code, status, starts_at, ends_at, source, created_at FROM subscriptions WHERE user_id = ? ORDER BY created_at DESC", userId).filter(
+async function activeSubs(userId: string, now = Date.now()) {
+  return (await all<Sub>("SELECT id, plan_code, status, starts_at, ends_at, source, created_at FROM subscriptions WHERE user_id = ? ORDER BY created_at DESC", userId)).filter(
     (s) => s.status === "active" && (s.ends_at === null || s.ends_at + GRACE_DAYS * 86400_000 > now),
   );
 }
 
 /** Single source of truth for access decisions. */
-export function entitlementsOf(a: Auth, now = Date.now()) {
-  const subs = activeSubs(a.user.id, now);
+export async function entitlementsOf(a: Auth, now = Date.now()) {
+  const subs = await activeSubs(a.user.id, now);
   const has = (code: string) => subs.some((s) => s.plan_code === code);
   const student = a.user.account_type === "student" && has("main_student");
   return {
@@ -72,14 +72,14 @@ export function entitlementsOf(a: Auth, now = Date.now()) {
   };
 }
 
-export function membershipStatus(a: Auth) {
+export async function membershipStatus(a: Auth) {
   const now = Date.now();
-  const all_ = all<Sub>("SELECT id, plan_code, status, starts_at, ends_at, source, created_at FROM subscriptions WHERE user_id = ? ORDER BY created_at DESC", a.user.id);
+  const all_ = await all<Sub>("SELECT id, plan_code, status, starts_at, ends_at, source, created_at FROM subscriptions WHERE user_id = ? ORDER BY created_at DESC", a.user.id);
   const current = all_.find((s) => s.plan_code === `main_${a.user.account_type}`);
   const inGrace = current?.status === "active" && current.ends_at !== null && current.ends_at < now;
   return {
     accountType: a.user.account_type,
-    catalog: catalogFor(a),
+    catalog: await catalogFor(a),
     current: current
       ? {
           planCode: current.plan_code,
@@ -91,8 +91,8 @@ export function membershipStatus(a: Auth) {
       : a.user.account_type === "patient"
         ? { planCode: "main_patient", status: "active", startsAt: null, renewsOrEndsAt: null, source: "free" }
         : null,
-    entitlements: entitlementsOf(a, now),
-    usage: usageFor(a, now),
+    entitlements: await entitlementsOf(a, now),
+    usage: await usageFor(a, now),
   };
 }
 
@@ -103,21 +103,21 @@ const monthStart = (t: number) => {
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1);
 };
 
-export function usageFor(a: Auth, now = Date.now()) {
-  if (!entitlementsOf(a, now).scholar) return [];
-  const limits = planView(one<Plan>("SELECT * FROM plans WHERE code = 'main_student'")!).usageLimits;
-  const used = one<{ used: number }>("SELECT used FROM usage_counters WHERE user_id = ? AND feature = 'scholar_requests' AND period_start = ?", a.user.id, monthStart(now))?.used ?? 0;
+export async function usageFor(a: Auth, now = Date.now()) {
+  if (!(await entitlementsOf(a, now)).scholar) return [];
+  const limits = planView((await one<Plan>("SELECT * FROM plans WHERE code = 'main_student'"))!).usageLimits;
+  const used = (await one<{ used: number }>("SELECT used FROM usage_counters WHERE user_id = ? AND feature = 'scholar_requests' AND period_start = ?", a.user.id, monthStart(now)))?.used ?? 0;
   return [{ feature: "scholar_requests", label: "Scholar requests this month", used, limit: limits.scholar_requests_per_month ?? null, provisional: true }];
 }
 
 /** Atomically consume one unit; refuses (with the upgrade path) at the limit instead of silently charging. */
-export function consume(a: Auth, feature: "scholar_requests", now = Date.now()) {
-  const u = usageFor(a, now).find((x) => x.feature === feature);
+export async function consume(a: Auth, feature: "scholar_requests", now = Date.now()) {
+  const u = (await usageFor(a, now)).find((x) => x.feature === feature);
   if (!u) throw new HttpError(403, "not_entitled", "This needs an active student membership.");
   if (u.limit !== null && u.used >= u.limit)
     throw new HttpError(429, "limit_reached", "You've used this month's included Scholar requests. The optional upgrade is shown in your membership page.");
-  run(
-    "INSERT INTO usage_counters (user_id, feature, period_start, used) VALUES (?, ?, ?, 1) ON CONFLICT (user_id, feature, period_start) DO UPDATE SET used = used + 1",
+  await run(
+    "INSERT INTO usage_counters (user_id, feature, period_start, used) VALUES (?, ?, ?, 1) ON CONFLICT (user_id, feature, period_start) DO UPDATE SET used = usage_counters.used + 1",
     a.user.id,
     feature,
     monthStart(now),
@@ -130,24 +130,24 @@ export function consume(a: Auth, feature: "scholar_requests", now = Date.now()) 
  * Until a gateway exists, FMD staff can activate a membership after verifying eligibility and an
  * offline payment. Evidence is required and audited (COM-05).
  */
-export function activateMembership(staff: Auth, input: Record<string, unknown>) {
-  requireRole(staff, "fmd_ops", "super_admin");
+export async function activateMembership(staff: Auth, input: Record<string, unknown>) {
+  await requireRole(staff, "fmd_ops", "super_admin");
   const userId = typeof input.userId === "string" ? input.userId : "";
-  const u = one<{ account_type: string }>("SELECT account_type FROM users WHERE id = ?", userId);
+  const u = await one<{ account_type: string }>("SELECT account_type FROM users WHERE id = ?", userId);
   if (!u) throw notFound("User not found.");
-  const plan = one<Plan>("SELECT * FROM plans WHERE code = ?", `main_${u.account_type}`);
+  const plan = await one<Plan>("SELECT * FROM plans WHERE code = ?", `main_${u.account_type}`);
   if (!plan || plan.price_paise === 0) throw bad("This account type has no paid membership.");
   const evidence = typeof input.evidence === "string" ? input.evidence.trim() : "";
   if (evidence.length < 6) throw bad("Record the payment reference and the verification performed.");
   const now = Date.now();
   const id = randomUUID();
-  tx(() => {
-    run("UPDATE subscriptions SET status = 'cancelled' WHERE user_id = ? AND plan_code = ? AND status = 'active'", userId, plan.code);
-    run(
+  await tx(async () => {
+    await run("UPDATE subscriptions SET status = 'cancelled' WHERE user_id = ? AND plan_code = ? AND status = 'active'", userId, plan.code);
+    await run(
       "INSERT INTO subscriptions (id, user_id, plan_code, status, starts_at, ends_at, source, evidence, created_by, created_at) VALUES (?, ?, ?, 'active', ?, ?, 'manual', ?, ?, ?)",
       id, userId, plan.code, now, now + 365 * 86400_000, evidence, staff.user.id, now,
     );
-    audit(staff.user.id, "membership.activated", "user", userId, { plan: plan.code, subscriptionId: id });
+    await audit(staff.user.id, "membership.activated", "user", userId, { plan: plan.code, subscriptionId: id });
   });
   return { subscriptionId: id };
 }

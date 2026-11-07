@@ -76,13 +76,13 @@ export async function chat(a: Auth | null, input: Record<string, unknown>, clien
   rateLimit(a ? `u:${a.user.id}` : `ip:${clientKey}`);
 
   // history is stored only for signed-in users who opted in (MAIN-13, consent ai_history)
-  const store = !!a && currentConsents(a.user.id).ai_history;
+  const store = !!a && (await currentConsents(a.user.id)).ai_history;
   let conversationId = typeof input.conversationId === "string" ? input.conversationId : null;
   let history: ChatTurn[] = [];
   if (store && conversationId) {
-    const c = one<{ user_id: string }>("SELECT user_id FROM ai_conversations WHERE id = ?", conversationId);
+    const c = await one<{ user_id: string }>("SELECT user_id FROM ai_conversations WHERE id = ?", conversationId);
     if (!c || c.user_id !== a!.user.id) throw notFound("Conversation not found.");
-    history = all<ChatTurn>("SELECT role, text FROM ai_messages WHERE conversation_id = ? ORDER BY created_at DESC LIMIT 12", conversationId).reverse();
+    history = (await all<ChatTurn>("SELECT role, text FROM ai_messages WHERE conversation_id = ? ORDER BY created_at DESC LIMIT 12", conversationId)).reverse();
   } else if (Array.isArray(input.history)) {
     // unsaved conversations: the client sends recent turns back; treated strictly as untrusted text
     history = input.history
@@ -107,48 +107,48 @@ export async function chat(a: Auth | null, input: Record<string, unknown>, clien
   }
 
   if (store) {
-    tx(() => {
+    await tx(async () => {
       const now = Date.now();
       if (!conversationId) {
         conversationId = randomUUID();
-        run("INSERT INTO ai_conversations (id, user_id, title, created_at, updated_at) VALUES (?, ?, ?, ?, ?)", conversationId, a!.user.id, message.slice(0, 60), now, now);
-      } else run("UPDATE ai_conversations SET updated_at = ? WHERE id = ?", now, conversationId);
-      run("INSERT INTO ai_messages (id, conversation_id, role, text, created_at) VALUES (?, ?, 'user', ?, ?)", randomUUID(), conversationId, message, now);
-      run(
+        await run("INSERT INTO ai_conversations (id, user_id, title, created_at, updated_at) VALUES (?, ?, ?, ?, ?)", conversationId, a!.user.id, message.slice(0, 60), now, now);
+      } else await run("UPDATE ai_conversations SET updated_at = ? WHERE id = ?", now, conversationId);
+      await run("INSERT INTO ai_messages (id, conversation_id, role, text, created_at) VALUES (?, ?, 'user', ?, ?)", randomUUID(), conversationId, message, now);
+      await run(
         "INSERT INTO ai_messages (id, conversation_id, role, text, actions, urgent, provider, created_at) VALUES (?, ?, 'assistant', ?, ?, ?, ?, ?)",
         randomUUID(), conversationId, reply.text, JSON.stringify(reply.actions), urgent ? 1 : 0, provider.name, now + 1,
       );
     });
   }
   // usage telemetry without message content (ANL-01; no sensitive text in analytics)
-  audit(a?.user.id ?? null, "assistant.reply", "assistant", conversationId, { urgent, provider: provider.name, stored: store });
+  await audit(a?.user.id ?? null, "assistant.reply", "assistant", conversationId, { urgent, provider: provider.name, stored: store });
 
   return { conversationId: store ? conversationId : null, stored: store, urgent, provider: { name: provider.name, configured: provider.configured }, reply };
 }
 
-export function listConversations(a: Auth) {
-  return all<{ id: string; title: string; updated_at: number }>("SELECT id, title, updated_at FROM ai_conversations WHERE user_id = ? ORDER BY updated_at DESC LIMIT 50", a.user.id);
+export async function listConversations(a: Auth) {
+  return await all<{ id: string; title: string; updated_at: number }>("SELECT id, title, updated_at FROM ai_conversations WHERE user_id = ? ORDER BY updated_at DESC LIMIT 50", a.user.id);
 }
 
-export function getConversation(a: Auth, id: string) {
-  const c = one<{ user_id: string; title: string }>("SELECT user_id, title FROM ai_conversations WHERE id = ?", id);
+export async function getConversation(a: Auth, id: string) {
+  const c = await one<{ user_id: string; title: string }>("SELECT user_id, title FROM ai_conversations WHERE id = ?", id);
   if (!c || c.user_id !== a.user.id) throw notFound("Conversation not found.");
   return {
     id,
     title: c.title,
-    messages: all<{ role: string; text: string; actions: string; urgent: number }>(
+    messages: (await all<{ role: string; text: string; actions: string; urgent: number }>(
       "SELECT role, text, actions, urgent FROM ai_messages WHERE conversation_id = ? ORDER BY created_at",
       id,
-    ).map((m) => ({ role: m.role, text: m.text, actions: JSON.parse(m.actions) as NavAction[], urgent: m.urgent === 1 })),
+    )).map((m) => ({ role: m.role, text: m.text, actions: JSON.parse(m.actions) as NavAction[], urgent: m.urgent === 1 })),
   };
 }
 
-export function deleteConversation(a: Auth, id: string) {
-  const c = one<{ user_id: string }>("SELECT user_id FROM ai_conversations WHERE id = ?", id);
+export async function deleteConversation(a: Auth, id: string) {
+  const c = await one<{ user_id: string }>("SELECT user_id FROM ai_conversations WHERE id = ?", id);
   if (!c || c.user_id !== a.user.id) throw notFound("Conversation not found.");
-  tx(() => {
-    run("DELETE FROM ai_messages WHERE conversation_id = ?", id);
-    run("DELETE FROM ai_conversations WHERE id = ?", id);
-    audit(a.user.id, "assistant.conversation_deleted", "assistant", id);
+  await tx(async () => {
+    await run("DELETE FROM ai_messages WHERE conversation_id = ?", id);
+    await run("DELETE FROM ai_conversations WHERE id = ?", id);
+    await audit(a.user.id, "assistant.conversation_deleted", "assistant", id);
   });
 }

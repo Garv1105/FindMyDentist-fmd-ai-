@@ -5,10 +5,10 @@ import { handler } from "@/server/http";
 import { seedDemoContent, seedDemoDirectory } from "@/server/seed";
 
 export const GET = handler(async (req) => {
-  devSeed(() => {
-    seedDemoDirectory();
-    seedDemoContent();
+  await devSeed(async () => {
+    await seedDemoDirectory();
+    await seedDemoContent();
   });
   const q = new URL(req.url).searchParams;
-  return Response.json(feed(await currentAuth(req), { tab: q.get("tab") ?? undefined, topic: q.get("topic") ?? undefined, q: q.get("q") ?? undefined }));
+  return Response.json(await feed(await currentAuth(req), { tab: q.get("tab") ?? undefined, topic: q.get("topic") ?? undefined, q: q.get("q") ?? undefined }));
 });

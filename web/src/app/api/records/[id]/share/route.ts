@@ -3,8 +3,8 @@ import { body, handler, str } from "@/server/http";
 import { revokeShare, shareRecord } from "@/server/records";
 
 export const POST = handler<RouteContext<"/api/records/[id]/share">>(async (req, ctx) =>
-  Response.json(shareRecord(await requireAuth(req), (await ctx.params).id, await body(req)), { status: 201 }),
+  Response.json(await shareRecord(await requireAuth(req), (await ctx.params).id, await body(req)), { status: 201 }),
 );
 export const DELETE = handler<RouteContext<"/api/records/[id]/share">>(async (req, ctx) =>
-  Response.json(revokeShare(await requireAuth(req), (await ctx.params).id, str((await body(req)).shareId, "Share", { max: 64 }))),
+  Response.json(await revokeShare(await requireAuth(req), (await ctx.params).id, str((await body(req)).shareId, "Share", { max: 64 }))),
 );

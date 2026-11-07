@@ -10,19 +10,19 @@ import { one, run } from "./db.ts";
 let n = 0;
 const accounts = new Map<string, ApiMe>(); // what FastAPI would say about each test user
 
-function authOf(id: string): Auth {
+async function authOf(id: string): Promise<Auth> {
   return {
-    user: one<User>("SELECT id, email, phone, name, account_type, language, status, created_at FROM users WHERE id = ?", id)!,
-    roles: rolesOf(id).map((r) => r.role),
+    user: (await one<User>("SELECT id, email, phone, name, account_type, language, status, created_at FROM users WHERE id = ?", id))!,
+    roles: (await rolesOf(id)).map((r) => r.role),
     sessionId: "test-session",
   };
 }
 
 /** A signed-in user as if they had signed up in FastAPI and opened this app once, plus any FMD roles. */
-export function testUser(
+export async function testUser(
   email: string,
   opts: { name?: string; accountType?: AccountType | string; roles?: Role[]; consents?: Partial<Record<ConsentPurpose, boolean>> } = {},
-): Auth {
+): Promise<Auth> {
   const accountType = (opts.accountType ?? "patient") as AccountType;
   const me: ApiMe = {
     id: randomUUID(),
@@ -36,16 +36,16 @@ export function testUser(
     workspaces: [],
   };
   accounts.set(me.id, me);
-  const user = storeMe(me);
+  const user = await storeMe(me);
   if (accountType !== user.account_type) {
     // student and company are chosen in this app, not in FastAPI
-    run("UPDATE users SET account_type = ? WHERE id = ?", accountType, user.id);
-    run("DELETE FROM user_roles WHERE user_id = ? AND role = ?", user.id, user.account_type);
-    grantRole(user.id, accountType, null);
+    await run("UPDATE users SET account_type = ? WHERE id = ?", accountType, user.id);
+    await run("DELETE FROM user_roles WHERE user_id = ? AND role = ?", user.id, user.account_type);
+    await grantRole(user.id, accountType, null);
   }
-  for (const r of opts.roles ?? []) grantRole(user.id, r, null);
-  const auth = authOf(user.id);
-  if (opts.consents) updateConsents(auth, opts.consents);
+  for (const r of opts.roles ?? []) await grantRole(user.id, r, null);
+  const auth = await authOf(user.id);
+  if (opts.consents) await updateConsents(auth, opts.consents);
   return auth;
 }
 
@@ -56,26 +56,26 @@ export const apiClinic = () => randomUUID();
  * Membership of a FastAPI clinic, as FastAPI reports it on the user's next sync (an owner who created it, or staff who
  * accepted an invitation). Roles are FastAPI's: owner, dentist, receptionist, finance, assistant.
  */
-export function joinClinic(a: Auth, apiClinicId: string, role: string): Auth {
+export async function joinClinic(a: Auth, apiClinicId: string, role: string): Promise<Auth> {
   const me = accounts.get(a.user.id)!;
   me.workspaces = [...me.workspaces.filter((w) => w.clinic_id !== apiClinicId), { clinic_id: apiClinicId, clinic_name: "Test clinic", role }];
-  storeMe(me);
-  return authOf(a.user.id);
+  await storeMe(me);
+  return await authOf(a.user.id);
 }
 
 /** Leaving (or being removed from) a FastAPI clinic, as seen on the next sync. */
-export function leaveClinic(a: Auth, apiClinicId: string): Auth {
+export async function leaveClinic(a: Auth, apiClinicId: string): Promise<Auth> {
   const me = accounts.get(a.user.id)!;
   me.workspaces = me.workspaces.filter((w) => w.clinic_id !== apiClinicId);
-  storeMe(me);
-  return authOf(a.user.id);
+  await storeMe(me);
+  return await authOf(a.user.id);
 }
 
 /** A FastAPI clinic created by `owner`, with this app's workspace set up for it. */
-export function testClinic(createWorkspace: (a: Auth, input: Record<string, unknown>) => { clinicId: string }, owner: Auth, name = "Smile Care", area = "Hebbal") {
+export async function testClinic(createWorkspace: (a: Auth, input: Record<string, unknown>) => Promise<{ clinicId: string }>, owner: Auth, name = "Smile Care", area = "Hebbal") {
   const api = apiClinic();
-  const o = joinClinic(owner, api, "owner");
-  const { clinicId } = createWorkspace(o, { apiClinicId: api, name, city: "Bengaluru", area });
+  const o = await joinClinic(owner, api, "owner");
+  const { clinicId } = await createWorkspace(o, { apiClinicId: api, name, city: "Bengaluru", area });
   return { clinicId, api, owner: o };
 }
 

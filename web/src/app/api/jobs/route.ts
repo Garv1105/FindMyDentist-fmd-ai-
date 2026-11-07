@@ -4,6 +4,6 @@ import { postJob, searchJobs } from "@/server/jobs";
 
 export const GET = handler(async (req) => {
   const q = new URL(req.url).searchParams;
-  return Response.json({ items: searchJobs(await currentAuth(req), { q: q.get("q") ?? undefined, city: q.get("city") ?? undefined, role: q.get("role") ?? undefined }) });
+  return Response.json({ items: await searchJobs(await currentAuth(req), { q: q.get("q") ?? undefined, city: q.get("city") ?? undefined, role: q.get("role") ?? undefined }) });
 });
-export const POST = handler(async (req) => Response.json(postJob(await requireAuth(req), await body(req)), { status: 201 }));
+export const POST = handler(async (req) => Response.json(await postJob(await requireAuth(req), await body(req)), { status: 201 }));
