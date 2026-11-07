@@ -1,10 +1,10 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import { BadgeCheck, BarChart3, Fingerprint, History, Orbit, Timer, UserCheck, type LucideIcon } from "lucide-react";
 import MascotArt from "@/components/MascotArt";
 import type { ReactNode } from "react";
-import { Container, Reveal } from "../ui";
+import { Container, Reveal, rest, useLoop } from "../ui";
 import { Atmosphere } from "./LowerWorld";
 
 // Counts are published only once they come from the live system; until then the slot says so instead of guessing.
@@ -35,7 +35,6 @@ const PILLARS = [
  * honest numbers flank him. Its own look (indigo arc of light, pedestal, no orbit lines) so the two never read as one.
  */
 export default function Trust() {
-  const reduced = useReducedMotion();
 
   return (
     <section id="trust" className="relative isolate scroll-mt-24 overflow-x-clip pt-28 sm:pt-40">
@@ -84,7 +83,7 @@ export default function Trust() {
           {/* a mirrored 2 × 3 grid: the guide spans both rows in the centre; each row's left and right card share one top and one
               height, so the two flanks match exactly. Below lg: the guide first, then the cards in order */}
           <div className="mt-14 grid gap-x-8 gap-y-14 sm:max-lg:grid-cols-2 sm:max-lg:gap-x-6 lg:mt-24 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)_minmax(0,1fr)] lg:grid-rows-[auto_auto]">
-            <Guardian reduced={reduced} />
+            <Guardian />
             <Card n={1} icon={PILLARS[0].icon} side="left" className="lg:col-start-1 lg:row-start-1">
               <Pillar {...PILLARS[0]} />
             </Card>
@@ -177,9 +176,10 @@ function Card({ n, icon: Icon, side, className = "", children }: { n: number; ic
 }
 
 /** The guide on a holographic pedestal: a slow breath, a radar sweep across the disc, light rising from it. */
-function Guardian({ reduced }: { reduced: boolean | null }) {
+function Guardian() {
+  const { ref, on } = useLoop();
   return (
-    <div aria-hidden className="relative mx-auto aspect-[5/6] w-full max-w-[440px] self-center max-lg:max-w-[340px] sm:max-lg:col-span-2 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+    <div ref={ref} aria-hidden className="relative mx-auto aspect-[5/6] w-full max-w-[440px] self-center max-lg:max-w-[340px] sm:max-lg:col-span-2 lg:col-start-2 lg:row-span-2 lg:row-start-1">
       {/* glow behind (and, below lg, standing in for the arc) */}
       <div className="absolute inset-x-[-10%] top-[18%] bottom-[8%] rounded-full bg-[radial-gradient(closest-side,rgb(99_102_241/0.18),rgb(139_92_246/0.06)_55%,transparent)]" />
 
@@ -190,7 +190,7 @@ function Guardian({ reduced }: { reduced: boolean | null }) {
         <div className="absolute inset-[28%] rounded-full border border-dashed border-cyan-200/30" />
         <motion.div
           className="absolute inset-[3%] rounded-full bg-[conic-gradient(from_0deg,transparent_0deg,rgb(103_232_249/0.35)_36deg,transparent_80deg)]"
-          animate={reduced ? undefined : { rotate: 360 }}
+          animate={on ? { rotate: 360 } : rest({ rotate: 0 })}
           transition={{ duration: 6, ease: "linear", repeat: Infinity }}
         />
       </div>
@@ -200,7 +200,7 @@ function Guardian({ reduced }: { reduced: boolean | null }) {
       {/* the guide, hand on heart; his feet (4% up in the art) on the disc's centre, breathing slowly */}
       <motion.div
         className="absolute bottom-[12%] left-1/2 aspect-square w-[86%] -translate-x-1/2 translate-y-[4%]"
-        animate={reduced ? undefined : { y: [0, -8, 0] }}
+        animate={on ? { y: [0, -8, 0] } : rest({ y: 0 })}
         transition={{ duration: 5, ease: "easeInOut", repeat: Infinity }}
       >
         <MascotArt src="/img/mascots/mascot-shield-1024.webp" sizes="(min-width:1024px) 380px, 300px" />

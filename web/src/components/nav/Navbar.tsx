@@ -71,11 +71,10 @@ export default function Navbar() {
   return (
     <header className="fixed inset-x-0 top-0 z-40 px-3 pt-3 sm:px-5">
       <nav
-        className={`nav-matte mx-auto flex items-center justify-between gap-4 rounded-full pl-6 pr-2 transition-[height,max-width,background-color,box-shadow] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-          scrolled || open ? "h-[56px] max-w-[1140px] !bg-[color-mix(in_srgb,var(--surface)_82%,transparent)]" : "h-[64px] max-w-[1400px]"
+        className={`nav-matte mx-auto flex max-w-[1280px] items-center justify-between gap-4 rounded-full pl-5 pr-2 transition-[height,background-color,box-shadow] duration-500 ${
+          scrolled || open ? "h-[58px] !bg-[color-mix(in_srgb,var(--surface)_80%,transparent)]" : "h-[64px]"
         }`}
       >
-        <span aria-hidden className="pointer-events-none absolute inset-x-[12%] -top-px h-px bg-[linear-gradient(90deg,transparent,rgb(var(--horizon-rgb)/0.45),transparent)]" />
         <Logo />
         <ul className="hidden items-center xl:flex" onMouseLeave={() => setHover(null)}>
           {LINKS.map((l) => {
@@ -88,7 +87,7 @@ export default function Navbar() {
                   onMouseEnter={() => setHover(id)}
                   onFocus={() => setHover(id)}
                   aria-current={on ? "location" : undefined}
-                  className={`relative z-10 block whitespace-nowrap rounded-full px-3.5 py-2 text-[14px] font-semibold tracking-[-0.01em] transition-colors duration-300 ${on || hover === id ? "text-ink" : "text-ink-2"}`}
+                  className={`relative z-10 block whitespace-nowrap rounded-full px-3.5 py-2 text-[13.5px] transition-colors duration-300 ${on || hover === id ? "text-ink" : "text-ink-2"}`}
                 >
                   {l.label}
                 </a>

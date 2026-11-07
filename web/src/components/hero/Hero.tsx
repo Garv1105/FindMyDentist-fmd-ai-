@@ -19,9 +19,9 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CS
 import Contain from "../Contain";
 import { ChatThread, useAssistant } from "./Assistant";
 import type { Mood } from "./AssistantMascot";
-import type { Spot } from "./Mascot3D";
 import { MASCOT_KEYS, MASCOT_OPACITY, PHASES } from "./phases";
 import { RIM, RIM_APEX, RIM_H, RIM_W, rimPath, rimYAt } from "./rim";
+import { useAwake } from "@/lib/phone";
 
 /**
  * Cinematic hero: one scroll timeline (0 → 1) drives every layer, so the sequence
@@ -60,18 +60,6 @@ const stageVars = (height: string) =>
 // WebGL can't render on the server; the sprite stays visible until the model has loaded
 const Mascot3D = dynamic(() => import("./Mascot3D"), { ssr: false });
 const AssistantMascot = dynamic(() => import("./AssistantMascot"), { ssr: false });
-// what it says, by where it was poked (and when a poke-flurry sends it spinning)
-const LINES: Record<Spot | "spin", string[]> = {
-  crown: ["Hey! Mind my crown.", "Ow, my enamel!", "Polished it this morning!", "That's my best cusp!"],
-  eyes: ["Eek, not the eyes!", "Hey, I can't see!", "Blink, blink!"],
-  face: ["Hehe, that tickles!", "You're making me blush!", "My cheeks!"],
-  head: ["Hey, who's there?", "Careful, I'm porcelain!", "Hehe, that tickles!"],
-  tummy: ["Hahaha, my tummy!", "Hehe, I'm ticklish there!", "Haha, stop it!"],
-  hands: ["Shh… I'm meditating.", "Om… namaste!", "Careful, perfect mudra!"],
-  legs: ["My legs fell asleep!", "Comfy here, thanks!", "Hey, my feet!"],
-  spin: ["Hahaha!", "Haha, I'm dizzy!", "Hahaha, stop it!", "Again! Again!"],
-};
-
 
 const noop = () => () => {};
 function useReducedMotionSafe() {
@@ -96,6 +84,7 @@ export default function Hero() {
 
 function CinematicHero() {
   const ref = useRef<HTMLElement>(null);
+  const awake = useAwake(); // phones: no 3D until the first scroll or touch (the still stands in)
   const { scrollYProgress: p } = useScroll({ target: ref, offset: ["start start", "end end"] });
 
   const [a0, a1] = PHASES.ai;
@@ -136,46 +125,11 @@ function CinematicHero() {
   const [mascotOn, setMascotOn] = useState(false);
   const [mascotReady, setMascotReady] = useState(false);
   const onMascotReady = useCallback(() => setMascotReady(true), []);
-  // once "Let me take over…" has finished typing it opens its eyes (Wake), then stays awake, eyes on the cursor, until
-  // the page scrolls back up into the rise
-  const [wake, setWake] = useState<{ name: string; id: number } | null>(null);
-  // once awake it can be played with: each poke gets a line in its bubble for a moment, fitting where it was poked
-  const [quip, setQuip] = useState<{ text: string; id: number } | null>(null);
-  const [played, setPlayed] = useState(false); // once played with, its bubble only carries the replies
-  // a moment after it wakes, before anyone has played: a nudge that it can be played with
-  const [hint, setHint] = useState(false);
-  useEffect(() => {
-    if (!wake || played) return;
-    const t = setTimeout(() => setHint(true), 2600);
-    return () => clearTimeout(t);
-  }, [wake, played]);
-  const touch = typeof window !== "undefined" && matchMedia("(pointer: coarse)").matches;
-  useEffect(() => {
-    if (!quip) return;
-    const t = setTimeout(() => setQuip(null), 1800);
-    return () => clearTimeout(t);
-  }, [quip]);
-  const onPlay = useCallback(
-    (kind: Spot | "spin") => {
-      setPlayed(true);
-      setQuip((q) => {
-        const pool = LINES[kind].filter((s) => s !== q?.text);
-        return { text: pool[Math.floor(Math.random() * pool.length)], id: Date.now() };
-      });
-    },
-    [],
-  );
-  useEffect(() => {
-    if (!speaking || wake) return;
-    const t = setTimeout(() => setWake({ name: "Wake", id: Date.now() }), 1100);
-    return () => clearTimeout(t);
-  }, [speaking, wake]);
   useMotionValueEvent(p, "change", (v) => {
     const on = v > a0 + 0.02;
     if (on !== aiActive) setAiActive(on); // each flag flips only at its own threshold
     const s = v >= PHASES.rise[1] - 0.03;
     if (s !== settled) setSettled(s);
-    if (!s && wake) setWake(null);
     const sp = v >= PHASES.rise[1] && v < PHASES.mascotOut[0];
     if (sp !== speaking) setSpeaking(sp);
     const m = v > MASCOT_KEYS[1] - 0.02 && v < PHASES.mascotOut[1] + 0.01;
@@ -190,8 +144,10 @@ function CinematicHero() {
       className="relative h-[295vh] md:h-[370vh]"
     >
       <div
-        className="sticky top-0 h-svh overflow-hidden"
-        style={stageVars("100svh")}
+        // lvh, not svh: on phones the stage fills the screen even once the browser toolbar has slid away (svh left a blank
+        // strip under it); on desktop the two are the same
+        className="sticky top-0 h-lvh overflow-hidden"
+        style={stageVars("100lvh")}
       >
         {/* faint atmosphere above the planet; dims as the light gathers */}
         <motion.div aria-hidden style={{ opacity: sky }} className="hero-sky pointer-events-none absolute inset-0" />
@@ -208,35 +164,22 @@ function CinematicHero() {
             className="absolute inset-x-0 bottom-0 mx-auto h-[var(--mh)] w-[var(--mh)] origin-bottom will-change-transform"
           >
             <div className="relative size-full">
-              <Image
-                src="/img/hero/mascot.webp"
+              {/* the fallback: a still of the GLB, framed like its canvas (170% wide, 1.7:1) */}
+              {/* eslint-disable-next-line @next/next/no-img-element -- already sized, optimised WebP */}
+              <img
+                src="/models/stills/hero-sitting.webp?v=1"
                 alt=""
-                fill
-                sizes="380px"
-                className={`object-contain transition-opacity duration-500 ${mascotReady ? "opacity-0" : ""}`}
+                decoding="async"
+                className={`absolute inset-y-0 left-1/2 h-full w-[170%] max-w-none -translate-x-1/2 transition-opacity duration-500 ${mascotReady ? "opacity-0" : ""}`}
               />
               {/* wider than the sprite box: room for the arms */}
               <div className="absolute inset-y-0 left-1/2 w-[170%] -translate-x-1/2">
                 {/* a model that can't load leaves the sprite (it never reports ready) */}
                 <Contain>
-                  <Mascot3D
-                    active={mascotOn}
-                    base={!settled ? "Fly" : wake ? "Idle" : "Meditate"}
-                    gesture={wake}
-                    lookAt={!!wake}
-                    playful={!!wake}
-                    onPlay={onPlay}
-                    rotY={rotY}
-                    onReady={onMascotReady}
-                  />
+                  {awake && <Mascot3D active={mascotOn} base={settled ? "Meditate" : "Fly"} rotY={rotY} onReady={onMascotReady} />}
                 </Contain>
               </div>
-              {/* keyed by the line, so each new one types itself out afresh */}
-              <SpeechBubble
-                key={quip?.id ?? (hint && !played ? "hint" : "line")}
-                show={(speaking && !played) || !!quip}
-                text={quip?.text ?? (hint && wake ? (touch ? "Psst… try tapping me!" : "Psst… try clicking me!") : "Let me take over…")}
-              />
+              <SpeechBubble show={speaking} text="Let me take over…" />
             </div>
           </motion.div>
         </MascotStage>
@@ -345,7 +288,7 @@ function SpeechBubble({ show, text }: { show: boolean; text: string }) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
           transition={{ type: "spring", stiffness: 380, damping: 26 }}
-          className="absolute left-[74%] top-[-6%] origin-bottom-left whitespace-nowrap rounded-2xl rounded-bl-md border border-white/70 bg-white px-5 py-3 text-[17px] font-semibold tracking-[-0.01em] text-[#0b1630] shadow-[0_10px_30px_-8px_rgb(59_130_246/0.55)] sm:text-[19px]"
+          className="absolute left-[28%] top-[-14%] origin-bottom-left sm:left-[74%] sm:top-[-6%] whitespace-nowrap rounded-2xl rounded-bl-md border border-white/70 bg-white px-5 py-3 text-[17px] font-semibold tracking-[-0.01em] text-[#0b1630] shadow-[0_10px_30px_-8px_rgb(59_130_246/0.55)] sm:text-[19px]"
         >
           {[...text].map((ch, i) => (
             <motion.span
@@ -398,6 +341,8 @@ function Earth({
   const hi2 = useTransform(spread, (v) => 50 + v * 50 - 4);
   const hi = useTransform(spread, (v) => 50 + v * 50 + 18);
   const mask = useMotionTemplate`linear-gradient(90deg, transparent ${lo}%, #000 ${lo2}%, #000 ${hi2}%, transparent ${hi}%)`;
+  // the planet is drawn once: 38% outside the lit span, full inside (same result as an unlit copy under a lit one)
+  const earthMask = useMotionTemplate`linear-gradient(90deg, rgb(0 0 0 / 0.38) ${lo}%, #000 ${lo2}%, #000 ${hi2}%, rgb(0 0 0 / 0.38) ${hi}%)`;
   // the travelling glints sit on the measured rim (SVG user units = source-image px)
   const reach = useTransform(spread, (v) => v * (IMG_W / 2));
   const rx = useTransform(reach, (r) => MID + r);
@@ -409,14 +354,16 @@ function Earth({
   return (
     <motion.div
       aria-hidden
-      className="pointer-events-none absolute left-1/2 w-[var(--ew)] -translate-x-1/2"
+      className="pointer-events-none absolute left-1/2 w-[var(--ew)] -translate-x-1/2 [contain:layout_paint] will-change-[opacity]"
       style={{ aspectRatio: `${IMG_W} / ${IMG_H}`, opacity: fade, bottom: "var(--eb)" }}
     >
-      {/* unlit planet */}
-      <Image src="/img/hero/earth-4320.webp" alt="" fill quality={92} sizes="max(100vw, 135vh)" priority className="hero-earth opacity-[0.38]" />
-      {/* lit planet + horizon light, revealed outward from the centre */}
+      {/* the planet, lit outward from the centre. Phones: ~1.5x density is plenty for this soft, dimmed picture (the
+          band is ~1.35 screen-heights wide, so 70vh), instead of 3x pulling the 3840px file */}
+      <motion.div className="absolute inset-0" style={{ WebkitMaskImage: earthMask, maskImage: earthMask }}>
+        <Image src="/img/hero/earth-4320.webp" alt="" fill quality={75} sizes="(max-width: 767px) 70vh, max(100vw, 135vh)" priority className="hero-earth" />
+      </motion.div>
+      {/* horizon light, revealed outward from the centre */}
       <motion.div className="absolute inset-0" style={{ WebkitMaskImage: mask, maskImage: mask }}>
-        <Image src="/img/hero/earth-4320.webp" alt="" fill quality={92} sizes="max(100vw, 135vh)" loading="eager" className="hero-earth" />
         <motion.svg
           viewBox={`0 0 ${IMG_W} ${IMG_H}`}
           className="absolute inset-0 size-full"
@@ -488,6 +435,7 @@ function getSpeech(): SpeechCtor | null {
 
 /** `active`: on screen (the cinematic hero shows it only once its scroll story reaches the assistant) */
 function HeroAssistantStage({ active }: { active: boolean }) {
+  const awake = useAwake();
   const [text, setText] = useState("");
   const [listening, setListening] = useState(false);
   const rec = useRef<InstanceType<SpeechCtor> | null>(null);
@@ -761,9 +709,15 @@ function HeroAssistantStage({ active }: { active: boolean }) {
 
       {/* FMD AI's mascot, floated over its place (above); if its model can't load, the guide's picture stands in */}
       <motion.div style={{ x: fx, y: fy, width: fw, height: fh }} className="pointer-events-none absolute left-0 top-0 z-20">
-        <Contain fallback={<Image src="/img/mascots/mascot-guide-1024.webp" alt="" width={96} height={128} className="size-full object-contain object-bottom" />}>
-          <AssistantMascot mood={mood} active={active} />
-        </Contain>
+        {awake ? (
+          // eslint-disable-next-line @next/next/no-img-element -- the fallback is a versioned still, cached forever
+          <Contain fallback={<img src="/models/stills/guide.webp?v=3" alt="" decoding="async" className="size-full object-contain object-bottom" />}>
+            <AssistantMascot mood={mood} active={active} />
+          </Contain>
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element -- the same still, until the phone has been touched
+          <img src="/models/stills/guide.webp?v=3" alt="" decoding="async" className="size-full object-contain object-bottom" />
+        )}
       </motion.div>
     </div>
     </MotionConfig>
@@ -777,12 +731,13 @@ function StaticHero() {
   const full = useMotionValue(1);
   return (
     <section id="top" aria-label="FindMyDentist introduction" className="relative">
-      <div className="relative h-svh min-h-[620px] overflow-hidden" style={stageVars("max(100svh, 620px)")}>
+      <div className="relative h-lvh min-h-[620px] overflow-hidden" style={stageVars("max(100lvh, 620px)")}>
         <div aria-hidden className="hero-sky absolute inset-0 opacity-60" />
         <Earth spread={full} core={full} coreScale={full} />
         <MascotStage>
           <div className="absolute inset-x-0 bottom-0 mx-auto [--mh:clamp(150px,26svh,260px)] h-[var(--mh)] w-[var(--mh)] -translate-y-[8%]">
-            <Image src="/img/hero/mascot.webp" alt="" fill sizes="380px" priority className="object-contain" />
+            {/* eslint-disable-next-line @next/next/no-img-element -- already sized, optimised WebP */}
+            <img src="/models/stills/hero-sitting.webp?v=1" alt="" decoding="async" className="absolute inset-y-0 left-1/2 h-full w-[170%] max-w-none -translate-x-1/2" />
           </div>
         </MascotStage>
         <div aria-hidden className="hero-rimfront absolute left-1/2 -translate-x-1/2 translate-y-1/2" />

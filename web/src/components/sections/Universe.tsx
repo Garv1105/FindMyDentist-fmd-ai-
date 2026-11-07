@@ -485,11 +485,11 @@ export default function Universe() {
         />
 
         {/* the stage: on desktop, as tall as the grid plus the stretch it stays pinned for */}
-        <div ref={stage} className="relative lg:h-[calc(624px+75vh)]">
+        <div ref={stage} className="relative overflow-x-clip lg:h-[calc(624px+75vh)]">
           <div className="lg:sticky lg:top-[90px]">
             <div
               ref={grid}
-              className="relative grid grid-cols-1 gap-3 [perspective:1600px] sm:grid-cols-2 lg:auto-rows-[200px] lg:grid-cols-6"
+              className="relative grid grid-cols-[minmax(0,1fr)] gap-3 [perspective:1600px] sm:grid-cols-2 lg:auto-rows-[200px] lg:grid-cols-6"
             >
               {/* FMD ONE: the phone, floating, bleeding off the tile */}
               <Tile
@@ -526,7 +526,7 @@ export default function Universe() {
                   {/* the phone: rises into the tile once the grid has assembled */}
                   <motion.div
                     aria-hidden
-                    className="pointer-events-none absolute -bottom-24 right-6 [mask-image:linear-gradient(180deg,#000_60%,transparent_88%)] max-sm:hidden"
+                    className="pointer-events-none absolute -bottom-24 right-6 pt-6 [mask-image:linear-gradient(180deg,#000_60%,transparent_88%)] max-sm:hidden"
                     style={reduced ? undefined : { y: phoneY, opacity: phoneO }}
                   >
                     <div className="absolute -inset-12 -z-10 rounded-full bg-[radial-gradient(closest-side,rgb(59_130_246/0.25),transparent)]" />
