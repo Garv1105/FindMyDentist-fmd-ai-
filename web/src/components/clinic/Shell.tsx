@@ -10,6 +10,8 @@ import { api, useMe } from "@/lib/me";
 
 export type Workspace = {
   clinic: { id: string; name: string; city: string; area: string; demo: boolean };
+  /** the FastAPI clinic: its team, invitations and details are managed there (null for demo workspaces) */
+  apiClinicId: string | null;
   status: "setup" | "active" | "suspended";
   roles: string[];
   permissions: string[];

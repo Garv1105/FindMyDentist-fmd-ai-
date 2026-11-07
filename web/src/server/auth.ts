@@ -154,11 +154,13 @@ export function storeMe(me: ApiMe): User {
     run(`DELETE FROM user_roles WHERE user_id = ? AND role IN (${ACCOUNT_TYPES.map(() => "?").join(",")}) AND role != ?`, me.id, ...ACCOUNT_TYPES, accountType);
     grantRole(me.id, accountType, null);
     if (email) for (const r of bootstrapRoles(email)) grantRole(me.id, r, null);
-    // clinic roles mirror FastAPI's active memberships exactly
+    // clinic roles mirror FastAPI's active memberships exactly, on the workspace linked to each FastAPI clinic (a
+    // clinic without a workspace here yet gets its role once the workspace is set up)
     run("DELETE FROM user_roles WHERE user_id = ? AND role LIKE 'clinic_%'", me.id);
     for (const w of me.workspaces) {
       const role = CLINIC_ROLES[w.role];
-      if (role) run("INSERT OR IGNORE INTO user_roles (user_id, role, org_id, granted_at) VALUES (?, ?, ?, ?)", me.id, role, w.clinic_id, now);
+      const local = one<{ clinic_id: string }>("SELECT clinic_id FROM clinic_workspaces WHERE api_clinic_id = ?", w.clinic_id);
+      if (role && local) run("INSERT OR IGNORE INTO user_roles (user_id, role, org_id, granted_at) VALUES (?, ?, ?, ?)", me.id, role, local.clinic_id, now);
     }
     return one<User>(`SELECT ${USER_COLS} FROM users WHERE id = ?`, me.id)!;
   });
@@ -314,6 +316,15 @@ export function publicMe(a: Auth) {
     mfaEnabled: Boolean(api.mfaEnabled),
     city: (api.city as string | null) ?? null,
     dentistProfile: (api.dentistProfile as ApiMe["dentist_profile"]) ?? null,
-    workspaces: (api.workspaces as ApiMe["workspaces"]) ?? [],
+    // each FastAPI clinic with this app's workspace for it (null: not set up here yet)
+    workspaces: ((api.workspaces as ApiMe["workspaces"]) ?? []).map((w) => ({
+      ...w,
+      workspace_id: one<{ clinic_id: string }>("SELECT clinic_id FROM clinic_workspaces WHERE api_clinic_id = ?", w.clinic_id)?.clinic_id ?? null,
+    })),
   };
+}
+
+/** The FastAPI clinics the signed-in user belongs to, as last synced (clinic id → role). */
+export function apiWorkspaces(a: Auth): ApiMe["workspaces"] {
+  return JSON.parse(one<{ api_me: string }>("SELECT api_me FROM users WHERE id = ?", a.user.id)?.api_me ?? "{}").workspaces ?? [];
 }

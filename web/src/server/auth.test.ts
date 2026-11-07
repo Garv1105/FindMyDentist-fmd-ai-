@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { afterEach, beforeEach, test } from "node:test";
-import { one, resetDb } from "./db.ts";
+import { one, resetDb, run } from "./db.ts";
 import { currentAuth, currentConsents, requestDeletion, requireAuth, requireRole, updateConsents, verifyAccess, type ApiMe } from "./auth.ts";
 import { HttpError } from "./http.ts";
 import { testUser } from "./testing.ts";
@@ -74,6 +74,10 @@ test("only FastAPI's own, unexpired, untampered tokens are accepted", () => {
 });
 
 test("first visit links the FastAPI account: same id, profile, clinic roles, consents", async () => {
+  // this app's workspace w-1 is linked to FastAPI clinic c-1
+  const creator = testUser("owner@example.com");
+  run("INSERT INTO clinics (id, name, city, area, address, phone, hours, is_demo, created_at) VALUES ('w-1', 'Smile Studio', 'Bengaluru', 'Hebbal', '', '', '', 0, 0)");
+  run("INSERT INTO clinic_workspaces (clinic_id, status, created_by, created_at, api_clinic_id) VALUES ('w-1', 'active', ?, 0, 'c-1')", creator.user.id);
   const a = (await currentAuth(req(token())))!;
   assert.equal(a.user.id, USER_ID);
   assert.equal(a.user.name, "Asha Rao");
@@ -82,7 +86,7 @@ test("first visit links the FastAPI account: same id, profile, clinic roles, con
   assert.equal(a.sessionId, "sess-1");
   assert.ok(a.roles.includes("patient"));
   assert.ok(a.roles.includes("clinic_front_desk")); // FastAPI receptionist
-  assert.equal(one<{ org_id: string }>("SELECT org_id FROM user_roles WHERE user_id = ? AND role = 'clinic_front_desk'", USER_ID)!.org_id, "c-1");
+  assert.equal(one<{ org_id: string }>("SELECT org_id FROM user_roles WHERE user_id = ? AND role = 'clinic_front_desk'", USER_ID)!.org_id, "w-1");
   const c = currentConsents(USER_ID);
   assert.equal(c.terms, true);
   assert.equal(c.comms_marketing, false);

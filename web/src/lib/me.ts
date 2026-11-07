@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 
-export type Workspace = { clinic_id: string; clinic_name: string; role: "owner" | "dentist" | "receptionist" | "finance" | "assistant" };
+/** A clinic in the FastAPI service the user belongs to, and this app's workspace for it (null: not set up yet). */
+export type Workspace = { clinic_id: string; clinic_name: string; role: ApiClinicRole; workspace_id: string | null };
+export type ApiClinicRole = "owner" | "dentist" | "receptionist" | "finance" | "assistant";
+export const CLINIC_ROLE_LABELS: Record<ApiClinicRole, string> = { owner: "Owner", dentist: "Dentist", receptionist: "Front desk", finance: "Finance", assistant: "Assistant" };
 export type DentistProfile = {
   council: string;
   registration_no: string;

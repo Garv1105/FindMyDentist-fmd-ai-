@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
 import { all, one, resetDb, run } from "../../db.ts";
 import { type Auth } from "../../auth.ts";
-import { testUser } from "../../testing.ts";
+import { apiRole, joinClinic, testClinic, testUser } from "../../testing.ts";
 import type { HttpError } from "../../http.ts";
 import { seedDemoDirectory } from "../../seed.ts";
-import { acceptInvite, createWorkspace, invite } from "../workspace.ts";
+import { createWorkspace } from "../workspace.ts";
 import { createPatient } from "../patients.ts";
 import { addItem, moveStock } from "../operations.ts";
 import { addSchedule, answerClarification, cancelTask, decide, listTasks, runDueSchedules, startTask, updateAiSettings } from "./engine.ts";
@@ -27,15 +27,15 @@ const status = (fn: () => unknown) => {
   }
   return 200;
 };
+const API = new Map<string, string>(); // workspace → its FastAPI clinic
 function clinic() {
-  const owner = user("owner@clinic.test", "dentist");
-  const { clinicId } = createWorkspace(owner, { name: "Smile Care", city: "Bengaluru", area: "Hebbal" });
+  const { owner, clinicId, api } = testClinic(createWorkspace, user("owner@clinic.test", "dentist"));
+  API.set(clinicId, api);
   return { owner, clinicId };
 }
-function staff(owner: Auth, clinicId: string, email: string, role: string) {
-  const u = user(email);
-  acceptInvite(u, invite(owner, clinicId, { email, role }).link.split("token=")[1]);
-  return u;
+/** Staff who joined the clinic in FastAPI, as seen after their next sign-in. */
+function staff(_owner: Auth, clinicId: string, email: string, role: string) {
+  return joinClinic(user(email), API.get(clinicId)!, apiRole(role));
 }
 /** Two patients overdue for recall: one consented to messages, one not. */
 function recallPatients(owner: Auth, clinicId: string) {
@@ -90,8 +90,7 @@ test("permissions: tool steps are blocked for roles without the permission; appr
   recallPatients(owner, clinicId);
   const r = startTask(owner, clinicId, "recall patients and send reminders");
   assert.equal(status(() => decide(fin, clinicId, r.id, { decision: "approve" })), 403); // finance can't approve patient messages
-  const outsider = user("x@other.test", "dentist");
-  createWorkspace(outsider, { name: "Other", city: "Bengaluru", area: "Indiranagar" });
+  const outsider = testClinic(createWorkspace, user("x@other.test", "dentist"), "Other", "Indiranagar").owner;
   assert.equal(status(() => decide(outsider, clinicId, r.id, { decision: "approve" })), 404);
 });
 
