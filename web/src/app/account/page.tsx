@@ -1,13 +1,13 @@
 "use client";
 
-import { LogOut, Monitor } from "lucide-react";
+import { LogOut } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
+import { DentistProfileForm, EmailSettings, MfaSettings, SessionsList } from "@/components/auth/security";
 import { inputCls, Notice, Page } from "@/components/Page";
-import { api, authChanged, useMe, type Me } from "@/lib/me";
+import { api, authChanged, signOut, useMe, type Me } from "@/lib/me";
 
-type Session = { ref: string; current: boolean; createdAt: number; lastSeenAt: number; device: string };
 const LANGS = [
   ["en", "English"],
   ["hi", "हिन्दी"],
@@ -15,13 +15,6 @@ const LANGS = [
   ["te", "తెలుగు"],
   ["ta", "தமிழ்"],
 ] as const;
-/** "Chrome on Windows" from a user-agent string; good enough for recognising your own devices. */
-function deviceLabel(ua: string) {
-  if (!ua) return "Unknown device";
-  const browser = /Edg\//.test(ua) ? "Edge" : /Firefox\//.test(ua) ? "Firefox" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : ua.split("/")[0];
-  const os = /Android/.test(ua) ? "Android" : /iPhone|iPad/.test(ua) ? "iOS" : /Windows/.test(ua) ? "Windows" : /Mac OS/.test(ua) ? "macOS" : /Linux/.test(ua) ? "Linux" : "";
-  return os ? `${browser} on ${os}` : browser;
-}
 const fmt = (t: number) => new Date(t).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
 
 export default function AccountPage() {
@@ -64,6 +57,12 @@ function Account({ me }: { me: Me }) {
       )}
       <div className="mt-8 grid gap-5 lg:grid-cols-2">
         <Profile me={me} />
+        <Security me={me} />
+        {(me.accountType === "dentist" || me.dentistProfile) && (
+          <Card title="Dentist profile" desc="Your council registration. FMD verifies it before showing you as verified.">
+            <DentistProfileForm profile={me.dentistProfile} />
+          </Card>
+        )}
         <Membership me={me} />
         <MyConcierge />
         <Preferences me={me} />
@@ -75,13 +74,12 @@ function Account({ me }: { me: Me }) {
 }
 
 function Profile({ me }: { me: Me }) {
-  const [name, setName] = useState(me.name);
   const [lang, setLang] = useState(me.language);
   const [msg, setMsg] = useState<{ kind: "error" | "success"; text: string } | null>(null);
   const save = async () => {
     setMsg(null);
     try {
-      await api("/api/me", { method: "PATCH", body: { name, language: lang } });
+      await api("/api/me", { method: "PATCH", body: { language: lang } });
       authChanged();
       setMsg({ kind: "success", text: "Profile saved." });
     } catch (e) {
@@ -91,16 +89,24 @@ function Profile({ me }: { me: Me }) {
   return (
     <Card title="Profile">
       <dl className="mb-5 grid grid-cols-[110px_1fr] gap-y-2 text-[13.5px]">
+        <dt className="text-ink-4">Name</dt>
+        <dd className="text-ink-2">{me.name}</dd>
+        <dt className="text-ink-4">Mobile</dt>
+        <dd className="text-ink-2">{me.phone}</dd>
+        <dt className="text-ink-4">Email</dt>
+        <dd className="text-ink-2">{me.email ?? "Not added"}</dd>
         <dt className="text-ink-4">Account type</dt>
         <dd className="capitalize text-ink-2">{me.accountType}</dd>
-        <dt className="text-ink-4">Sign-in</dt>
-        <dd className="text-ink-2">{me.email ?? me.phone}</dd>
       </dl>
-      <label htmlFor="pname" className="text-[13px] text-ink-2">
-        Name
-      </label>
-      <input id="pname" value={name} onChange={(e) => setName(e.target.value)} className={`${inputCls} mt-2`} />
-      <label htmlFor="plang" className="mt-4 block text-[13px] text-ink-2">
+      {me.accountType !== "dentist" && (
+        <p className="mb-5 text-[12.5px] text-ink-4">
+          A dentist?{" "}
+          <Link href="/dentist/register" className="text-ink-2 underline underline-offset-4 hover:text-ink">
+            Add your council registration
+          </Link>
+        </p>
+      )}
+      <label htmlFor="plang" className="block text-[13px] text-ink-2">
         Preferred language
       </label>
       <select id="plang" value={lang} onChange={(e) => setLang(e.target.value)} className={`${inputCls} mt-2 [&>option]:bg-[var(--surface)]`}>
@@ -286,48 +292,32 @@ function Preferences({ me }: { me: Me }) {
   );
 }
 
+function Security({ me }: { me: Me }) {
+  return (
+    <Card title="Sign-in & security" desc="Your FMD account. These settings apply everywhere you use FMD.">
+      <h3 className="text-[13px] text-ink-2">Email</h3>
+      <div className="mt-3">
+        <EmailSettings me={me} />
+      </div>
+      <h3 className="mt-6 border-t border-line pt-5 text-[13px] text-ink-2">Two-step sign-in</h3>
+      <div className="mt-3">
+        <MfaSettings me={me} />
+      </div>
+      <p className="mt-6 border-t border-line pt-5 text-[12.5px] text-ink-4">
+        Forgot your password?{" "}
+        <Link href="/signin" className="text-ink-2 underline underline-offset-4 hover:text-ink">
+          Reset it from the sign-in page
+        </Link>
+      </p>
+    </Card>
+  );
+}
+
 function Sessions() {
-  const [list, setList] = useState<Session[] | null>(null);
-  const [err, setErr] = useState("");
-  useEffect(() => {
-    api<{ sessions: Session[] }>("/api/me/sessions")
-      .then((r) => setList(r.sessions))
-      .catch((e) => setErr(e.message));
-  }, []);
-  const revoke = async (ref: string) => {
-    try {
-      setList((await api<{ sessions: Session[] }>("/api/me/sessions", { method: "DELETE", body: { ref } })).sessions);
-    } catch (e) {
-      setErr((e as Error).message);
-    }
-  };
+  const router = useRouter();
   return (
     <Card title="Signed-in devices">
-      {!list && !err && <p className="text-[13px] text-ink-4">Loading…</p>}
-      {err && <Notice kind="error">{err}</Notice>}
-      <ul className="space-y-3">
-        {list?.map((s) => (
-          <li key={s.ref} className="flex items-center gap-3 text-[13px]">
-            <Monitor className="size-4 shrink-0 text-ink-3" strokeWidth={1.5} />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-ink-2">{deviceLabel(s.device)}</span>
-              <span className="block text-[12px] text-ink-4">
-                {s.current ? "This device · " : ""}last active {fmt(s.lastSeenAt)}
-              </span>
-            </span>
-            {!s.current && (
-              <button onClick={() => revoke(s.ref)} className="btn-ghost h-8 px-3 text-[12px]">
-                Sign out
-              </button>
-            )}
-          </li>
-        ))}
-      </ul>
-      {list && list.length > 1 && (
-        <button onClick={() => revoke("others")} className="btn-ghost mt-4 h-9 px-4 text-[12.5px]">
-          Sign out all other devices
-        </button>
-      )}
+      <SessionsList onSignedOut={() => router.push("/")} />
     </Card>
   );
 }
@@ -337,9 +327,8 @@ function Danger() {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [msg, setMsg] = useState<{ kind: "error" | "success"; text: string } | null>(null);
-  const signOut = async () => {
-    await api("/api/auth/logout", { method: "POST", body: {} });
-    authChanged();
+  const leave = async () => {
+    await signOut();
     router.push("/");
   };
   const request = async () => {
@@ -354,7 +343,7 @@ function Danger() {
   };
   return (
     <Card title="Sign out & delete">
-      <button onClick={signOut} className="btn-ghost h-10 px-4 text-[13px]">
+      <button onClick={leave} className="btn-ghost h-10 px-4 text-[13px]">
         <LogOut className="size-4" strokeWidth={1.5} /> Sign out
       </button>
       <div className="mt-6 border-t border-line pt-5">

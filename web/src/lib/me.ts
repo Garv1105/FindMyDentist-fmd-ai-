@@ -2,6 +2,16 @@
 
 import { useEffect, useState } from "react";
 
+export type Workspace = { clinic_id: string; clinic_name: string; role: "owner" | "dentist" | "receptionist" | "finance" | "assistant" };
+export type DentistProfile = {
+  council: string;
+  registration_no: string;
+  qualifications?: string | null;
+  specialisation?: string | null;
+  verification_status: "unverified" | "pending" | "verified" | "rejected";
+};
+
+/** This app's view of the signed-in user plus the FastAPI account's (GET /api/me). */
 export type Me = {
   id: string;
   name: string;
@@ -12,9 +22,34 @@ export type Me = {
   status: string;
   roles: string[];
   consents: Record<"terms" | "privacy" | "comms_appointments" | "comms_marketing" | "ai_history", boolean>;
+  emailVerified: boolean;
+  /** an email added but not yet verified */
+  pendingEmail: string | null;
+  mfaEnabled: boolean;
+  city: string | null;
+  dentistProfile: DentistProfile | null;
+  workspaces: Workspace[];
 };
 
-/** JSON fetch that surfaces the server's human-readable message on failure. */
+/** The human message in any of the error shapes: this app's {message}, FastAPI's {error:{message}} and its 422 {detail}. */
+function errorText(data: Record<string, unknown>): string | null {
+  if (typeof data.message === "string") return data.message;
+  const e = data.error as { message?: string } | undefined;
+  if (e?.message) return e.message;
+  if (typeof data.detail === "string") return data.detail;
+  const d = Array.isArray(data.detail) ? (data.detail[0] as { loc?: unknown[]; msg?: string }) : null;
+  if (d?.msg) {
+    const field = String(d.loc?.at(-1) ?? "").replace(/_/g, " ");
+    const msg = d.msg.replace(/^Value error, /, "");
+    return field && field !== "body" ? `${field[0].toUpperCase()}${field.slice(1)}: ${msg}` : msg;
+  }
+  return null;
+}
+
+/**
+ * JSON fetch that surfaces the server's human-readable message on failure. Paths under /api/v1 go to the FastAPI
+ * service (proxied by next.config.ts); the rest are this app's own routes.
+ */
 export async function api<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
   const res = await fetch(path, {
     method: init.method ?? "GET",
@@ -22,7 +57,7 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
     body: init.body === undefined ? undefined : JSON.stringify(init.body),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message ?? "Something went wrong. Please try again.");
+  if (!res.ok) throw new Error(errorText(data) ?? (res.status === 429 ? "Too many attempts. Please wait a little and try again." : "Something went wrong. Please try again."));
   return data as T;
 }
 
@@ -45,4 +80,19 @@ export function useMe() {
   return me;
 }
 
+/** Tell every useMe() the account changed. */
 export const authChanged = () => window.dispatchEvent(new Event("fmd:auth"));
+
+/**
+ * After signing in or changing the account in FastAPI (email, two-step sign-in, dentist profile, clinics): bring this
+ * app's copy up to date now, then tell every useMe().
+ */
+export async function accountChanged() {
+  await api("/api/me?fresh=1").catch(() => null);
+  authChanged();
+}
+
+export async function signOut() {
+  await api("/api/v1/auth/logout", { method: "POST" }).catch(() => null);
+  authChanged();
+}

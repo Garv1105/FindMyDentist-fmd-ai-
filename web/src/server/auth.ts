@@ -257,13 +257,24 @@ export function updateConsents(a: Auth, changes: Partial<Record<ConsentPurpose, 
   return currentConsents(a.user.id);
 }
 
-/** Language is this app's; the name belongs to the FastAPI account (set at sign-up). */
-export function updateProfile(a: Auth, input: { language?: unknown }) {
+/**
+ * This app's own choices: language, and patient / student / company. The name belongs to the FastAPI account, and
+ * "dentist" comes from having a dentist profile there, so a dentist can't switch away here.
+ */
+export function updateProfile(a: Auth, input: { language?: unknown; accountType?: unknown }) {
   const language = input.language === undefined ? a.user.language : String(input.language);
   if (!["en", "hi", "kn", "te", "ta"].includes(language)) throw bad("Unsupported language.");
-  run("UPDATE users SET language = ?, updated_at = ? WHERE id = ?", language, Date.now(), a.user.id);
+  const accountType = input.accountType === undefined ? a.user.account_type : (String(input.accountType) as AccountType);
+  if (accountType !== a.user.account_type) {
+    if (a.user.account_type === "dentist" || !["patient", "student", "company"].includes(accountType)) throw bad("Choose patient, student or company.");
+    tx(() => {
+      run("DELETE FROM user_roles WHERE user_id = ? AND role = ?", a.user.id, a.user.account_type);
+      grantRole(a.user.id, accountType, a.user.id);
+    });
+  }
+  run("UPDATE users SET language = ?, account_type = ?, updated_at = ? WHERE id = ?", language, accountType, Date.now(), a.user.id);
   audit(a.user.id, "profile.updated", "user", a.user.id);
-  return { ...a.user, language };
+  return { ...a.user, language, account_type: accountType };
 }
 
 export function requestDeletion(a: Auth, reason: unknown) {
