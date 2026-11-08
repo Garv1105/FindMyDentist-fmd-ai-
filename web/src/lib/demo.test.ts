@@ -29,4 +29,7 @@ test("safeNext: same-site paths only", () => {
   assert.equal(safeNext("https://evil.com"), "/");
   assert.equal(safeNext("/\\evil.com"), "/");
   assert.equal(safeNext(null), "/");
+  assert.equal(safeNext("/\t/evil.com"), "/"); // browsers drop tabs: would become //evil.com
+  assert.equal(safeNext("/\n/evil.com"), "/");
+  assert.equal(safeNext("/clinic/smile-studio?date=2026-11-10#x"), "/clinic/smile-studio?date=2026-11-10#x");
 });

@@ -11,7 +11,7 @@ import { createContext, use, useCallback, useEffect, useRef, useState, type Reac
 import { ButtonLink, IconButton, Panel } from "@/components/app/kit";
 import { canOpenClinic, type DemoUser } from "@/lib/demo";
 import { useDemoUser } from "@/lib/useDemoUser";
-import { getClinic, getClinicHome, type Clinic } from "@/sample/clinic";
+import { cleanBranch, cleanDate, getClinic, getClinicHome, type Clinic } from "@/sample/clinic";
 import { useDismiss } from "./dismiss";
 import { Notifications } from "./Notifications";
 
@@ -138,6 +138,7 @@ function Picker({ label, icon: Icon, choices, footer }: { label: string; icon: L
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const btn = useRef<HTMLButtonElement>(null);
+  const [alignLeft, setAlignLeft] = useState(false);
   const close = useCallback(() => setOpen(false), []);
   useDismiss(open, close, box, btn);
   return (
@@ -146,7 +147,11 @@ function Picker({ label, icon: Icon, choices, footer }: { label: string; icon: L
         ref={btn}
         type="button"
         aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
+        onClick={(e) => {
+          // the 220px menu hangs from the button's right edge unless that would push it off the left of the screen
+          setAlignLeft(e.currentTarget.getBoundingClientRect().right < 236);
+          setOpen((o) => !o);
+        }}
         className="inline-flex h-10 items-center gap-2 rounded-full border border-line bg-[var(--surface-glass)] px-3.5 text-[14px] text-ink hover:border-line-strong"
       >
         <Icon className="size-4 text-ink-2" strokeWidth={1.5} />
@@ -154,7 +159,7 @@ function Picker({ label, icon: Icon, choices, footer }: { label: string; icon: L
         <ChevronDown className="size-3.5 text-ink-3" strokeWidth={1.75} />
       </button>
       {open && (
-        <div ref={box} className="app-panel absolute right-0 top-[calc(100%+8px)] z-40 w-[220px] p-1.5">
+        <div ref={box} data-picker-menu className={`app-panel absolute top-[calc(100%+8px)] z-40 w-[220px] p-1.5 ${alignLeft ? "left-0" : "right-0"}`}>
           {choices.map((c) => (
             <button
               key={c.key}
@@ -259,9 +264,17 @@ export function ClinicShell({ children }: { children: ReactNode }) {
   const menuBtn = useRef<HTMLButtonElement>(null);
   const closeMenu = useCallback(() => setMenu(false), []);
   useDismiss(menu, closeMenu, drawer, menuBtn);
+  useEffect(() => {
+    if (!menu) return;
+    drawer.current?.querySelector<HTMLElement>("button")?.focus();
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [menu]);
 
-  const date = params.get("date") || todayIst();
-  const branchId = params.get("branch") || "main";
+  const date = cleanDate(params.get("date"), todayIst());
   const setParam = useCallback(
     (key: string, value: string) => {
       const p = new URLSearchParams(params);
@@ -276,6 +289,7 @@ export function ClinicShell({ children }: { children: ReactNode }) {
   }, [clinicId]);
 
   const allowed = canOpenClinic(user ?? null, clinicId);
+  const branchId = clinic ? cleanBranch(params.get("branch"), clinic) : "main";
   useEffect(() => {
     if (!clinic || !allowed) return;
     getClinicHome(clinic.id, { date: todayIst(), branchId }).then((h) =>

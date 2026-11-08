@@ -2,6 +2,7 @@
 
 import { ArrowRight, Mic } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { createPortal } from "react-dom";
 import { Button, Panel, Tag } from "@/components/app/kit";
 import type { DemoUser } from "@/lib/demo";
 import { briefingText, decideAiTask, type AiTask, type ClinicHome } from "@/sample/clinic";
@@ -51,8 +52,9 @@ function ReviewDialog({ task, onClose, onApprove }: { task: AiTask; onClose: () 
     to.focus();
   };
   const p = task.preview;
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-end bg-black/60 sm:place-items-center sm:p-4">
+  // drawn on <body>: inside a card, the card's backdrop blur would trap a fixed overlay in some browsers
+  return createPortal(
+    <div data-overlay className="fixed inset-0 z-50 grid place-items-end bg-black/60 sm:place-items-center sm:p-4">
       <div ref={box} role="dialog" aria-modal="true" aria-labelledby="review-title" onKeyDown={trap} className="app-panel w-full max-w-[520px] rounded-b-none p-6 sm:rounded-b-[22px]">
         <p className="text-[13px] text-ink-3">FMD Manager · {task.source.replace(/^From: /, "from ")}</p>
         <h2 id="review-title" className="mt-1 text-[19px] font-medium text-ink">
@@ -92,7 +94,8 @@ function ReviewDialog({ task, onClose, onApprove }: { task: AiTask; onClose: () 
           <Button onClick={onApprove}>Approve</Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -104,10 +107,17 @@ const DONE_NOTE: Record<string, string> = {
 function TaskCard({ task, clinicId, onChange }: { task: AiTask; clinicId: string; onChange: (t: AiTask) => void }) {
   const [reviewing, setReviewing] = useState(false);
   const decide = async (d: "approve" | "skip" | "undo") => onChange(await decideAiTask(clinicId, task.id, d));
-  const closeReview = useCallback(() => setReviewing(false), []);
+  const opener = useRef<HTMLButtonElement>(null);
+  const card = useRef<HTMLDivElement>(null);
+  // focus goes back to the button that opened the review, or to the card once that button is gone (after Approve)
+  const restoreFocus = useCallback(() => requestAnimationFrame(() => (opener.current?.isConnected ? opener.current : card.current)?.focus()), []);
+  const closeReview = useCallback(() => {
+    setReviewing(false);
+    restoreFocus();
+  }, [restoreFocus]);
   const skipped = task.status === "skipped";
   return (
-    <div className={`app-panel flex min-w-[272px] snap-start flex-col gap-2.5 p-4 transition-opacity lg:min-w-0 ${skipped ? "opacity-60" : ""}`}>
+    <div ref={card} tabIndex={-1} className={`app-panel flex min-w-[272px] outline-none snap-start flex-col gap-2.5 p-4 transition-opacity lg:min-w-0 ${skipped ? "opacity-60" : ""}`}>
       <div className="flex items-start justify-between gap-3">
         <p className="text-[15px] font-medium leading-snug text-ink">{task.title}</p>
         {task.status === "proposed" && task.needsApproval && <Tag tone="warn">Needs approval</Tag>}
@@ -120,7 +130,7 @@ function TaskCard({ task, clinicId, onChange }: { task: AiTask; clinicId: string
       <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
         {task.status === "proposed" && task.needsApproval && (
           <>
-            <Button size="sm" onClick={() => setReviewing(true)}>
+            <Button ref={opener} size="sm" onClick={() => setReviewing(true)}>
               {task.actionLabel}
             </Button>
             <Button size="sm" variant="secondary" onClick={() => decide("skip")}>
@@ -144,9 +154,10 @@ function TaskCard({ task, clinicId, onChange }: { task: AiTask; clinicId: string
         <ReviewDialog
           task={task}
           onClose={closeReview}
-          onApprove={() => {
+          onApprove={async () => {
             setReviewing(false);
-            decide("approve");
+            await decide("approve");
+            restoreFocus();
           }}
         />
       )}
