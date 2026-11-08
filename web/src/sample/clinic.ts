@@ -92,14 +92,14 @@ type Slot = [time: string, minutes: number, patient: string, type: string, denti
 /** One day's plan per branch (Monday to Saturday). Flags decide the few slots that don't go to plan. */
 const PLAN: Record<string, Slot[]> = {
   main: [
-    ["09:30", 30, "Rohan Gupta", "Scaling & polishing", "Dr. Rao", "Chair 1"],
-    ["09:45", 45, "Anita Desai", "Filling", "Dr. Iyer", "Chair 2"],
+    ["09:30", 30, "Rohan Gupta", "Scaling & polishing", "Dr. Iyer", "Chair 1"],
+    ["09:30", 45, "Anita Desai", "Filling", "Dr. Rao", "Chair 2"],
     ["10:00", 20, "Suresh Babu", "Check-up", "Dr. Iyer", "Chair 1", { noShow: true }],
-    ["10:15", 60, "Lakshmi Narayan", "Crown preparation", "Dr. Rao", "Chair 2"],
-    ["10:30", 30, "Priya Sharma", "Scaling & polishing", "Dr. Rao", "Chair 1"],
+    ["10:15", 45, "Lakshmi Narayan", "Crown preparation", "Dr. Rao", "Chair 2"],
+    ["10:30", 30, "Priya Sharma", "Scaling & polishing", "Dr. Iyer", "Chair 1"],
     ["11:00", 60, "Arjun Mehta", "Root canal, visit 2", "Dr. Rao", "Chair 2", { unconfirmed: true }],
     ["11:45", 20, "Neha Kulkarni", "Consultation", "Dr. Iyer", "Chair 1"],
-    ["12:30", 45, "Vikram Patel", "Extraction, 38", "Dr. Rao", "Chair 2"],
+    ["12:00", 45, "Vikram Patel", "Extraction, 38", "Dr. Rao", "Chair 2"],
     ["14:00", 30, "Sana Qureshi", "Braces review", "Dr. Iyer", "Chair 1", { viaFmd: true }],
     ["14:45", 30, "Rahul Verma", "Filling", "Dr. Rao", "Chair 2", { unconfirmed: true }],
     ["15:30", 60, "Divya Pillai", "Whitening", "Dr. Iyer", "Chair 1"],
@@ -116,6 +116,19 @@ const PLAN: Record<string, Slot[]> = {
     ["17:00", 20, "Ritu Agarwal", "Check-up", "Dr. Menon", "Chair 1"],
   ],
 };
+
+/** Who works which chair, per branch. Chair 3 at the main branch is the hygienist's, free for bookings. */
+export const CHAIRS: Record<string, { chair: string; dentist: string }[]> = {
+  main: [
+    { chair: "Chair 1", dentist: "Dr. Iyer" },
+    { chair: "Chair 2", dentist: "Dr. Rao" },
+    { chair: "Chair 3", dentist: "Meera (hygienist)" },
+  ],
+  kora: [{ chair: "Chair 1", dentist: "Dr. Menon" }],
+};
+
+/** Opening hours, the same every working day; Sundays are closed. */
+export const HOURS = { open: "09:00", close: "19:00", lunch: ["13:00", "14:00"] as const };
 
 /** On a future day, these slots are the unconfirmed ones (the rest are confirmed). */
 const FUTURE_UNCONFIRMED = new Set(["main-11:00", "main-18:00", "kora-15:00"]);
@@ -196,12 +209,18 @@ const NOTICES: Omit<Notice, "read">[] = [
 /* ---------------- in-memory state ---------------- */
 
 const taskState = new Map<string, AiTask["status"]>();
+/** status changes made in the Calendar, by appointment id */
+export const statusOverride = new Map<string, ApptStatus>();
+/** appointments booked in the Calendar, by date */
+export const added = new Map<string, Appointment[]>();
 const followUpDone = new Map<string, boolean>();
 let noticesRead = false;
 
 /** Tests only: back to the untouched demo. */
 export function resetSample() {
   taskState.clear();
+  statusOverride.clear();
+  added.clear();
   followUpDone.clear();
   noticesRead = false;
 }
@@ -231,10 +250,11 @@ export function cleanDate(raw: string | null, fallback: string) {
 export const cleanBranch = (raw: string | null, clinic: Clinic) =>
   raw === "all" || clinic.branches.some((b) => b.id === raw) ? (raw as string) : clinic.branches[0].id;
 
-function dayAppointments(branchId: string, date: string, now: Date): Appointment[] {
+/** One branch's appointments for a date: the day plan, statuses from the clock, then Calendar changes and bookings. */
+export function dayAppointments(branchId: string, date: string, now: Date): Appointment[] {
   if (weekday(date) === 0) return []; // closed on Sundays
   const today = istDate(now);
-  return (PLAN[branchId] ?? []).map(([time, minutes, patientName, type, dentist, chair, flags = {}]) => {
+  const planned = (PLAN[branchId] ?? []).map(([time, minutes, patientName, type, dentist, chair, flags = {}]) => {
     const start = `${date}T${time}:00+05:30`;
     const startMs = Date.parse(start);
     const endMs = startMs + minutes * 60_000;
@@ -246,6 +266,9 @@ function dayAppointments(branchId: string, date: string, now: Date): Appointment
     else status = flags.unconfirmed ? "unconfirmed" : flags.viaFmd ? "booked" : "confirmed";
     return { id: `${branchId}-${date}-${time}`, branchId, patientName, start, minutes, type, dentist, chair, status, viaFmd: Boolean(flags.viaFmd) };
   });
+  return [...planned, ...(added.get(date) ?? []).filter((a) => a.branchId === branchId)]
+    .map((a) => ({ ...a, status: statusOverride.get(a.id) ?? a.status }))
+    .sort((a, b) => a.start.localeCompare(b.start));
 }
 
 const withTaskState = (t: AiTask): AiTask => ({ ...t, status: taskState.get(t.id) ?? t.status });
