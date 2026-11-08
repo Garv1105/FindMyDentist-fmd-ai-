@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ButtonHTMLAttributes, ComponentProps, ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 
 /** Building blocks shared by FMD Clinic and FMD Main. Colours come only from the theme variables. */
 
@@ -30,7 +30,7 @@ const look = ({ variant = "primary", size = "md" }: Look) =>
       : "border border-line bg-[var(--button-secondary)] text-ink hover:border-line-strong"
   }`;
 
-export function Button({ variant, size, className = "", ...rest }: Look & ButtonHTMLAttributes<HTMLButtonElement>) {
+export function Button({ variant, size, className = "", ...rest }: Look & ComponentProps<"button">) {
   return <button type="button" className={`${look({ variant, size })} ${className}`} {...rest} />;
 }
 
@@ -38,7 +38,7 @@ export function ButtonLink({ variant, size, className = "", ...rest }: Look & Co
   return <Link className={`${look({ variant, size })} ${className}`} {...rest} />;
 }
 
-export function IconButton({ label, className = "", children, ...rest }: { label: string } & ButtonHTMLAttributes<HTMLButtonElement>) {
+export function IconButton({ label, className = "", children, ...rest }: { label: string } & ComponentProps<"button">) {
   return (
     <button
       type="button"
