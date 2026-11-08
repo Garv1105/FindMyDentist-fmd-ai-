@@ -93,7 +93,7 @@ type Slot = [time: string, minutes: number, patient: string, type: string, denti
 const PLAN: Record<string, Slot[]> = {
   main: [
     ["09:30", 30, "Rohan Gupta", "Scaling & polishing", "Dr. Iyer", "Chair 1"],
-    ["09:30", 45, "Anita Desai", "Filling", "Dr. Rao", "Chair 2"],
+    ["09:45", 30, "Anita Desai", "Filling", "Dr. Rao", "Chair 2"],
     ["10:00", 20, "Suresh Babu", "Check-up", "Dr. Iyer", "Chair 1", { noShow: true }],
     ["10:15", 45, "Lakshmi Narayan", "Crown preparation", "Dr. Rao", "Chair 2"],
     ["10:30", 30, "Priya Sharma", "Scaling & polishing", "Dr. Iyer", "Chair 1"],
@@ -129,6 +129,13 @@ export const CHAIRS: Record<string, { chair: string; dentist: string }[]> = {
 
 /** Opening hours, the same every working day; Sundays are closed. */
 export const HOURS = { open: "09:00", close: "19:00", lunch: ["13:00", "14:00"] as const };
+
+/** Days differ: some afternoon slots are empty midweek, and Saturdays are mornings only. */
+const SKIP: Record<number, (time: string) => boolean> = {
+  3: (t) => t === "14:45" || t === "16:30",
+  4: (t) => t === "15:30" || t === "17:15",
+  6: (t) => t >= "13:00",
+};
 
 /** On a future day, these slots are the unconfirmed ones (the rest are confirmed). */
 const FUTURE_UNCONFIRMED = new Set(["main-11:00", "main-18:00", "kora-15:00"]);
@@ -261,7 +268,8 @@ export const cleanBranch = (raw: string | null, clinic: Clinic) =>
 export function dayAppointments(branchId: string, date: string, now: Date): Appointment[] {
   if (weekday(date) === 0) return []; // closed on Sundays
   const today = istDate(now);
-  const planned = (PLAN[branchId] ?? []).map(([time, minutes, patientName, type, dentist, chair, flags = {}]) => {
+  const skip = SKIP[weekday(date)] ?? (() => false);
+  const planned = (PLAN[branchId] ?? []).filter(([time]) => !skip(time)).map(([time, minutes, patientName, type, dentist, chair, flags = {}]) => {
     const start = `${date}T${time}:00+05:30`;
     const startMs = Date.parse(start);
     const endMs = startMs + minutes * 60_000;

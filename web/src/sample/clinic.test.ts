@@ -141,3 +141,18 @@ test("each chair has one dentist", async () => {
   }
   assert.deepEqual(CHAIRS.main.map((c) => c.chair), ["Chair 1", "Chair 2", "Chair 3"]);
 });
+
+test("appointment ids are unique on every day of the week", () => {
+  for (let d = 9; d <= 14; d++) {
+    const date = `2026-11-${String(d).padStart(2, "0")}`;
+    const ids = ["main", "kora"].flatMap((b) => dayAppointments(b, date, now)).map((a) => a.id);
+    assert.equal(new Set(ids).size, ids.length, date);
+  }
+});
+
+test("the week isn't the same every day: Saturday is mornings only", () => {
+  const count = (date: string) => dayAppointments("main", date, now).length;
+  assert.equal(count("2026-11-10"), 14);
+  assert.ok(count("2026-11-14") < count("2026-11-12") && count("2026-11-12") < count("2026-11-10"));
+  assert.ok(dayAppointments("main", "2026-11-14", now).every((a) => a.start.slice(11, 16) < "13:00"));
+});
