@@ -3,7 +3,7 @@ import type { ComponentProps, ReactNode } from "react";
 
 /** Building blocks shared by FMD Clinic and FMD Main. Colours come only from the theme variables. */
 
-export function Panel({ as: Tag = "div", className = "", children }: { as?: "section" | "div"; className?: string; children: ReactNode }) {
+export function Panel({ as: Tag = "div", className = "", children }: { as?: "section" | "div"; className?: string; children?: ReactNode }) {
   return <Tag className={`app-panel ${className}`}>{children}</Tag>;
 }
 
