@@ -213,6 +213,8 @@ const taskState = new Map<string, AiTask["status"]>();
 export const statusOverride = new Map<string, ApptStatus>();
 /** appointments booked in the Calendar, by date */
 export const added = new Map<string, Appointment[]>();
+/** waitlist entries already offered a slot */
+export const waitlistOffered = new Set<string>();
 const followUpDone = new Map<string, boolean>();
 let noticesRead = false;
 
@@ -221,6 +223,7 @@ export function resetSample() {
   taskState.clear();
   statusOverride.clear();
   added.clear();
+  waitlistOffered.clear();
   followUpDone.clear();
   noticesRead = false;
 }
@@ -228,12 +231,12 @@ export function resetSample() {
 /* ---------------- helpers ---------------- */
 
 const IST = 5.5 * 3600_000;
-const istDate = (d: Date) => new Date(d.getTime() + IST).toISOString().slice(0, 10);
+export const istDate = (d: Date) => new Date(d.getTime() + IST).toISOString().slice(0, 10);
 const addDays = (date: string, n: number) => new Date(Date.parse(`${date}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
-const weekday = (date: string) => new Date(`${date}T00:00:00Z`).getUTCDay();
+export const weekday = (date: string) => new Date(`${date}T00:00:00Z`).getUTCDay();
 const hm = (time: string) => time.replace(/^0/, "");
 
-function requireClinic(clinicId: string) {
+export function requireClinic(clinicId: string) {
   if (clinicId !== CLINIC.id) throw new Error("Clinic not found");
 }
 
@@ -284,7 +287,11 @@ export async function getClinicHome(clinicId: string, opts: { date: string; bran
   requireClinic(clinicId);
   const now = opts.now ?? new Date();
   const ids = branchesOf(opts.branchId);
-  const appts = ids.flatMap((b) => dayAppointments(b, opts.date, now)).sort((a, b) => a.start.localeCompare(b.start));
+  // cancelled visits no longer count as appointments
+  const appts = ids
+    .flatMap((b) => dayAppointments(b, opts.date, now))
+    .filter((a) => a.status !== "cancelled")
+    .sort((a, b) => a.start.localeCompare(b.start));
   const nextDay = ids.flatMap((b) => dayAppointments(b, addDays(opts.date, 1), now));
   const count = (s: ApptStatus) => appts.filter((a) => a.status === s).length;
   const extras = ids.map((b) => BRANCH_EXTRAS[b]);
