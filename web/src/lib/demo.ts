@@ -26,8 +26,16 @@ export const findDemoUser = (id: string | null) => DEMO_USERS.find((u) => u.id =
 
 export const canOpenClinic = (user: DemoUser | null, clinicId: string) => user?.clinicId === clinicId;
 
-/** Only same-site paths: no "//host", no "/\host" (browsers treat both as another site). */
-export const safeNext = (next: string | null) => (next && /^\/(?![/\\])/.test(next) ? next : "/");
+/**
+ * Only same-site paths. Parsed the way a browser would (it drops tabs and newlines, so "/\t/evil.com" means
+ * "//evil.com"), then kept only if it stays on this site.
+ */
+export function safeNext(next: string | null) {
+  if (!next?.startsWith("/")) return "/";
+  const base = "http://same.site";
+  const u = new URL(next, base);
+  return u.origin === base ? u.pathname + u.search + u.hash : "/";
+}
 
 /** Where a person lands after choosing them. */
 export const homeOf = (user: DemoUser) => (user.clinicId ? `/clinic/${user.clinicId}` : "/");

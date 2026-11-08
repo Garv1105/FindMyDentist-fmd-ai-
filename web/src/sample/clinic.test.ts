@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
 import {
-  briefingText, decideAiTask, getClinic, getClinicHome, listNotices, markNoticesRead, resetSample, toggleFollowUp,
+  cleanBranch, cleanDate, briefingText, decideAiTask, getClinic, getClinicHome, listNotices, markNoticesRead, resetSample, toggleFollowUp,
 } from "./clinic.ts";
 
 beforeEach(resetSample);
@@ -95,4 +95,25 @@ test("notices: unread until marked read", async () => {
   assert.ok((await listNotices("smile-studio")).some((n) => !n.read));
   await markNoticesRead("smile-studio");
   assert.ok((await listNotices("smile-studio")).every((n) => n.read));
+});
+
+test("reminder task only on today, and only while someone is unconfirmed", async () => {
+  assert.ok((await home()).tasks.some((t) => t.id === "t-reminders"));
+  assert.ok(!(await home("2026-11-15")).tasks.some((t) => t.id === "t-reminders"));
+  assert.ok(!(await home("2026-11-11")).tasks.some((t) => t.id === "t-reminders"));
+  const evening = await getClinicHome("smile-studio", { date: "2026-11-10", branchId: "main", now: new Date("2026-11-10T19:00:00+05:30") });
+  assert.ok(!evening.tasks.some((t) => t.id === "t-reminders"));
+});
+
+test("cleanDate keeps real YYYY-MM-DD dates only", () => {
+  assert.equal(cleanDate("2026-11-10", "2026-11-09"), "2026-11-10");
+  for (const bad of [null, "", "garbage", "2026-13-45", "2026-02-30", "2026-1-1"]) assert.equal(cleanDate(bad, "2026-11-09"), "2026-11-09");
+});
+
+test("cleanBranch keeps known branches or all", async () => {
+  const c = (await getClinic("smile-studio"))!;
+  assert.equal(cleanBranch("kora", c), "kora");
+  assert.equal(cleanBranch("all", c), "all");
+  assert.equal(cleanBranch("nope", c), "main");
+  assert.equal(cleanBranch(null, c), "main");
 });

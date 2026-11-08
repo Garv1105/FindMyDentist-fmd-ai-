@@ -220,6 +220,17 @@ function requireClinic(clinicId: string) {
 
 const branchesOf = (branchId: string) => (branchId === "all" ? CLINIC.branches.map((b) => b.id) : [branchId]);
 
+/** A `?date=` value from the URL: a real calendar date, or `fallback`. */
+export function cleanDate(raw: string | null, fallback: string) {
+  if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return fallback;
+  const t = Date.parse(`${raw}T00:00:00Z`);
+  return Number.isNaN(t) || new Date(t).toISOString().slice(0, 10) !== raw ? fallback : raw; // rejects 2026-02-30
+}
+
+/** A `?branch=` value from the URL: one of the clinic's branches or "all", else its first branch. */
+export const cleanBranch = (raw: string | null, clinic: Clinic) =>
+  raw === "all" || clinic.branches.some((b) => b.id === raw) ? (raw as string) : clinic.branches[0].id;
+
 function dayAppointments(branchId: string, date: string, now: Date): Appointment[] {
   if (weekday(date) === 0) return []; // closed on Sundays
   const today = istDate(now);
@@ -278,7 +289,11 @@ export async function getClinicHome(clinicId: string, opts: { date: string; bran
     attention: { stockAlerts: sum("stockAlerts"), unsignedNotes: sum("unsignedNotes") },
     lowStock: extras.find((e) => e.lowStock)?.lowStock ?? null,
     firstAt: appts[0] ? hm(appts[0].start.slice(11, 16)) : null,
-    tasks: ids.flatMap((b) => TASKS[b] ?? []).map(withTaskState),
+    // reminders are about today's unconfirmed patients: on any other day, or once none are left, there's nothing to send
+    tasks: ids
+      .flatMap((b) => TASKS[b] ?? [])
+      .filter((t) => t.id !== "t-reminders" || (opts.date === istDate(now) && count("unconfirmed") > 0))
+      .map(withTaskState),
     next: appts.filter((a) => !finished.has(a.status)).slice(0, 5),
     followUps: ids.flatMap((b) => FOLLOW_UPS[b] ?? []).map(withDone),
   };
