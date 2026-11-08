@@ -218,8 +218,12 @@ export const waitlistOffered = new Set<string>();
 const followUpDone = new Map<string, boolean>();
 let noticesRead = false;
 
+/** Other sample modules register how to clear their own in-memory changes. */
+export const onReset: (() => void)[] = [];
+
 /** Tests only: back to the untouched demo. */
 export function resetSample() {
+  onReset.forEach((fn) => fn());
   taskState.clear();
   statusOverride.clear();
   added.clear();
