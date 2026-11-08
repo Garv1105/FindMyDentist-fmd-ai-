@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, Menu, UserRound, X } from "lucide-react";
+import { ArrowRight, Menu, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useMe } from "@/lib/me";
+import AccountMenu from "./AccountMenu";
 
 /** The brand mark: public/logo.png (fmd + the meditating mascot + FindMyDentist), trimmed to public/img/logo-fmd.webp */
 export function Logo() {
@@ -52,22 +52,6 @@ function useCurrentSection() {
     };
   }, []);
   return current;
-}
-
-/** Signed in: your initial, to your account. Signed out: sign in. Nothing until we know, so it never flickers. */
-function AccountButton() {
-  const me = useMe();
-  if (me === undefined) return null;
-  const cls = "grid size-11 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-ink-2 transition-colors hover:text-ink";
-  return me ? (
-    <Link href="/account" aria-label={`Your account (${me.name})`} className={`${cls} text-[14px] font-medium`}>
-      {me.name.trim()[0]?.toUpperCase() ?? <UserRound className="size-5" strokeWidth={1.5} />}
-    </Link>
-  ) : (
-    <Link href="/signin" aria-label="Sign in" className={cls}>
-      <UserRound className="size-5" strokeWidth={1.5} />
-    </Link>
-  );
 }
 
 /** The site bar: a floating matte-glass pill with the logo, the homepage's sections in page order, and the early-access
@@ -136,9 +120,9 @@ export default function Navbar() {
             onClick={() => setOpen(false)}
             className="btn-primary cta-pulse h-11 gap-1.5 whitespace-nowrap pl-5 pr-4 text-[13.5px]"
           >
-            Join Waitlist<ArrowRight className="cta-arrow size-4" strokeWidth={2} />
+            <span className="hidden sm:inline">Join&nbsp;</span>Waitlist<ArrowRight className="cta-arrow size-4" strokeWidth={2} />
           </Link>
-          <AccountButton />
+          <AccountMenu />
           <button
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
