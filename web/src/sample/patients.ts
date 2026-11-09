@@ -225,6 +225,11 @@ export async function addNote(clinicId: string, patientId: string, input: { text
 
 /** A patient by exact name, for screens that only know the name (sync: sample data only). */
 export const patientByName = (name: string) => all().find((p) => p.name === name) ?? null;
+/** A patient by mobile number, however it's typed (sample data only). */
+export const patientByPhone = (phone: string) => {
+  const d = digits(phone).slice(-10);
+  return d.length === 10 ? (all().find((p) => digits(p.phone).slice(-10) === d) ?? null) : null;
+};
 
 export const planTotal = (plan: Plan) => plan.lines.reduce((n, l) => n + l.qty * l.feeInr, 0) - plan.discountInr;
 

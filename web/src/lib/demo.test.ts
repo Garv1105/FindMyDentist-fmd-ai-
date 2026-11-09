@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { areasFor, canOpenClinic, DEMO_USERS, findDemoUser, makeUser, PREVIEW_CODE, readStored, safeNext, userByPhone } from "./demo.ts";
+import { areasFor, canOpenClinic, phoneTaken, DEMO_USERS, findDemoUser, makeUser, PREVIEW_CODE, readStored, safeNext, userByPhone } from "./demo.ts";
 
 test("six demo people, one per role", () => {
   assert.deepEqual(
@@ -77,4 +77,14 @@ test("the profile menu lists what each role can open", () => {
   assert.ok(!labels("demo-patient").includes("Billing"));
   assert.ok(areasFor(findDemoUser("demo-patient")!).flatMap((g) => g.items).every((i) => !i.href)); // FMD Main isn't built yet
   assert.ok(labels("demo-student").some((l) => /Scholar/.test(l)));
+});
+
+test("created accounts are found by phone too, and a number can't be taken twice", () => {
+  const made = makeUser({ name: "Meera Iyer", role: "patient", phone: "91234 56789" });
+  assert.equal(userByPhone("9123456789"), null);
+  assert.equal(userByPhone("9123456789", [made])?.name, "Meera Iyer");
+  assert.equal(userByPhone("98450 10101", [made])?.id, "demo-owner"); // demo people still win
+  assert.equal(phoneTaken("98450 10101", []), true);
+  assert.equal(phoneTaken("91234 56789", [made]), true);
+  assert.equal(phoneTaken("90000 11111", [made]), false);
 });

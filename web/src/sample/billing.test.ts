@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
-import { getBill, getBillingSummary, listBills, MODES, recordPayment, refundBill, voidBill } from "./billing.ts";
+import { dayBills, getBill, getBillingSummary, listBills, MODES, recordPayment, refundBill, voidBill } from "./billing.ts";
 import { resetSample } from "./clinic.ts";
 
 beforeEach(resetSample);
@@ -85,4 +85,17 @@ test("voided bills leave today's total", async () => {
   const after = await getBillingSummary(C, { branchId: "main", now });
   assert.equal(after.today.totalInr, before.today.totalInr - b.amountInr);
   assert.equal(after.refunds.voids, 1);
+});
+
+test("bills for any day, including an earlier month (Home uses this)", async () => {
+  const oct = await dayBills(C, { branchId: "main", date: "2026-10-30", now });
+  assert.ok(oct.length > 0 && oct.every((b) => b.date === "2026-10-30"));
+  const today = await dayBills(C, { branchId: "main", date: "2026-11-10", now });
+  const s = await getBillingSummary(C, { branchId: "main", now });
+  assert.equal(today.filter((b) => b.status === "paid").reduce((n, b) => n + b.amountInr, 0), s.today.totalInr);
+});
+
+test("a payment without an ID reuses the patient found by phone", async () => {
+  const b = await recordPayment(C, { branchId: "main", name: "Neha K", phone: "+91 99001 22334", patientId: "", amountInr: 500, mode: "Cash", by: "Kavya" }, now);
+  assert.equal(b.patientId, "FMD-00820");
 });

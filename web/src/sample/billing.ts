@@ -7,7 +7,7 @@
  * staff only choosing the payment mode.
  */
 import { CHAIRS, dayAppointments, FEES, istDate, onReset, requireClinic } from "./clinic.ts";
-import { patientByName } from "./patients.ts";
+import { patientByName, patientByPhone } from "./patients.ts";
 
 export const MODES = ["UPI", "Card", "Cash", "Net banking"] as const;
 export type Mode = (typeof MODES)[number];
@@ -85,6 +85,14 @@ const withChange = (b: Bill): Bill => {
   return c ? { ...b, change: c, status: c.kind === "refund" ? "refunded" : "void" } : b;
 };
 
+/** One day's bills (any date, not just this month), newest first. */
+function billsOn(branchId: string, date: string, now: Date): Bill[] {
+  const ids = branchIds(branchId);
+  return [...ids.flatMap((b) => visitBills(b, date, now)), ...recorded.filter((b) => ids.includes(b.branchId) && b.date === date)]
+    .map(withChange)
+    .sort((a, b) => b.time.localeCompare(a.time) || b.id.localeCompare(a.id));
+}
+
 /** Every bill this month up to today, newest first. */
 function monthBills(branchId: string, now: Date): Bill[] {
   const today = istDate(now);
@@ -110,6 +118,12 @@ export async function listBills(clinicId: string, opts: { branchId: string; q?: 
       b.id.toLowerCase().includes(q) ||
       (qd.length >= 3 && digits(b.phone).includes(qd)),
   );
+}
+
+/** The bills raised on one day; Home's "Collected" card uses this, so it matches Billing for that day. */
+export async function dayBills(clinicId: string, opts: { branchId: string; date: string; now?: Date }): Promise<Bill[]> {
+  requireClinic(clinicId);
+  return billsOn(opts.branchId, opts.date, opts.now ?? new Date());
 }
 
 export async function getBill(clinicId: string, id: string, now = new Date()): Promise<Bill | null> {
@@ -157,7 +171,8 @@ export async function recordPayment(clinicId: string, input: PaymentInput, now =
     date: today,
     time: ist.toISOString().slice(11, 16),
     patientName: name,
-    patientId: input.patientId.trim() || `FMD-${String(13000 + recorded.length).padStart(5, "0")}`,
+    // no ID typed: reuse the patient this phone belongs to, else give a new patient their first ID
+    patientId: input.patientId.trim() || patientByPhone(d)?.pid || `FMD-${String(13000 + recorded.length).padStart(5, "0")}`,
     phone: fmtPhone(d),
     items: [{ what: input.what?.trim() || "Treatment", amountInr: input.amountInr }],
     amountInr: input.amountInr,
