@@ -5,7 +5,6 @@ import { LOCAL_MODELS_VERSION, USE_CLOUDINARY_MODELS } from "@/toggle";
 
 export const MODEL_CDN: Record<string, string> = {
   "/mascot-sitting-raw.glb": "https://res.cloudinary.com/dspavi1io/raw/upload/v1793992496/fmd/models/mascot-sitting-raw.glb",
-  "/mascot-sitting-raw-mobile.glb": "https://res.cloudinary.com/dspavi1io/raw/upload/v1793992497/fmd/models/mascot-sitting-raw-mobile.glb",
   "/models/assistant.glb": "https://res.cloudinary.com/dspavi1io/raw/upload/v1793992499/fmd/models/assistant.glb",
   "/models/rig/guide.glb": "https://res.cloudinary.com/dspavi1io/raw/upload/v1793992500/fmd/models/rig/guide.glb",
   "/models/rig/guide-left.glb": "https://res.cloudinary.com/dspavi1io/raw/upload/v1793992502/fmd/models/rig/guide-left.glb",

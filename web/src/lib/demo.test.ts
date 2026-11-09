@@ -70,12 +70,14 @@ test("the profile menu lists what each role can open", () => {
   assert.equal(owner[0].title, "FMD Clinic");
   assert.deepEqual(
     owner[0].items.filter((i) => i.href).map((i) => i.label),
-    ["Home", "Calendar", "Patients", "Billing"],
+    ["Home", "Calendar", "Patients", "Billing", "Tasks", "Reports", "AI manager", "Team", "Settings"],
   );
   assert.ok(owner[0].items.every((i) => !i.href || i.href.startsWith("/clinic/smile-studio")));
   assert.ok(labels("demo-patient").some((l) => /FMD Main/.test(l)));
   assert.ok(!labels("demo-patient").includes("Billing"));
-  assert.ok(areasFor(findDemoUser("demo-patient")!).flatMap((g) => g.items).every((i) => !i.href)); // FMD Main isn't built yet
+  assert.ok(labels("demo-patient").includes("Jobs"));
+  // a dentist at the demo clinic sees their own part of FMD Clinic
+  assert.deepEqual(areasFor(findDemoUser("demo-dentist")!)[0].items.map((i) => i.label), ["Home", "Calendar", "Patients", "Tasks", "Settings"]);
   assert.ok(labels("demo-student").some((l) => /Scholar/.test(l)));
 });
 

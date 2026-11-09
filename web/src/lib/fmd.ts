@@ -39,9 +39,14 @@ export type Me = User & {
 
 export type MfaChallenge = { mfa_required: true; challenge_token: string };
 
+// fields written out (not as constructor parameter properties) so node --test can strip the types
 export class ApiError extends Error {
-  constructor(message: string, readonly status: number, readonly code: string) {
+  readonly status: number;
+  readonly code: string;
+  constructor(message: string, status: number, code: string) {
     super(message);
+    this.status = status;
+    this.code = code;
   }
 }
 

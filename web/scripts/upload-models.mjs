@@ -15,7 +15,7 @@ const FOLDER = "fmd/models";
 // every model the home page loads, by its path under web/public
 const FILES = [
   "/mascot-sitting-raw.glb", // hero, desktop
-  "/mascot-sitting-raw-mobile.glb", // hero, phones and low-memory devices
+  "/mascot-sitting-mobile.glb", // hero, phones (lighter build)
   "/models/assistant.glb", // FMD AI's mascot beside the search bar
   "/models/assistant-mobile.glb",
   // the section mascots, and their phone builds (models/rig-mobile: same look, ~half the triangles)

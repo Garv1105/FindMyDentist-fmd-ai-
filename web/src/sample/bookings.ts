@@ -47,13 +47,16 @@ export type Booking = {
 
 export type Input = { dentist_id: string; type: TypeKey; start?: number; window?: Window; for: Booking["for"]; notes: string | null };
 
+type BookingErrorCode = "slot_taken" | "duplicate" | "not_open" | "not_allowed" | "not_found";
+
+// fields written out (not as constructor parameter properties) so node --test can strip the types
 export class BookingError extends Error {
-  constructor(
-    message: string,
-    readonly code: "slot_taken" | "duplicate" | "not_open" | "not_allowed" | "not_found",
-    readonly bookingId?: string,
-  ) {
+  readonly code: BookingErrorCode;
+  readonly bookingId?: string;
+  constructor(message: string, code: BookingErrorCode, bookingId?: string) {
     super(message);
+    this.code = code;
+    this.bookingId = bookingId;
   }
 }
 

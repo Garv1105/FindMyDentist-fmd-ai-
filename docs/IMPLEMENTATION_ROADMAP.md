@@ -1,6 +1,6 @@
 # FMD - Implementation Roadmap
 
-**Last updated:** 9 Nov 2026 · **Repo:** `findmydentist/fmd-website` (primary; the live site deploys from `main`)
+**Last updated:** 9 Nov 2026 · **Repo:** `findmydentist/fmd-experimental`
 
 This roadmap sets the **order** of work. The PRD (`FMD_Master_PDR_Expanded_Revised.pdf`) stays the product definition. Every place where we deliberately differ from it is listed in [`PRD_CHANGES.md`](PRD_CHANGES.md), and decisions are logged in [`OPEN_DECISIONS.md`](OPEN_DECISIONS.md).
 
@@ -23,14 +23,14 @@ The whole website's UI/UX is being built **before** the real backend. This lets 
 | **C1** | Clinic shell (sidebar, date and branch pickers, notifications, phone menu) + **Home** (AI briefing with approval cards, summary numbers, next appointments, follow-ups) | **Done**, in [PR #3](https://github.com/findmydentist/fmd-website/pull/3) |
 | **C2** | **Calendar**: agenda list by Morning/Afternoon/Evening with free-time chips, "By dentist" view, appointment details and status steps, booking with clash checks, waitlist. **Patients**: search, filters, duplicate warning, patient record with timeline, FDI chart, signed notes and amendments, treatment plans, files, bills | **Done**, in [PR #4](https://github.com/findmydentist/fmd-website/pull/4) (stacked on #3) |
 | **C3** | **Billing**: bills paid in full, today's collection by mode, record a payment (name, phone, patient ID, amount, mode), owner-only refund/void with a reason. **Inventory removed** from FMD Clinic. **Homepage profile menu**: sign in / create account, role-based navigation, switch role | Billing done; profile menu in progress |
-| C4 | Tasks (handover, checklists), Reports | Next |
-| C5 | AI manager page: chat, task cards, approval queue, history, scheduled tasks, content drafts | Planned |
-| C6 | Team, Settings (incl. AI permissions), clinic sign-up and verification | Planned |
-| M1 | FMD Main shell (slim side rail) + full-screen AI Assistant with draft-then-tap action cards | Planned |
-| M2 | Find a dentist, Instagram-style dentist profile, Messages | Planned |
-| M3 | Feed and Explore, post/reel viewer, dentist post creation | Planned |
-| M4 | Appointments and booking flow, Records | Planned |
-| M5 | FMD Edge (Concierge), Jobs, Account and membership, sign-up and onboarding, dentist registration, help | Planned |
+| **C4** | **Tasks** (checklists, handover, follow-ups) and **Reports** stages 1–4: Clinic Pulse, daily operations and collection, utilisation, no-shows, patient base, new by source, recall, case acceptance, pending treatment, procedure mix, revenue summary, GST register | **Done** |
+| **C5** | **AI manager**: approval queue, chat answering from the clinic's figures, scheduled jobs, content drafts, history | **Done** |
+| **C6** | **Team** (roles, invites) and **Settings** (clinic details, GST mapping, AI permissions, each dentist's own profile); light theme | **Done**; clinic sign-up and verification still to come |
+| M1 | FMD Main shell (slim side rail) + full-screen AI Assistant with draft-then-tap action cards | Built in FMD Main phases 1–11; status per part in [`FMD_MAIN_PLAN.md`](FMD_MAIN_PLAN.md) |
+| M2 | Find a dentist, Instagram-style dentist profile, Messages | Built in FMD Main phases 1–11; status per part in [`FMD_MAIN_PLAN.md`](FMD_MAIN_PLAN.md) |
+| M3 | Feed and Explore, post/reel viewer, dentist post creation | Built in FMD Main phases 1–11; status per part in [`FMD_MAIN_PLAN.md`](FMD_MAIN_PLAN.md) |
+| M4 | Appointments and booking flow, Records | Built in FMD Main phases 1–11; status per part in [`FMD_MAIN_PLAN.md`](FMD_MAIN_PLAN.md) |
+| M5 | FMD Edge (Concierge), Jobs, Account and membership, sign-up and onboarding, dentist registration, help | Built in FMD Main phases 1–11; status per part in [`FMD_MAIN_PLAN.md`](FMD_MAIN_PLAN.md) |
 | Scholar | FMD Scholar | After M5, with its own design round |
 | Backend | Real data, auth, AI, messaging, payments | After the UI; see "Later" below |
 

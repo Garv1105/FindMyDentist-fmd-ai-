@@ -11,9 +11,8 @@ import Contain from "./Contain";
 const MascotModel = dynamic(() => import("./MascotModel"), { ssr: false });
 
 /**
- * The 3D model standing in for each mascot artwork. Sources: model/mascot/compressed → public/models/mascots (as given);
- * the site loads public/models/rig: porcelain, rigged and meshopt + WebP (model/blender/mascots/build_rig.sh; their
- * motions are MascotModel's MOTIONS). public/models/compressed holds the same models unrigged (build_porcelain.sh).
+ * The 3D model standing in for each mascot artwork: public/models/rig (porcelain, rigged, meshopt + WebP; their motions
+ * are MascotModel's MOTIONS). The 3D sources and build scripts live outside this repository.
  */
 // bump ?v= whenever the models are rebuilt, or browsers keep the cached old ones
 // Cloudinary when it has a copy (lib/models.ts); low-memory devices and narrow windows get swaraj's lighter rig-mobile
