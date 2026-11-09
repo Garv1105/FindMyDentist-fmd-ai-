@@ -7,6 +7,8 @@
 # build_rig.sh). The Care Core tooth is glass instead (glass_tooth.py, never rigged: it only spins). Their studios
 # (lights fitted to each artwork) are in web/src/components/MascotModel.tsx (LOOKS).
 #   usage: model/blender/mascots/build_porcelain.sh [name …]     (default: every model below)
+# Phones: DECIMATE=40000 OUT_DIR=rig-mobile RIG=1 …  reduces the smoothed (subdivided) surface to that many triangles
+# before the head and rig are built, into web/public/models/<OUT_DIR>/. GT=<local gltf-transform> skips npx.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$HERE/../../.."
@@ -18,11 +20,17 @@ declare -A NECK=([guide]=0.53 [guide-left]=0.53 [butler]=0.53 [laptop]=0.53 [pin
 # laptop, pin, scholar, vault: their eye textures have no painted highlight (the others have)
 declare -A EXTRA=([butler]="--black-suit" [pin]="--deep-blue --eye-glints" [laptop]="--eye-glints" [scholar]="--eye-glints" [vault]="--eye-glints")
 if [ -n "${RIG:-}" ]; then OUT="$ROOT/web/public/models/rig"; else OUT="$ROOT/web/public/models/compressed"; fi
+[ -n "${OUT_DIR:-}" ] && OUT="$ROOT/web/public/models/$OUT_DIR"
+GT="${GT:-npx --yes @gltf-transform/cli@4}"
 mkdir -p "$OUT"
 ALL=("${!NECK[@]}" tooth)
 TMP="$(mktemp -d)"
 for n in "${@:-${ALL[@]}}"; do
   blender -b --python "$HERE/subdivide.py" -- "$ROOT/web/public/models/mascots/$n.glb" "$TMP/$n.sub.glb" | grep -E "^SUBDIV"
+  if [ -n "${DECIMATE:-}" ]; then
+    blender -b --python "$ROOT/model/blender/tripo/raw/decimate_raw.py" -- "$TMP/$n.sub.glb" "$TMP/$n.dec.glb" "$DECIMATE" | grep -E "^TRIS"
+    mv "$TMP/$n.dec.glb" "$TMP/$n.sub.glb"
+  fi
   if [ "$n" = tooth ]; then
     blender -b --python "$HERE/glass_tooth.py" -- "$TMP/$n.sub.glb" "$TMP/$n.glb" | grep -E "^GLASS"
   else
@@ -35,8 +43,8 @@ for n in "${@:-${ALL[@]}}"; do
     fi
   fi
   # textures first (a separate webp pass would drop meshopt), at 95: the face, eyes and lines stay crisp
-  npx --yes @gltf-transform/cli@4 webp "$TMP/$n.glb" "$TMP/$n.webp.glb" --quality 95 | tail -1
-  NODE_OPTIONS=--max-old-space-size=3072 npx --yes @gltf-transform/cli@4 optimize "$TMP/$n.webp.glb" "$OUT/$n.glb" \
+  $GT webp "$TMP/$n.glb" "$TMP/$n.webp.glb" --quality 95 | tail -1
+  NODE_OPTIONS=--max-old-space-size=3072 $GT optimize "$TMP/$n.webp.glb" "$OUT/$n.glb" \
     --compress meshopt --texture-compress false --texture-size 1024 --simplify false --instance false --flatten false --join false | tail -1
 done
 rm -rf "$TMP"

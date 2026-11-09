@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { isPhone } from "@/lib/phone";
 
 const SEEN = "fmd-models-ready";
 const MAX_WAIT = 25000;
@@ -16,6 +17,8 @@ export default function ModelPreloader() {
   const [pct, setPct] = useState(0);
 
   useEffect(() => {
+    // phones load no models (MascotArt plays loops there) and never see this screen (globals.css hides it)
+    const phone = isPhone();
     let seen = false;
     try {
       seen = sessionStorage.getItem(SEEN) === "1";
@@ -28,9 +31,10 @@ export default function ModelPreloader() {
         sessionStorage.setItem(SEEN, "1");
       } catch {}
       setPct(1);
-      setState(seen ? "gone" : "leaving");
+      setState(seen || phone ? "gone" : "leaving");
     };
-    if (seen) void Promise.resolve().then(finish); // cached already: drop the screen straight away
+    if (seen || phone) void Promise.resolve().then(finish); // cached already (or a phone): drop the screen straight away
+    if (phone) return;
     const timer = setTimeout(finish, MAX_WAIT);
     // downloads are the first 80% of the bar, setting up the canvases the rest
     const bar = (f: number) => setPct((p) => Math.max(p, f));
@@ -45,7 +49,7 @@ export default function ModelPreloader() {
 
   // no scrolling under the loading screen
   useEffect(() => {
-    if (state !== "loading") return;
+    if (state !== "loading" || isPhone()) return;
     const prev = document.documentElement.style.overflow;
     document.documentElement.style.overflow = "hidden";
     return () => {
@@ -60,7 +64,7 @@ export default function ModelPreloader() {
       aria-live="polite"
       aria-label="Loading FindMyDentist"
       onTransitionEnd={() => state === "leaving" && setState("gone")}
-      className={`fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black transition-opacity duration-700 ${
+      className={`fmd-loader fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black transition-opacity duration-700 ${
         state === "leaving" ? "pointer-events-none opacity-0" : "opacity-100"
       }`}
     >

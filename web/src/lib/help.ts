@@ -1,0 +1,21 @@
+/** Help centre articles. Plain language; each answers one question about how FMD actually works today. */
+export type Article = { id: string; area: string; q: string; a: string };
+
+export const ARTICLES: Article[] = [
+  { id: "sign-in", area: "Account & sign-in", q: "How do I sign in?", a: "Enter your email or mobile number and we send a 6-digit code. Codes expire after 10 minutes, and after 5 wrong attempts you need a new one. FMD doesn't use passwords." },
+  { id: "devices", area: "Account & sign-in", q: "How do I sign out of other devices?", a: "Go to Account → Signed-in devices. You can sign out a single device or all other devices at once." },
+  { id: "delete-account", area: "Account & sign-in", q: "How do I delete my account?", a: "Go to Account → Sign out & delete → Request account deletion. The FMD team confirms what is deleted and what must be kept for legal reasons." },
+  { id: "consent", area: "Account & sign-in", q: "What do the communication settings mean?", a: "Appointment updates and news/offers are separate choices. Turning on one never turns on the other. Each change is recorded with a timestamp." },
+  { id: "booking-status", area: "Appointments & booking", q: "Why does my booking say 'Awaiting clinic confirmation'?", a: "Your request has been sent but isn't an appointment until the clinic confirms it. You'll see the status change in My Appointments. If it doesn't change, contact the clinic or open a support request." },
+  { id: "booking-availability", area: "Appointments & booking", q: "Why can't I pick a time for some dentists?", a: "Times are shown only when the clinic's schedule is connected to FMD. Otherwise you tell the clinic your preferred timing and they propose a time." },
+  { id: "booking-cancel", area: "Appointments & booking", q: "How do I cancel or reschedule?", a: "Open My Appointments and choose Reschedule or Cancel request. Rescheduling keeps your current request until the new one is sent successfully. The clinic's cancellation terms are shown on each booking." },
+  { id: "records-private", area: "Dental records", q: "Who can see my dental records?", a: "Only you, unless you share a document with a specific dentist on FMD for a period you choose. You can stop sharing at any time, and every view is listed in the document's access history." },
+  { id: "records-types", area: "Dental records", q: "What files can I upload?", a: "PDF, JPEG, PNG, WebP and DICOM files up to 15 MB each. Files are checked by their content, not just their name." },
+  { id: "ai-what", area: "FMD AI", q: "What can FMD AI do?", a: "It explains dental topics in plain language and helps you find the right kind of dentist. It doesn't diagnose, prescribe, book, message clinics or pay for you. You make every decision." },
+  { id: "ai-history", area: "FMD AI", q: "Are my FMD AI conversations saved?", a: "Only if you turn on 'Save FMD AI conversations' in Account. You can open or delete saved conversations from the assistant's history." },
+  { id: "ai-urgent", area: "FMD AI", q: "What if my symptoms are serious?", a: "FMD AI isn't monitoring emergencies. For swelling spreading to your eye or neck, difficulty breathing or swallowing, heavy bleeding or a serious injury, go to the nearest emergency department or call 112." },
+  { id: "concierge", area: "FMD Edge", q: "What is FMD Edge?", a: "A human coordination service. You share what you need and an FMD coordinator contacts you to help find suitable options. Nothing is arranged until you agree to it. It isn't an emergency service." },
+  { id: "verified", area: "Explore & content", q: "What does 'Verified' mean?", a: "FMD has checked specific details about that dentist, and the profile lists exactly what was checked. Sponsored labels mean paid placement and are never a clinical endorsement." },
+  { id: "feed-why", area: "Explore & content", q: "Why am I seeing a post?", a: "Each post shows a reason: your chosen interests, a dentist you follow, your search, or general education. You can edit or reset your interests in Explore." },
+  { id: "membership", area: "Membership & payments", q: "How do memberships work?", a: "Patient access is free. Dentist, student and company memberships are annual; prices exclude GST. Online payment isn't available yet; your Account page shows your current status and limits." },
+];
