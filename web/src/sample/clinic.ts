@@ -61,8 +61,7 @@ export type ClinicHome = {
     recallDue: number;
   };
   money: { collectedInr: number; outstandingInr: number; outstandingPatients: number };
-  attention: { stockAlerts: number; unsignedNotes: number };
-  lowStock: string | null;
+  attention: { unsignedNotes: number; overdueFollowUps: number };
   /** "9:30" style IST time of the first appointment, or null */
   firstAt: string | null;
   tasks: AiTask[];
@@ -156,14 +155,17 @@ const TASKS: Record<string, AiTask[]> = {
       },
     },
     {
-      id: "t-po-composite",
-      title: "Draft purchase order: composite A2 × 6",
-      detail: "Dentsply via MedSupply Bengaluru · ₹8,640 estimated. Nothing is ordered until you approve.",
-      source: "From: stock levels and last 30 days' use",
+      id: "t-recall",
+      title: "Send recall messages to 2 patients",
+      detail: "Their 6-month check is due and nothing is booked. WhatsApp, using your \"Recall\" template; both have opted in.",
+      source: "From: visit history and your recall rule",
       needsApproval: true,
       status: "proposed",
-      actionLabel: "Review order",
-      preview: { lines: [["Composite A2, 4 g syringe × 6", "₹7,320"], ["GST 18%", "₹1,320"]], total: "₹8,640" },
+      actionLabel: "Review & send",
+      preview: {
+        recipients: ["Meera Joshi · last visit 8 May", "Divya Pillai · last visit 14 Apr"],
+        message: "Hi {name}, it's been 6 months since your last check-up at Smile Studio Dental. Reply with a day that suits you, or book on FMD.",
+      },
     },
     {
       id: "t-paysheet",
@@ -197,18 +199,18 @@ const FOLLOW_UPS: Record<string, FollowUp[]> = {
   ],
   kora: [
     { id: "f-xray", kind: "follow_up", title: "Send Farah Sheikh her X-ray report", note: "Requested at her last visit", due: "upcoming", fromAi: false, done: false },
-    { id: "f-stock-count", kind: "staff_task", title: "Weekly stock count", note: "Front desk · due Friday", due: "upcoming", fromAi: false, done: false },
+    { id: "f-sterilisation-log", kind: "staff_task", title: "Weekly sterilisation log", note: "Front desk · due Friday", due: "upcoming", fromAi: false, done: false },
   ],
 };
 
-const BRANCH_EXTRAS: Record<string, { recallDue: number; stockAlerts: number; unsignedNotes: number; lowStock: string | null; outstandingInr: number; outstandingPatients: number }> = {
-  main: { recallDue: 2, stockAlerts: 2, unsignedNotes: 2, lowStock: "composite A2", outstandingInr: 12000, outstandingPatients: 4 },
-  kora: { recallDue: 4, stockAlerts: 0, unsignedNotes: 1, lowStock: null, outstandingInr: 3500, outstandingPatients: 1 },
+const BRANCH_EXTRAS: Record<string, { recallDue: number; unsignedNotes: number; outstandingInr: number; outstandingPatients: number }> = {
+  main: { recallDue: 2, unsignedNotes: 2, outstandingInr: 12000, outstandingPatients: 4 },
+  kora: { recallDue: 4, unsignedNotes: 1, outstandingInr: 3500, outstandingPatients: 1 },
 };
 
 const NOTICES: Omit<Notice, "read">[] = [
   { id: "n1", text: "Arjun Mehta hasn't confirmed today's 11:00 root canal", at: "08:30", href: "calendar?filter=unconfirmed" },
-  { id: "n2", text: "Composite A2 is below its reorder level", at: "08:30", href: "inventory" },
+  { id: "n2", text: "Meera Joshi and Divya Pillai are due for their 6-month check", at: "08:30", href: "patients" },
   { id: "n3", text: "New booking via FMD: Sana Qureshi, 14:00 braces review", at: "08:05", href: "calendar" },
   { id: "n4", text: "FMD Manager finished yesterday's daily payment sheet", at: "08:30", href: "billing" },
 ];
@@ -307,7 +309,7 @@ export async function getClinicHome(clinicId: string, opts: { date: string; bran
   const nextDay = ids.flatMap((b) => dayAppointments(b, addDays(opts.date, 1), now));
   const count = (s: ApptStatus) => appts.filter((a) => a.status === s).length;
   const extras = ids.map((b) => BRANCH_EXTRAS[b]);
-  const sum = (k: "recallDue" | "stockAlerts" | "unsignedNotes" | "outstandingInr" | "outstandingPatients") => extras.reduce((n, e) => n + e[k], 0);
+  const sum = (k: "recallDue" | "unsignedNotes" | "outstandingInr" | "outstandingPatients") => extras.reduce((n, e) => n + e[k], 0);
   const finished = new Set<ApptStatus>(["completed", "no_show", "cancelled"]);
 
   return {
@@ -328,8 +330,10 @@ export async function getClinicHome(clinicId: string, opts: { date: string; bran
       outstandingInr: sum("outstandingInr"),
       outstandingPatients: sum("outstandingPatients"),
     },
-    attention: { stockAlerts: sum("stockAlerts"), unsignedNotes: sum("unsignedNotes") },
-    lowStock: extras.find((e) => e.lowStock)?.lowStock ?? null,
+    attention: {
+      unsignedNotes: sum("unsignedNotes"),
+      overdueFollowUps: ids.flatMap((b) => FOLLOW_UPS[b] ?? []).map(withDone).filter((f) => f.due === "overdue" && !f.done).length,
+    },
     firstAt: appts[0] ? hm(appts[0].start.slice(11, 16)) : null,
     // reminders are about today's unconfirmed patients: on any other day, or once none are left, there's nothing to send
     tasks: ids
@@ -379,7 +383,6 @@ export function briefingText(h: ClinicHome): string {
   if (u > 0) parts.push(`${u} patient${u === 1 ? " hasn't" : "s haven't"} confirmed.`);
   const tail: string[] = [];
   if (h.counts.recallDue > 0) tail.push(`${h.counts.recallDue} patient${h.counts.recallDue === 1 ? " is" : "s are"} due for recall this week`);
-  if (h.lowStock) tail.push(`${h.lowStock} will run out in about 4 days at the current rate`);
   if (tail.length) parts.push(`${tail.join(", and ")}.`.replace(/^./, (c) => c.toUpperCase()));
   return parts.join(" ");
 }
