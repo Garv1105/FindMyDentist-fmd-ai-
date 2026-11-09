@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { LIGHT_DEVICE } from "@/lib/device";
+import { model } from "@/lib/models";
 import type { MotionValue } from "motion/react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Environment, Lightformer, useGLTF } from "@react-three/drei";
@@ -22,7 +24,9 @@ import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js
 // gltf-transform center, the head's sculpted seam/pit faired off with the face pinned, meshopt + WebP 2048 → 2.5 MB);
 // it floats, bobs its hands and flutters its coat tails (forearm + coat bones, arms_raw.py); the clips below need the
 // rigged one
-const MODEL_URL = "/mascot-sitting-raw.glb?v=5";
+// phones and low-memory devices get the same model built lighter (150k tris, 1024 textures: build_raw.sh 150000 1024
+// mascot-sitting-raw-mobile.glb); at a phone's mascot size it looks the same, at a fraction of the GPU work (see lib/device.ts)
+const MODEL_URL = model(LIGHT_DEVICE ? "/mascot-sitting-raw-mobile.glb" : "/mascot-sitting-raw.glb");
 // const MODEL_URL = "/mascot-sitting.glb?v=20"; // rigged + animated (Fly, Meditate, face)
 // const MODEL_URL = "/mascot-sitting-org.glb?v=20";
 const FADE = 0.45;
@@ -195,6 +199,9 @@ function Model({ base, gesture, rotY, onReady, onMouth }: Props) {
 useGLTF.preload(MODEL_URL);
 
 export default function Mascot3D({ active, ...props }: Props & { active: boolean }) {
+  // the browser can kill a WebGL context (phones cap how many live at once): throw, so the hero's Contain shows the still
+  const [lost, setLost] = useState(false);
+  if (lost) throw new Error("WebGL context lost");
   return (
     <Canvas
       frameloop={active ? "always" : "never"}
@@ -207,6 +214,7 @@ export default function Mascot3D({ active, ...props }: Props & { active: boolean
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.NeutralToneMapping;
         gl.toneMappingExposure = 1;
+        gl.domElement.addEventListener("webglcontextlost", () => setLost(true), { once: true });
       }}
       style={{ pointerEvents: "none" }}
     >
