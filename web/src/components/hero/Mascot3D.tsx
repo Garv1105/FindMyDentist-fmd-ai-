@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { LIGHT_DEVICE } from "@/lib/device";
-import { model } from "@/lib/models";
+import { useEffect, useMemo, useRef } from "react";
 import type { MotionValue } from "motion/react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Environment, Lightformer, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
+import { isPhone } from "@/lib/phone";
+import { model } from "@/lib/models";
+import Throttle from "./Throttle";
 
 /**
  * The seated hero mascot (the Tripo model, built by model/blender/tripo: prep_tripo.py … sit, rig_tripo.py … sit,
@@ -24,11 +25,12 @@ import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js
 // gltf-transform center, the head's sculpted seam/pit faired off with the face pinned, meshopt + WebP 2048 → 2.5 MB);
 // it floats, bobs its hands and flutters its coat tails (forearm + coat bones, arms_raw.py); the clips below need the
 // rigged one
-// phones and low-memory devices get the same model built lighter (150k tris, 1024 textures: build_raw.sh 150000 1024
-// mascot-sitting-raw-mobile.glb); at a phone's mascot size it looks the same, at a fraction of the GPU work (see lib/device.ts)
-const MODEL_URL = model(LIGHT_DEVICE ? "/mascot-sitting-raw-mobile.glb" : "/mascot-sitting-raw.glb");
+// phones: the same model at 48k triangles, 1024px textures, 530 KB (gltf-transform: dequantize, weld, simplify 0.12,
+// resize, webp, meshopt). This module only loads in the browser, so isPhone() is safe here
+const PHONE = isPhone();
+// served from Cloudinary when it has a copy (lib/models.ts), else from web/public
+const MODEL_URL = model(PHONE ? "/mascot-sitting-mobile.glb" : "/mascot-sitting-raw.glb");
 // const MODEL_URL = "/mascot-sitting.glb?v=20"; // rigged + animated (Fly, Meditate, face)
-// const MODEL_URL = "/mascot-sitting-org.glb?v=20";
 const FADE = 0.45;
 const AMBIENT = ["LookAround", "Smile", "Nod"];
 
@@ -199,22 +201,19 @@ function Model({ base, gesture, rotY, onReady, onMouth }: Props) {
 useGLTF.preload(MODEL_URL);
 
 export default function Mascot3D({ active, ...props }: Props & { active: boolean }) {
-  // the browser can kill a WebGL context (phones cap how many live at once): throw, so the hero's Contain shows the still
-  const [lost, setLost] = useState(false);
-  if (lost) throw new Error("WebGL context lost");
   return (
     <Canvas
-      frameloop={active ? "always" : "never"}
+      // phones: 30 fps (Throttle), 1.5× pixels at most, no MSAA, 3 lights (the 8 below folded into key, blue side, blue rim)
+      frameloop={active ? (PHONE ? "demand" : "always") : "never"}
       dpr={[1, 1.5]}
       // measure the unscaled box: the parent is CSS-scaled while rising, and a scaled measure shrinks the canvas off-centre
       resize={{ offsetSize: true }}
       // the model is 1 unit tall, sitting on y=-0.5; the canvas is wider than tall so waving/pointing arms fit
       camera={{ position: [0, 0.03, 2.15], fov: 30 }}
-      gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+      gl={PHONE ? { antialias: false, alpha: true } : { antialias: true, alpha: true, powerPreference: "high-performance" }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.NeutralToneMapping;
         gl.toneMappingExposure = 1;
-        gl.domElement.addEventListener("webglcontextlost", () => setLost(true), { once: true });
       }}
       style={{ pointerEvents: "none" }}
     >
@@ -223,17 +222,28 @@ export default function Mascot3D({ active, ...props }: Props & { active: boolean
           rim along the top and lavender underneath */}
       <ambientLight intensity={0.9} color="#fff3f3" />
       <hemisphereLight args={["#000000", "#b4a8f0", 0.5]} />
-      <directionalLight position={[0, 0.3, 4]} intensity={1} color="#fff0f0" />
-      <directionalLight position={[2.6, 2.4, 3]} intensity={2} color="#ffe6dc" />
-      <directionalLight position={[-4, 0.3, 0.4]} intensity={2.6} color="#6fb1ff" />
-      <directionalLight position={[-3, -1.5, 1]} intensity={1.4} color="#6fb1ff" />
-      {/* rims from behind: blue on the left contours, peach on the right */}
-      <directionalLight position={[-2, 1, -3]} intensity={7} color="#6fb1ff" />
-      <directionalLight position={[-3, 0.5, -2]} intensity={5} color="#6fb1ff" />
-      <directionalLight position={[2, 1, -3]} intensity={5} color="#ffd6c2" />
+      {PHONE ? (
+        <>
+          <directionalLight position={[1.8, 1.8, 3.4]} intensity={2.8} color="#ffe9e2" />
+          <directionalLight position={[-4, -0.3, 0.6]} intensity={3.6} color="#6fb1ff" />
+          <directionalLight position={[-2.5, 0.8, -2.5]} intensity={11} color="#6fb1ff" />
+          <Throttle active={active} />
+        </>
+      ) : (
+        <>
+          <directionalLight position={[0, 0.3, 4]} intensity={1} color="#fff0f0" />
+          <directionalLight position={[2.6, 2.4, 3]} intensity={2} color="#ffe6dc" />
+          <directionalLight position={[-4, 0.3, 0.4]} intensity={2.6} color="#6fb1ff" />
+          <directionalLight position={[-3, -1.5, 1]} intensity={1.4} color="#6fb1ff" />
+          {/* rims from behind: blue on the left contours, peach on the right */}
+          <directionalLight position={[-2, 1, -3]} intensity={7} color="#6fb1ff" />
+          <directionalLight position={[-3, 0.5, -2]} intensity={5} color="#6fb1ff" />
+          <directionalLight position={[2, 1, -3]} intensity={5} color="#ffd6c2" />
+        </>
+      )}
       <Model {...props} />
       {/* softboxes the glossy, clear-coated head mirrors: streaks on the lobes and sides, the lavender top rim */}
-      <Environment resolution={256}>
+      <Environment resolution={PHONE ? 128 : 256}>
         <Lightformer form="rect" intensity={5} position={[0, 3.5, -3]} scale={[8, 3, 1]} color="#b4a8f0" />
         <Lightformer form="rect" intensity={6} position={[3, 3.5, 1]} scale={[4, 2, 1]} />
         <Lightformer form="rect" intensity={4} position={[-3, 3.5, 1]} scale={[4, 2, 1]} />

@@ -39,7 +39,8 @@ export function resolveTheme(choice: string | null): ThemeId {
 }
 
 /** Inlined in <head> so the stored theme applies before first paint.
- *  `?theme=<id>` previews a theme for review links without persisting it. */
+ *  `?theme=<id>` previews a theme for review links without persisting it. The homepage is drawn for the dark look, so
+ *  it always opens dark (see components/HomeTheme.tsx for moving to and from it). */
 export const noFlashScript = `(function(){try{var q=new URLSearchParams(location.search).get("theme");var c=q||localStorage.getItem("${STORAGE_KEY}");var t=c;if(c==="${SYSTEM}"){t=matchMedia("(prefers-color-scheme: light)").matches?"pearl-light":"${DEFAULT_THEME}"}if(!t||!${JSON.stringify(
   THEMES.map((t) => t.id),
-)}.includes(t))t="${DEFAULT_THEME}";document.documentElement.dataset.theme=t}catch(e){document.documentElement.dataset.theme="${DEFAULT_THEME}"}})();`;
+)}.includes(t))t="${DEFAULT_THEME}";if(location.pathname==="/")t="${DEFAULT_THEME}";document.documentElement.dataset.theme=t}catch(e){document.documentElement.dataset.theme="${DEFAULT_THEME}"}})();`;

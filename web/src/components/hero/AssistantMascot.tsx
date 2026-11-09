@@ -1,14 +1,15 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { LIGHT_DEVICE } from "@/lib/device";
-import { model } from "@/lib/models";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, Lightformer, useGLTF } from "@react-three/drei";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { PHONE, PORCELAIN } from "../MascotModel";
+import { PORCELAIN } from "../MascotModel";
+import { isPhone } from "@/lib/phone";
+import { model } from "@/lib/models";
+import Throttle from "./Throttle";
 
 /**
  * FMD AI's mascot beside the search bar: the guide (web/public/models/assistant.glb, built by
@@ -18,7 +19,17 @@ import { PHONE, PORCELAIN } from "../MascotModel";
  * and talking, while it types out). It blinks now and then over all of them, and turns: towards the visitor while it
  * waits or listens, towards the chat on its right as it explains. Bump ?v= when the GLB is rebuilt.
  */
-export const ASSISTANT_URL = model(LIGHT_DEVICE ? "/models/assistant-mobile.glb" : "/models/assistant.glb"); // phones: lighter build (lib/device.ts)
+// phones: the same model at 35k triangles, 512px textures, 344 KB (gltf-transform: dequantize, weld, simplify 0.3,
+// resize, meshopt; face shapes and clips kept). This module only loads in the browser, so isPhone() is safe here
+const PHONE = isPhone();
+export const ASSISTANT_URL = model(PHONE ? "/models/assistant-mobile.glb" : "/models/assistant.glb"); // Cloudinary when it has a copy
+// phones: PORCELAIN's 7 lights folded into 3 (warm key, blue side, blue rim)
+const PHONE_DIRS: [V3, number, string][] = [
+  [[1.6, 1.6, 3.4], 3.2, "#fff6ee"],
+  [[-4, -0.2, 0.6], 2, "#3d8fff"],
+  [[-2.5, 0.8, -2.5], 18, "#3d8fff"],
+];
+type V3 = [number, number, number];
 
 export type Mood = "idle" | "listening" | "thinking" | "explaining";
 
@@ -157,9 +168,6 @@ export default function AssistantMascot({ mood, active }: { mood: Mood; active: 
   const still = useReducedMotion();
   const [ready, setReady] = useState(false);
   const onReady = useMemo(() => () => setReady(true), []);
-  // the browser can kill a WebGL context (phones cap how many live at once): throw, so Hero's Contain shows the still
-  const [lost, setLost] = useState(false);
-  if (lost) throw new Error("WebGL context lost");
   // frames the 1-unit-tall model with room all round (the presenting hand reaches out to the side, the listening hand
   // up by the head), so nothing is cut at the box's edges; the feet near the bottom edge
   const dist = 0.68 / Math.tan(THREE.MathUtils.degToRad(FOV / 2));
@@ -167,25 +175,26 @@ export default function AssistantMascot({ mood, active }: { mood: Mood; active: 
   return (
     <div aria-hidden className={`relative size-full transition-opacity duration-700 ${ready ? "opacity-100" : "opacity-0"}`}>
       <Canvas
-        frameloop={active && !still ? "always" : "demand"}
-        dpr={PHONE ? [1, 1.5] : [1, 2]} // phones: less GPU memory, see MascotModel
+        // phones: 30 fps (Throttle), 1.5× pixels at most (a small box), no MSAA, 3 lights
+        frameloop={active && !still && !PHONE ? "always" : "demand"}
+        dpr={PHONE ? [1, 1.5] : [1, 2]}
         camera={{ position: [0, 0.12, dist], fov: FOV }}
-        gl={{ antialias: true, alpha: true }}
+        gl={{ antialias: !PHONE, alpha: true }}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.NeutralToneMapping;
           gl.toneMappingExposure = look.exposure;
-          gl.domElement.addEventListener("webglcontextlost", () => setLost(true), { once: true });
         }}
         style={{ pointerEvents: "none" }}
       >
         {look.ambient && <ambientLight intensity={look.ambient[1]} color={look.ambient[0]} />}
         {look.ground && <hemisphereLight args={["#000000", look.ground[0], look.ground[1]]} />}
-        {look.dirs.map(([p, i, c], k) => (
+        {(PHONE ? PHONE_DIRS : look.dirs).map(([p, i, c], k) => (
           <directionalLight key={k} position={p} intensity={i} color={c} />
         ))}
+        {PHONE && <Throttle active={active && !still} />}
         <Suspense fallback={null}>
           <Model mood={mood} onReady={onReady} />
-          <Environment resolution={256}>
+          <Environment resolution={PHONE ? 128 : 256}>
             {look.panels.map(([p, s, i, c], k) => (
               <Lightformer key={k} form="rect" position={p} scale={s} intensity={i} color={c} />
             ))}

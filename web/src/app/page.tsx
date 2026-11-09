@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DiscoveryProvider } from "@/components/discovery";
 import Hero from "@/components/hero/Hero";
+import HomeTheme from "@/components/HomeTheme";
 import ModelPreloader from "@/components/ModelPreloader";
 import Navbar from "@/components/nav/Navbar";
 import AiFeatures from "@/components/sections/AiFeatures";
@@ -18,6 +19,7 @@ import Ribbon from "@/components/sections/Ribbon";
 import Trust from "@/components/sections/Trust";
 import Universe from "@/components/sections/Universe";
 import Walkthrough from "@/components/sections/Walkthrough";
+import { PauseOffscreen } from "@/components/ui";
 
 // the home page's own address (set here, not in the layout, so other pages don't inherit it)
 export const metadata: Metadata = { alternates: { canonical: "/" } };
@@ -26,7 +28,9 @@ export const metadata: Metadata = { alternates: { canonical: "/" } };
 export default function Home() {
   return (
     <DiscoveryProvider>
+      <HomeTheme />
       <ModelPreloader />
+      <PauseOffscreen />
       <Navbar />
       <main>
         <Hero /> {/* 01 */}

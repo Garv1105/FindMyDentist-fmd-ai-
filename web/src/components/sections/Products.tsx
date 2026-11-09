@@ -6,7 +6,7 @@ import MascotArt from "@/components/MascotArt";
 import Link from "next/link";
 import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { SPECIALTIES } from "@/lib/catalog";
-import { Container, Reveal, SectionHeader } from "../ui";
+import { Container, Reveal, SectionHeader, rest, useLoop } from "../ui";
 import { Atmosphere } from "./LowerWorld";
 
 // Only routes that exist: Scholar access is part of the student membership (sign-in), there is no Scholar page yet.
@@ -286,6 +286,7 @@ function NexusLayer({ at, product, side: s, children }: { at: -1 | 0 | 1; produc
 
 function Nexus() {
   const ref = useRef<HTMLDivElement>(null);
+  const { ref: floatRef, on: floating } = useLoop();
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
   // which product is on stage: the track's three equal stretches
   const [active, setActive] = useState(0);
@@ -322,7 +323,7 @@ function Nexus() {
           <div className="absolute inset-x-[8%] bottom-0 h-[14%] rounded-[50%] bg-[radial-gradient(closest-side,rgb(147_197_253/0.45),rgb(59_130_246/0.18)_55%,transparent)] shadow-[0_0_60px_rgb(59_130_246/0.25)]" />
           <div className="absolute inset-x-[16%] bottom-[3%] h-[8%] rounded-[50%] border border-blue-300/40" />
           <div className="absolute inset-[6%] rounded-full bg-[radial-gradient(circle,rgb(59_130_246/0.2),transparent_68%)]" />
-          <motion.div className="absolute inset-0" animate={{ y: [0, -12, 0] }} transition={{ duration: 5.5, ease: "easeInOut", repeat: Infinity }}>
+          <motion.div ref={floatRef} className="absolute inset-0" animate={floating ? { y: [0, -12, 0] } : rest({ y: 0 })} transition={{ duration: 5.5, ease: "easeInOut", repeat: Infinity }}>
             <MascotArt src="/img/mascots/mascot-guide-1024.webp" sizes="400px" />
           </motion.div>
         </div>

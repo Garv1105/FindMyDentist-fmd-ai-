@@ -1,11 +1,12 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { rigPath } from "@/lib/device";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import Contain from "./Contain";
+import { isPhone, usePhone } from "@/lib/phone";
+import { rigPath } from "@/lib/device";
 import { model } from "@/lib/models";
+import Contain from "./Contain";
 
 const MascotModel = dynamic(() => import("./MascotModel"), { ssr: false });
 
@@ -14,9 +15,10 @@ const MascotModel = dynamic(() => import("./MascotModel"), { ssr: false });
  * the site loads public/models/rig: porcelain, rigged and meshopt + WebP (model/blender/mascots/build_rig.sh; their
  * motions are MascotModel's MOTIONS). public/models/compressed holds the same models unrigged (build_porcelain.sh).
  */
-// served from Cloudinary (src/lib/models.ts; re-run scripts/upload-models.mjs after rebuilding a model: its URLs change,
-// so browsers never keep a stale one)
-const M = (name: string) => model(rigPath(name)); // phones: models/rig-mobile (lib/device.ts)
+// bump ?v= whenever the models are rebuilt, or browsers keep the cached old ones
+// Cloudinary when it has a copy (lib/models.ts); low-memory devices and narrow windows get swaraj's lighter rig-mobile
+// builds (lib/device.ts). Phones never load these: they play the pre-rendered loops.
+const M = (name: string) => model(rigPath(name));
 type Art = { model: string; overlay?: { src: string; style: React.CSSProperties } };
 const MODELS: Record<string, Art> = {
   "/img/mascots/mascot-guide-1024.webp": { model: M("guide") },
@@ -42,6 +44,13 @@ const MODELS: Record<string, Art> = {
  */
 const STILL_V = 3;
 const stillOf = (model: string) => `/models/stills/${model.split("/").pop()!.split("?")[0].replace(".glb", ".webp")}?v=${STILL_V}`;
+/*
+ * Phones play a loop instead of a live canvas: each model's own motion, pre-rendered as an animated WebP
+ * (public/models/loops, render_stills.cjs with LOOPS=1: same look, pose and framing as the stills). Bump LOOP_V when
+ * they are re-rendered.
+ */
+const LOOP_V = 1;
+const loopOf = (model: string) => `/models/loops/${model.split("/").pop()!.split("?")[0].replace(".glb", ".webp")}?v=${LOOP_V}`;
 /** every model the page can show (and the walkthrough's mirrored guide): the loading screen fetches them up front */
 export const MODEL_URLS = [...new Set([...Object.values(MODELS).map((a) => a.model), M("guide-left")])];
 
@@ -50,11 +59,9 @@ export const MODEL_URLS = [...new Set([...Object.values(MODELS).map((a) => a.mod
  * Browsers cap a page at ~16 WebGL contexts (the hero takes some), so past LIVE the canvas scrolled away from longest ago
  * is released; its box then shows a snapshot of its own last frame until it is needed again (no visible change).
  */
-// phones allow far fewer WebGL contexts than desktops (Android Chrome caps a page at 8 and kills the oldest past it,
-// painting a white "sad face" box); the hero and assistant hold two more, so 5 + 2 leaves one spare. A released canvas
-// keeps showing a snapshot of its last frame, so nothing visibly changes
-// ponytail: fixed cap; if low-end phones still lose contexts, scale it by navigator.deviceMemory
-const LIVE = typeof window !== "undefined" && window.matchMedia("(hover: none) and (pointer: coarse)").matches ? 5 : 9;
+// phones allow fewer WebGL contexts than desktops; a released canvas keeps showing a snapshot of its last frame, so
+// nothing visibly changes
+const LIVE = isPhone() ? 6 : 9;
 const live = new Map<number, { seen: number; visible: boolean; key: string; release: () => void }>();
 const snapshots = new Map<string, string>();
 let nextId = 0;
@@ -134,10 +141,12 @@ export default function MascotArt({ src, model, sizes, className = "object-conta
   const [ready, setReady] = useState<string | null>(null);
   const [, snapped] = useState(0); // re-render once a snapshot exists
   const warmTurn = useRef<(() => void) | null>(null); // set while this box is the one warming up
+  const phone = usePhone();
+  const [loaded, setLoaded] = useState<string | null>(null); // phones: the model whose loop has loaded
   const lost = useRef<() => void>(() => {}); // the browser killed this box's canvas: drop it, its picture shows
 
   useEffect(() => {
-    if (!url || !box.current) return;
+    if (!url || !box.current || isPhone()) return; // phones never set up a canvas (no warm-up turn either)
     const id = nextId++;
     const el = box.current;
     let alive = true;
@@ -148,7 +157,7 @@ export default function MascotArt({ src, model, sizes, className = "object-conta
     lost.current = () => {
       live.delete(id);
       release();
-      warmTurn.current?.();
+      warmTurn.current?.(); // if it was warming up, move the queue on
     };
     // the warm-up turn: mount the canvas off screen (paused), move on once its snapshot is taken
     warmTotal += 1;
@@ -198,15 +207,19 @@ export default function MascotArt({ src, model, sizes, className = "object-conta
   }, [url, key]);
 
   const shown = ready === url;
+  const looping = phone && loaded === url; // the loop covers the still
+  // the glass Care Core has no loop (see render_stills.cjs): on phones its still sways and its core glows, in CSS
+  const sway = phone && url?.includes("/tooth.glb");
   const still = snapshots.get(key); // this model's own frame, once it has rendered
   return (
     <div ref={box} className="absolute inset-0">
+      {sway && <div className="phone-glow absolute inset-[24%] rounded-full bg-[radial-gradient(closest-side,rgb(59_130_246/0.5),transparent)]" />}
       {still && url ? (
         // eslint-disable-next-line @next/next/no-img-element -- a data URL snapshot of the canvas
         <img src={still} alt="" className={`absolute inset-0 size-full ${shown ? "opacity-0" : "opacity-100"}`} />
       ) : url ? (
         // eslint-disable-next-line @next/next/no-img-element -- already sized, optimised WebP; versioned by a query
-        <img src={stillOf(url)} alt="" decoding="async" className={`absolute inset-0 size-full object-contain transition-opacity duration-500 ${shown ? "opacity-0" : "opacity-100"}`} />
+        <img src={stillOf(url)} alt="" loading="lazy" decoding="async" className={`absolute inset-0 size-full object-contain transition-opacity duration-500 ${shown || looping ? "opacity-0" : "opacity-100"} ${sway ? "phone-sway" : ""}`} />
       ) : (
         <Image
           src={src}
@@ -214,6 +227,17 @@ export default function MascotArt({ src, model, sizes, className = "object-conta
           fill
           sizes={sizes}
           className={`${className} transition-opacity duration-500 ${url && shown ? "opacity-0" : "opacity-100"}`}
+        />
+      )}
+      {url && phone && !sway && (
+        // eslint-disable-next-line @next/next/no-img-element -- an animated WebP, already sized; the browser only plays it on screen
+        <img
+          src={loopOf(url)}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onLoad={() => setLoaded(url)}
+          className={`absolute inset-0 size-full object-contain transition-opacity duration-500 ${looping ? "opacity-100" : "opacity-0"}`}
         />
       )}
       {url && mounted && (

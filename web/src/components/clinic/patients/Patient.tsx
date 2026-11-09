@@ -303,9 +303,6 @@ export function PatientPage() {
               </Tag>
             ))}
           </div>
-          <p className="mt-5 flex justify-between text-[15px] font-medium text-ink">
-            Balance <span className={p.balanceInr ? "text-[var(--tone-warn)]" : "text-ink-3"}>{p.balanceInr ? `${inr(p.balanceInr)} due` : "Nothing due"}</span>
-          </p>
         </Panel>
 
         <div className="flex min-w-0 flex-col gap-4">
@@ -428,31 +425,20 @@ export function PatientPage() {
 
           {tab === "billing" && (
             <Panel as="section" className="p-5">
-              <div className="mb-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-                {(
-                  [
-                    ["Plan total", plan ? inr(planTotal(plan)) : "—"],
-                    ["Paid", inr(paid)],
-                    ["Balance", inr(p.balanceInr)],
-                  ] as const
-                ).map(([k, v]) => (
-                  <div key={k} className="rounded-2xl border border-line p-3">
-                    <span className="block text-[13px] text-ink-3">{k}</span>
-                    <span className="block text-[22px] font-light text-ink">{v}</span>
-                  </div>
-                ))}
-              </div>
+              <p className="mb-3 flex flex-wrap items-baseline justify-between gap-2 text-[16px] font-medium text-ink">
+                Bills <span className="text-[13.5px] font-normal text-ink-3">Every bill is paid in full · {inr(paid)} in total</span>
+              </p>
               {p.payments.length === 0 ? (
-                <Empty title="No payments recorded" />
+                <Empty title="No bills yet" />
               ) : (
                 <ul>
                   {p.payments.map((x) => (
                     <li key={x.ref} className="flex flex-wrap items-center justify-between gap-2 border-t border-line py-3 text-[15px] first:border-0">
                       <span className="text-ink">
-                        {inr(x.amountInr)} · {x.mode}
+                        {inr(x.amountInr)} · {x.mode} <Tag tone="ok">Paid</Tag>
                       </span>
                       <span className="text-[13.5px] text-ink-3">
-                        {x.date} · receipt {x.ref}
+                        {x.date} · {x.ref}
                       </span>
                     </li>
                   ))}

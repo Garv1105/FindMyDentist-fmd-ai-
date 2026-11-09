@@ -78,10 +78,10 @@ function ReviewDialog({ task, onClose, onApprove }: { task: AiTask; onClose: () 
 
 const DONE_NOTE: Record<string, string> = {
   "t-reminders": "Sent to 3 patients (demo, nothing was sent)",
-  "t-po-composite": "Order approved (demo, nothing was ordered)",
+  "t-recall": "Sent to 2 patients (demo, nothing was sent)",
 };
 
-function TaskCard({ task, clinicId, onChange }: { task: AiTask; clinicId: string; onChange: (t: AiTask) => void }) {
+export function TaskCard({ task, clinicId, onChange }: { task: AiTask; clinicId: string; onChange: (t: AiTask) => void }) {
   const [reviewing, setReviewing] = useState(false);
   const decide = async (d: "approve" | "skip" | "undo") => onChange(await decideAiTask(clinicId, task.id, d));
   const opener = useRef<HTMLButtonElement>(null);
@@ -161,7 +161,7 @@ export function AiBriefing({ home, user, clinicId, onTask }: { home: ClinicHome;
       <div className="pointer-events-none absolute -right-24 -top-36 h-[320px] w-[520px] rounded-full bg-[radial-gradient(closest-side,var(--accent-glow),transparent)] opacity-60" aria-hidden />
       <p className="relative flex items-center gap-2.5 text-[13.5px] text-ink-3">
         <span className="size-7 shrink-0 rounded-full bg-[radial-gradient(circle_at_35%_30%,#dbe7ff,var(--accent)_45%,#1b2c66_80%)] shadow-[0_0_18px_var(--accent-glow)]" aria-hidden />
-        FMD Manager · briefing generated {generated} from the calendar, billing and stock
+        FMD Manager · briefing generated {generated} from the calendar, patients and billing
       </p>
       <h2 className="relative mt-3 bg-gradient-to-b from-[var(--headline-from)] to-[var(--headline-to)] bg-clip-text text-[26px] font-light tracking-[-0.03em] text-transparent sm:text-[30px]">
         {greeting(user)}

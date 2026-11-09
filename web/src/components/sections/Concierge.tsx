@@ -7,7 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { api, useMe } from "@/lib/me";
-import { Container, Reveal } from "../ui";
+import { Container, Reveal, rest, useLoop } from "../ui";
 import { Atmosphere } from "./LowerWorld";
 
 // the request form on the right is hidden for now; set to true to bring it back (the /api/concierge routes are ready)
@@ -101,18 +101,20 @@ function Plane({ mx, my, depth, children }: { mx: MotionValue<number>; my: Motio
   );
 }
 
-function Ambience({ reduced, mx, my }: { reduced: boolean | null; mx: MotionValue<number>; my: MotionValue<number> }) {
+function Ambience({ mx, my }: { mx: MotionValue<number>; my: MotionValue<number> }) {
+  const { ref, on } = useLoop();
   const orb = (p: (typeof BOKEH)[number], i: number) => (
     <motion.div
       key={i}
       className={`absolute rounded-full ${p.b} ${orbTone(p)}`}
       style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.s, height: p.s }}
-      animate={reduced ? undefined : { x: [0, p.dx], y: [0, -p.dy] }}
+      animate={on ? { x: [0, p.dx], y: [0, -p.dy] } : rest({ x: 0, y: 0 })}
       transition={{ duration: p.d, ease: "easeInOut", repeat: Infinity, repeatType: "mirror", delay: (i % 5) * 1.2 }}
     />
   );
   return (
     <div
+      ref={ref}
       aria-hidden
       className="pointer-events-none absolute inset-0 -z-10 overflow-hidden [mask-image:linear-gradient(180deg,transparent,#000_14%,#000_86%,transparent)]"
     >
@@ -122,7 +124,7 @@ function Ambience({ reduced, mx, my }: { reduced: boolean | null; mx: MotionValu
           viewBox="-1200 -1200 2400 2400"
           className="absolute size-[2400px] -translate-x-1/2 -translate-y-1/2 left-[calc(50%+min(600px,46vw))] top-28 sm:top-40"
           fill="none"
-          animate={reduced ? undefined : { rotate: 360 }}
+          animate={on ? { rotate: 360 } : rest({ rotate: 0 })}
           transition={{ duration: 240, ease: "linear", repeat: Infinity }}
         >
           {RINGS.map((g) => (
@@ -222,7 +224,7 @@ export default function Concierge() {
     >
       {/* data-no-tilt: the site-wide cursor tilt (CursorFx) leaves this whole section still */}
       <Atmosphere scene="edge" />
-      <Ambience reduced={reduced} mx={mx} my={my} />
+      <Ambience mx={mx} my={my} />
       {/* film grain so the black around the lounge isn't perfectly flat; strongest behind the card, dissolving to nothing
           at the section's edges so it never shows as a box */}
       <div

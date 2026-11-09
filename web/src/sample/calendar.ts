@@ -3,7 +3,7 @@
  * changes and bookings. Built on clinic.ts's appointment generator, so Home and Calendar always agree.
  */
 import {
-  added, CHAIRS, dayAppointments, HOURS, istDate, requireClinic, statusOverride, waitlistOffered, weekday,
+  added, CHAIRS, dayAppointments, HOURS, istDate, openWindows, requireClinic, statusOverride, waitlistOffered, weekday,
   type Appointment, type ApptStatus,
 } from "./clinic.ts";
 
@@ -21,13 +21,10 @@ const live = (a: Appointment) => a.status !== "cancelled";
 const span = (a: Appointment) => [Date.parse(a.start), Date.parse(a.start) + a.minutes * MIN] as const;
 
 /** Bookable gaps of 30 minutes or more in one chair: opening hours minus lunch, bookings and (today) the past. */
-function freeGaps(branchId: string, date: string, now: Date, appts: Appointment[]): FreeSlot[] {
+export function freeGaps(branchId: string, date: string, now: Date, appts: Appointment[]): FreeSlot[] {
   if (weekday(date) === 0 || date < istDate(now)) return [];
   const floor = date === istDate(now) ? Math.ceil(now.getTime() / (15 * MIN)) * 15 * MIN : 0; // next quarter hour
-  const windows = [
-    [at(date, HOURS.open), at(date, HOURS.lunch[0])],
-    [at(date, HOURS.lunch[1]), at(date, HOURS.close)],
-  ];
+  const windows = openWindows(date).map(([from, to]) => [at(date, from), at(date, to)]);
   return (CHAIRS[branchId] ?? []).flatMap(({ chair, dentist }) => {
     const busy = appts.filter((a) => a.chair === chair && live(a)).map(span).sort((x, y) => x[0] - y[0]);
     const out: FreeSlot[] = [];
@@ -143,6 +140,7 @@ function problem(i: BookInput, now: Date): string | null {
   if (Number.isNaN(s)) return "Pick a valid time.";
   if (s < now.getTime()) return "That time has already passed.";
   if (s < at(i.date, HOURS.open) || e > at(i.date, HOURS.close)) return `Outside opening hours (${HOURS.open}–${HOURS.close}).`;
+  if (weekday(i.date) === 6 && e > at(i.date, HOURS.saturdayClose)) return `Saturdays close at ${HOURS.saturdayClose}.`;
   if (s < at(i.date, HOURS.lunch[1]) && e > at(i.date, HOURS.lunch[0])) return "Overlaps the lunch break (13:00–14:00).";
   const clash = dayAppointments(i.branchId, i.date, now).find((a) => a.chair === i.chair && live(a) && s < span(a)[1] && e > span(a)[0]);
   return clash ? `Clashes with ${clash.patientName} at ${hmOf(clash.start)} in ${i.chair}.` : null;

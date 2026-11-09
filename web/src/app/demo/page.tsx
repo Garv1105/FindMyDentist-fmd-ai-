@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { Page } from "@/components/Page";
@@ -12,6 +13,8 @@ const OPENS: Record<DemoUser["role"], string> = {
   dentist: "FMD Main · coming soon",
   clinic_owner: "Opens FMD Clinic",
   clinic_front_desk: "Opens FMD Clinic",
+  student: "FMD Scholar · coming soon",
+  company: "FMD Main · coming soon",
 };
 
 function Chooser() {
@@ -53,8 +56,14 @@ function Chooser() {
 export default function DemoPage() {
   return (
     <Page narrow>
-      <h1 className="type-h2">Choose a demo account</h1>
+      <h1 className="type-h2">Try FMD as any role</h1>
       <p className="type-lede mt-3">FMD is in preview. Pick who you want to be; no password needed.</p>
+      <p className="mt-3 text-[15px] text-ink-3">
+        Prefer your own account?{" "}
+        <Link href="/login" className="text-ink underline underline-offset-4">
+          Sign in or create one
+        </Link>
+      </p>
       <Suspense>
         <Chooser />
       </Suspense>

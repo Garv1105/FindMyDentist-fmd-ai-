@@ -1286,6 +1286,35 @@ html.theme-anim *::after {
 }
 
 
+/* off-screen sections (PauseOffscreen in components/ui.tsx): their endless CSS animations hold still */
+[data-offscreen],
+[data-offscreen] *,
+[data-offscreen] *::before,
+[data-offscreen] *::after {
+  animation-play-state: paused !important;
+}
+
+/* phones skip the model loading screen (ModelPreloader): hidden from the first paint, before any script runs */
+@media (hover: none) and (pointer: coarse) {
+  .fmd-loader { display: none; }
+}
+
+/* phones: the glass Care Core's still turns gently and its core light breathes (MascotArt; transform and opacity
+   only, so the compositor does it) */
+@keyframes phone-sway {
+  0%, 100% { transform: perspective(900px) rotateY(-14deg); }
+  50% { transform: perspective(900px) rotateY(14deg); }
+}
+@keyframes phone-glow {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+.phone-sway { animation: phone-sway 7s ease-in-out infinite; }
+.phone-glow { animation: phone-glow 2.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .phone-sway, .phone-glow { animation: none; }
+}
+
 /* ---------------- App surfaces (FMD Clinic, FMD Main) ----------------
    Phones get solid panels: backdrop blur is costly on phone GPUs. From 1024px the panels turn to frosted glass over
    the soft glows of .app-glow. */
@@ -1369,4 +1398,17 @@ html.theme-anim *::after {
       background: radial-gradient(closest-side, rgb(120 90 255 / 0.18), transparent);
     }
   }
+}
+
+/* ---------------- Light looks for the app surfaces ----------------
+   Status colours darkened so text in them reads on white (each at least 4.5:1 on #fff), and native controls follow the
+   page: several app controls pin color-scheme: dark for the dark looks. */
+:is([data-theme="pearl-light"], [data-theme="silver-light"], [data-theme="white-royal"]) {
+  --tone-ok: #13773d;
+  --tone-warn: #a34e00;
+  --tone-bad: #c0262d;
+  color-scheme: light;
+}
+:is([data-theme="pearl-light"], [data-theme="silver-light"], [data-theme="white-royal"]) :is(select, input, textarea) {
+  color-scheme: light !important;
 }

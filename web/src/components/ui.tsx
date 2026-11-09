@@ -1,8 +1,8 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
+import { motion, useInView, useReducedMotion } from "motion/react";
 import { ArrowRight, BadgeCheck, Megaphone } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 /**
  * Homepage motion vocabulary (mirrors --ease-settle / --dur-* in globals.css). Motion explains a change: something
@@ -114,4 +114,29 @@ export function Chip({ children }: { children: ReactNode }) {
   return (
     <span className="rounded-full border border-line bg-[var(--accent-soft)] px-2.5 py-1 text-[11px] text-ink-2">{children}</span>
   );
+}
+
+/**
+ * Endless loops run only near the screen. `on` is false while the element is off screen or under reduced motion; then
+ * give `animate` the loop's resting values through rest(), whose instant transition ends the loop.
+ */
+export function useLoop<T extends Element = HTMLDivElement>() {
+  const ref = useRef<T>(null);
+  const near = useInView(ref, { margin: "200px 0px" });
+  const reduced = useReducedMotion();
+  return { ref, on: near && !reduced };
+}
+export const rest = <V extends object>(v: V) => ({ ...v, transition: { duration: 0 } });
+
+/** Pauses every CSS animation inside a section or footer that is off screen (see [data-offscreen] in globals.css). */
+export function PauseOffscreen() {
+  useEffect(() => {
+    const io = new IntersectionObserver(
+      (es) => es.forEach((e) => e.target.toggleAttribute("data-offscreen", !e.isIntersecting)),
+      { rootMargin: "200px 0px" },
+    );
+    document.querySelectorAll("main section, footer").forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, []);
+  return null;
 }

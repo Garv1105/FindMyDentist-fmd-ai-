@@ -14,12 +14,11 @@ test("search by name (any case), phone fragment or patient id", async () => {
 });
 
 test("filters", async () => {
-  const names = async (filter: "recall" | "balance" | "in_treatment" | "consent_missing") => (await listPatients(C, { filter })).map((p) => p.name);
+  const names = async (filter: "recall" | "in_treatment" | "consent_missing") => (await listPatients(C, { filter })).map((p) => p.name);
   assert.ok((await names("recall")).includes("Meera Joshi"));
-  assert.ok((await names("balance")).includes("Ravi Nair"));
   assert.ok((await names("in_treatment")).includes("Sana Qureshi"));
   assert.ok((await names("consent_missing")).includes("Meera Joshi"));
-  assert.ok(!(await names("balance")).includes("Priya Sharma"));
+  assert.ok(!(await names("in_treatment")).includes("Priya Sharma"));
 });
 
 test("duplicates share phone and date of birth", async () => {
@@ -66,4 +65,11 @@ test("adding a note: signed, newest first, and needs text", async () => {
   assert.equal((await getPatient(C, "p-arjun"))!.notes[0].id, n.id);
   await assert.rejects(addNote(C, "p-arjun", { text: "   ", by: "Dr. Rao" }));
   await assert.rejects(addNote(C, "nope", { text: "x", by: "Dr. Rao" }));
+});
+
+test("no balances: patients carry no dues, and Arjun's bills are each paid in full", async () => {
+  for (const p of await listPatients(C)) assert.ok(!("balanceInr" in p) && !p.flags.includes("balance" as never), p.name);
+  const a = (await getPatient(C, "p-arjun"))!;
+  assert.ok(a.payments.length >= 2 && a.payments.every((x) => x.amountInr > 0));
+  assert.ok(!a.timeline.some((e) => /due|balance|part/i.test(e.title + e.detail)));
 });
