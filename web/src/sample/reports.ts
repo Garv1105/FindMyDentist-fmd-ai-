@@ -8,7 +8,8 @@ import { dayBills, MODES, type Bill, type Mode } from "./billing.ts";
 import { freeGaps } from "./calendar.ts";
 import { CHAIRS, dayAppointments, FEES, getClinicHome, isFirstVisit, istDate, onReset, openWindows, requireClinic, type Appointment } from "./clinic.ts";
 import { listPatients } from "./patients.ts";
-import { roster, type Person } from "./people.ts";
+import { hash as mix, roster, type Person } from "./people.ts";
+import { recallsBetween } from "./recall.ts";
 
 /* ---------------- definitions ---------------- */
 
@@ -118,9 +119,94 @@ export const METRICS: Record<string, MetricDef> = {
   },
   recallOverdue: {
     label: "Recall overdue",
-    formula: "Patients past their recall due date with nothing booked",
+    formula: "Recalls past their due date (in the 12 months to the period end) with nothing booked, contacted or not",
     numerator: "overdue recalls",
+    exclusions: "Patients who opted out",
     unit: "count",
+  },
+  recallCompletion: {
+    label: "Recall completion",
+    formula: "Recalls due in the period that were attended by the due date + 30 days ÷ recalls due × 100",
+    numerator: "recalls attended within 30 days of due",
+    denominator: "recalls due (whose 30 days have passed)",
+    exclusions: "Patients who opted out",
+    unit: "pct",
+  },
+  recallConversion: {
+    label: "Recall → booking",
+    formula: "Recalls contacted that led to a visit ÷ recalls contacted × 100",
+    numerator: "contacted recalls that came in",
+    denominator: "recalls contacted",
+    unit: "pct",
+  },
+  pendingValue: {
+    label: "Pending treatment",
+    formula: "₹ estimate of accepted plan items not completed and not scheduled (including unfinished multi-visit courses)",
+    numerator: "estimates of accepted, unscheduled items",
+    unit: "inr",
+    estimate: true,
+  },
+  daysToAccept: {
+    label: "Days to accept",
+    formula: "Median days between presenting a plan item and the patient accepting it",
+    numerator: "days to accept (median)",
+    unit: "days",
+  },
+  grossRevenue: {
+    label: "Gross revenue",
+    formula: "Sum of list fees on paid bills, by bill date",
+    numerator: "list fees on paid bills",
+    exclusions: "Void bills; GST",
+    unit: "inr",
+  },
+  discountTotal: {
+    label: "Discounts",
+    formula: "Sum of discounts on paid bills",
+    numerator: "discounts",
+    exclusions: "Void bills",
+    unit: "inr",
+  },
+  realisationRate: {
+    label: "Realised fee",
+    formula: "Net revenue ÷ gross revenue × 100: how much of the list fee is actually charged",
+    numerator: "net revenue",
+    denominator: "gross revenue",
+    unit: "pct",
+  },
+  revenuePerVisit: {
+    label: "Revenue per visit",
+    formula: "Net revenue ÷ attended visits",
+    numerator: "net revenue",
+    denominator: "attended visits",
+    unit: "inr",
+  },
+  revenuePerNewPatient: {
+    label: "Revenue per new patient",
+    formula: "Net revenue ÷ new patients in the period",
+    numerator: "net revenue",
+    denominator: "new patients",
+    unit: "inr",
+  },
+  revenuePerActivePatient: {
+    label: "Revenue per active patient",
+    formula: "Net revenue ÷ active patients at the period end",
+    numerator: "net revenue",
+    denominator: "active patients",
+    unit: "inr",
+  },
+  gstCollected: {
+    label: "GST collected",
+    formula: "Sum of GST on paid bills (rate per service as set by the clinic and confirmed by its CA)",
+    numerator: "GST on paid bills",
+    exclusions: "Void bills",
+    unit: "inr",
+  },
+  exemptValue: {
+    label: "Exempt value",
+    formula: "List fee − discount on bill lines with a 0% GST rate",
+    numerator: "taxable value of exempt lines",
+    exclusions: "Void bills",
+    unit: "inr",
   },
   averageRating: {
     label: "Average rating",
@@ -164,6 +250,8 @@ const GROUPS: [RegExp, string][] = [
   [/^Extraction/, "Surgical"],
   [/^Braces/, "Orthodontic"],
   [/^Whitening/, "Cosmetic"],
+  [/^Deep cleaning/, "Periodontal"],
+  [/Implant/i, "Implant"],
   [/^Consultation/, "Diagnostic"],
 ];
 export const CATEGORY = (treatment: string) => GROUPS.find(([re]) => re.test(treatment))?.[1] ?? "Other";
@@ -195,7 +283,7 @@ export function apptsIn(f: Filters, now: Date): Appointment[] {
   );
 }
 
-async function billsIn(clinicId: string, f: Filters, now: Date): Promise<Bill[]> {
+export async function billsIn(clinicId: string, f: Filters, now: Date): Promise<Bill[]> {
   const all = await Promise.all(days(f).map((date) => dayBills(clinicId, { branchId: f.branchId, date, now })));
   return all
     .flat()
@@ -204,11 +292,54 @@ async function billsIn(clinicId: string, f: Filters, now: Date): Promise<Bill[]>
 }
 
 /* sample-only signals, stable per appointment: plan items presented, ratings, reactivated patients */
-const ESTIMATES = [3500, 6500, 9000, 15000, 25000];
-const planItem = (a: Appointment) =>
-  a.status === "completed" && /^(Consultation|Check-up|Kids' check-up)/.test(a.type)
-    ? { appt: a, estimateInr: ESTIMATES[hash(`${a.id}-est`) % ESTIMATES.length], accepted: hash(`${a.id}-acc`) % 3 !== 0 }
-    : null;
+/** What a consultation or check-up can propose: procedure, FMD category, estimate (₹). */
+const PLANS: [string, string, number][] = [
+  ["Filling", "Restorative", 3500],
+  ["Deep cleaning", "Periodontal", 4500],
+  ["Root canal + crown", "Endodontic", 15000],
+  ["Zirconia crown", "Prosthodontic", 9000],
+  ["Clear aligners", "Orthodontic", 85000],
+  ["Implant", "Implant", 45000],
+  ["Whitening", "Cosmetic", 8000],
+  ["Wisdom tooth removal", "Surgical", 6500],
+  ["Full-mouth implants", "Implant", 180000],
+];
+export const DECLINE_REASONS = ["Cost", "Wants a second opinion", "Not urgent for them", "Fear or anxiety", "Time off work", "Other"];
+export type PlanItem = {
+  appt: Appointment;
+  procedure: string;
+  category: string;
+  estimateInr: number;
+  accepted: boolean;
+  status: "accepted" | "declined" | "deferred" | "undecided";
+  declineReason?: string;
+  /** accepted only: days between presenting and accepting */
+  daysToAccept?: number;
+  /** accepted only: where the treatment is now */
+  progress?: "completed" | "scheduled" | "not scheduled" | "course incomplete";
+};
+// ponytail: plan items are stable hash-derived samples on completed consultations; the backend stores real ones
+export const planItem = (a: Appointment): PlanItem | null => {
+  if (a.status !== "completed" || !/^(Consultation|Check-up|Kids' check-up)/.test(a.type)) return null;
+  const h = (t: string) => mix(`${a.id}-${t}`);
+  const [procedure, category, estimateInr] = PLANS[h("est") % PLANS.length];
+  const accepted = h("acc") % 3 !== 0;
+  if (!accepted) {
+    const status = (["declined", "deferred", "undecided"] as const)[h("dec") % 3];
+    return { appt: a, procedure, category, estimateInr, accepted, status, ...(status === "declined" ? { declineReason: DECLINE_REASONS[h("why") % DECLINE_REASONS.length] } : {}) };
+  }
+  const multiVisit = /\+|aligners|Full-mouth/.test(procedure);
+  const p = h("prog") % 10;
+  const progress = p < 5 ? "completed" : p < 7 ? "scheduled" : multiVisit ? "course incomplete" : "not scheduled";
+  return { appt: a, procedure, category, estimateInr, accepted, status: "accepted", daysToAccept: [0, 0, 1, 2, 4, 7, 12, 21][h("days") % 8], progress };
+};
+/** Accepted but not done and not booked: what "pending treatment" counts. */
+export const isPending = (x: PlanItem) => x.progress === "not scheduled" || x.progress === "course incomplete";
+/** Plan items presented in the period (respects branch, dentist and category filters). */
+export const planItemsIn = (f: Filters, now: Date) =>
+  apptsIn({ ...f, category: undefined }, now)
+    .map(planItem)
+    .filter((x): x is PlanItem => x !== null && (!f.category || x.category === f.category));
 const rating = (a: Appointment) => (a.status === "completed" && hash(`${a.id}-r`) % 4 === 0 ? 4 + (hash(`${a.id}-s`) % 2) : null);
 // ponytail: a stable 1-in-50 flag, not a look-back at the patient's history; the analytics marts compute it for real
 const isReactivated = (a: Appointment) => a.status === "completed" && !a.newPatient && hash(`${a.id}-react`) % 50 === 0;
@@ -326,13 +457,60 @@ export async function metric(clinicId: string, id: string, f: Filters): Promise<
     case "lapsedPatients":
       return count(lapsedIn(f, now).length);
     case "caseAcceptance": {
-      const items = appts().map(planItem).filter((x) => x !== null);
+      const items = planItemsIn(f, now);
       const acc = items.filter((x) => x.accepted);
       const val = (l: typeof items) => l.reduce((n, x) => n + x.estimateInr, 0);
       return { id, value: pct(acc.length, items.length), numerator: acc.length, denominator: items.length, byValue: pct(val(acc), val(items)) };
     }
-    case "recallOverdue":
-      return count((await listPatients(clinicId, { filter: "recall" })).length);
+    case "pendingValue":
+      return count(planItemsIn(f, now).filter(isPending).reduce((n, x) => n + x.estimateInr, 0));
+    case "daysToAccept": {
+      const d = planItemsIn(f, now).flatMap((x) => (x.daysToAccept === undefined ? [] : [x.daysToAccept])).sort((a, b) => a - b);
+      return { id, value: d.length ? d[Math.floor((d.length - 1) / 2)] : null, numerator: d.length };
+    }
+    case "recallOverdue": {
+      const end = [f.to, istDate(now)].sort()[0];
+      const open = recallsBetween(f.branchId, addMonths(end, -12), end, istDate(now)).filter((r) => r.status === "overdue" || r.status === "contacted");
+      return count(open.length);
+    }
+    case "recallCompletion": {
+      const today = istDate(now);
+      const due = recallsBetween(f.branchId, f.from, f.to, today).filter((r) => r.status !== "opted_out" && addDays(r.due, 30) <= today);
+      const done = due.filter((r) => r.status === "completed").length;
+      return { id, value: pct(done, due.length), numerator: done, denominator: due.length };
+    }
+    case "recallConversion": {
+      const list = recallsBetween(f.branchId, f.from, f.to, istDate(now)).filter((r) => r.channel);
+      const booked = list.filter((r) => r.status === "completed").length;
+      return { id, value: pct(booked, list.length), numerator: booked, denominator: list.length };
+    }
+    case "grossRevenue":
+    case "discountTotal":
+    case "gstCollected":
+    case "exemptValue": {
+      const lines = (await billsIn(clinicId, f, now)).flatMap((b) => b.items);
+      const pick = {
+        grossRevenue: (l: Bill["items"][number]) => l.listFeeInr,
+        discountTotal: (l: Bill["items"][number]) => l.discountInr,
+        gstCollected: (l: Bill["items"][number]) => l.gstInr,
+        exemptValue: (l: Bill["items"][number]) => (l.gstRate === 0 ? l.listFeeInr - l.discountInr : 0),
+      }[id];
+      return count(lines.reduce((n, l) => n + pick(l), 0));
+    }
+    case "realisationRate": {
+      const [net, gross] = await Promise.all([metric(clinicId, "netRevenue", f), metric(clinicId, "grossRevenue", f)]);
+      return { id, value: pct(net.value ?? 0, gross.value ?? 0), numerator: net.value ?? 0, denominator: gross.value ?? 0 };
+    }
+    case "revenuePerVisit":
+    case "revenuePerNewPatient":
+    case "revenuePerActivePatient": {
+      const net = (await metric(clinicId, "netRevenue", f)).value ?? 0;
+      const d =
+        id === "revenuePerVisit"
+          ? appts().filter((a) => a.status === "completed").length
+          : ((await metric(clinicId, id === "revenuePerNewPatient" ? "newPatients" : "activePatients", f)).value ?? 0);
+      return { id, value: d ? Math.round(net / d) : null, numerator: net, denominator: d };
+    }
     case "averageRating": {
       const r = appts().map(rating).filter((x) => x !== null);
       return { id, value: r.length ? Math.round((r.reduce((n, x) => n + x, 0) / r.length) * 10) / 10 : null, numerator: r.reduce((n, x) => n + x, 0), denominator: r.length };
@@ -383,7 +561,7 @@ export async function pulse(clinicId: string, f: Filters) {
 }
 
 /** The metrics whose number opens a list of appointments. */
-export const DRILLABLE = ["noShowRate", "newPatients", "chairUtilisation", "dentistUtilisation", "caseAcceptance", "lateCancelRate", "lostChairHours", "lostRevenue", "rebookRate", "returningPatients", "reactivatedPatients"];
+export const DRILLABLE = ["pendingValue", "noShowRate", "newPatients", "chairUtilisation", "dentistUtilisation", "caseAcceptance", "lateCancelRate", "lostChairHours", "lostRevenue", "rebookRate", "returningPatients", "reactivatedPatients"];
 
 /** The rows behind a number. */
 export async function drillDown(clinicId: string, id: string, f: Filters) {
@@ -394,7 +572,8 @@ export async function drillDown(clinicId: string, id: string, f: Filters) {
   if (id === "newPatients") return list.filter(isFirstVisit);
   if (id === "chairUtilisation") return list.filter((a) => a.status === "completed");
   if (id === "dentistUtilisation") return list.filter((a) => a.status === "completed" && !isHygienist(a.dentist));
-  if (id === "caseAcceptance") return list.filter((a) => planItem(a) !== null);
+  if (id === "caseAcceptance") return planItemsIn(f, now).map((x) => x.appt);
+  if (id === "pendingValue") return planItemsIn(f, now).filter(isPending).map((x) => x.appt);
   if (id === "lateCancelRate") return list.filter(isLateCancel);
   if (id === "lostChairHours" || id === "lostRevenue" || id === "rebookRate") return list.filter(isMissed);
   if (id === "returningPatients") return list.filter(isReturning);
