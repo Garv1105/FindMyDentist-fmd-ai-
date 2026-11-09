@@ -260,9 +260,13 @@ export function BookPage() {
         {err && (
           <Notice kind="error">
             {err.msg}{" "}
-            {err.bookingId && (
+            {err.bookingId ? (
               <Link href={`/appointments/${err.bookingId}`} className="font-medium underline underline-offset-4">
                 View your appointment
+              </Link>
+            ) : (
+              <Link href={`/help/contact?topic=booking&about=${encodeURIComponent(`booking with ${p.name}`)}`} className="font-medium underline underline-offset-4">
+                Get help
               </Link>
             )}
           </Notice>

@@ -233,7 +233,14 @@ export function AssistantPage() {
         </div>
 
         <form onSubmit={submit} className="grid gap-2 border-t border-line p-3">
-          {err && <Notice kind="error">{err}</Notice>}
+          {err && (
+            <Notice kind="error">
+              {err}{" "}
+              <Link href="/help/contact?topic=ai" className="font-medium underline underline-offset-4">
+                Get help
+              </Link>
+            </Notice>
+          )}
           {listening && (
             <p role="status" className="flex items-center gap-2 text-[13px] text-[var(--tone-bad)]">
               <span className="size-2 animate-pulse rounded-full bg-[var(--tone-bad)]" /> Listening… tap the microphone to stop. Your browser&apos;s speech service turns your voice into text.

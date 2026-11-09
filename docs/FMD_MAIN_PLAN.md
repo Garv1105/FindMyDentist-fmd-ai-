@@ -38,8 +38,8 @@ Each part has one of two backend states:
 | 7.1 | Jobs: browse, detail, post, my postings | DEMO | **Done** |
 | 8.1 | Plans and membership | DEMO | **Done** |
 | 8.2 | Checkout, receipts, renewals, failed payments | DEMO | **Done** |
-| 9.1 | Notifications and preferences | DEMO | Not started |
-| 9.2 | Help centre and support tickets | DEMO | Not started |
+| 9.1 | Notifications and preferences | DEMO | **Done** |
+| 9.2 | Help centre and support tickets | DEMO | **Done** |
 | 10.1 | Feedback and reviews (Annex G) | DEMO | Not started |
 | 10.2 | Personalisation controls (Annex D) | DEMO | Not started |
 | 10.3 | Referrals (Annex I), switched off by default | DEMO | Not started |
@@ -677,6 +677,12 @@ Built in `src/components/auth/AuthForms.tsx`, against `/auth/*`: OTP sign-up, OT
   - `/help/tickets` and `/help/tickets/[id]`: status, messages, reopen.
   - Context-aware "Get help" links on failed booking, payment, upload and AI screens, which open the form already filled in.
 - **Proposed API:** `GET /help/articles?q&topic`, `GET /help/articles/{slug}`, `POST /support/tickets`, `GET /me/tickets`, `GET /support/tickets/{id}`, `POST /support/tickets/{id}/messages`.
+- **Built (all of Phase 9):**
+  - A notifications bell in the app shell, plus `/notifications`. Notifications are built from the other demo parts: appointments, FMD Edge, payments, post reviews and security. Opening one marks it read, and the bell and page stay in step. A test keeps clinical words out of notification text.
+  - Help pages: `/help` (search and topics), `/help/[slug]`, `/help/contact`, `/help/tickets`, `/help/tickets/[id]`. Tickets get a reply, are resolved, and can be reopened (demo support answers within seconds).
+  - "Get help" links where things go wrong: a failed payment, a booking error, a refused upload, and an FMD AI error. Each opens the form already filled in.
+  - `sample/notifications.ts` and `help.ts`, with 4 tests
+- **Bug found and fixed in testing:** "Mark all read" on the page didn't clear the bell until its next 10-second check.
 
 ### Phase 10: Trust and growth (Annex)
 

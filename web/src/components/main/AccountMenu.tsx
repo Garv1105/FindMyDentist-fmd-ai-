@@ -1,6 +1,6 @@
 "use client";
 
-import { Bookmark, CalendarDays, LogOut, Sparkles, UserRound } from "lucide-react";
+import { Bookmark, CalendarDays, CircleHelp, LogOut, Sparkles, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
@@ -74,6 +74,9 @@ export function AccountMenu({ loginClassName = "" }: { loginClassName?: string }
             </Link>
             <Link href="/account" onClick={close} className={itemCls}>
               <UserRound className="size-4" strokeWidth={1.5} /> Account
+            </Link>
+            <Link href="/help" onClick={close} className={itemCls}>
+              <CircleHelp className="size-4" strokeWidth={1.5} /> Help
             </Link>
             <button type="button" onClick={signOut} className={itemCls}>
               <LogOut className="size-4" strokeWidth={1.5} /> Log out

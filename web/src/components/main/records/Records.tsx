@@ -371,7 +371,12 @@ function UploadSheet({ me, used, journeys, onClose, onDone }: { me: Me; used: nu
               <span className="text-[13px] text-ink-3">{mb(it.file.size)}</span>
             </div>
             {it.error ? (
-              <Notice kind="error">{it.error}</Notice>
+              <Notice kind="error">
+                {it.error}{" "}
+                <Link href="/help/upload-limits" className="font-medium underline underline-offset-4">
+                  Which files work?
+                </Link>
+              </Notice>
             ) : (
               <>
                 <div className="grid gap-3 sm:grid-cols-2">

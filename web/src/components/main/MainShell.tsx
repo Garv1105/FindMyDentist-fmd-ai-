@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { SHOW_ACCOUNT } from "@/toggle";
 import { AccountMenu } from "./AccountMenu";
+import { NotificationsBell } from "./help/Support";
 
 /**
  * The FMD Main app frame for every page except the homepage: a top bar on laptops, a tab bar on phones. A link whose
@@ -70,7 +71,10 @@ export function MainShell({ children }: { children: ReactNode }) {
               )}
             </nav>
           )}
-          <div className="ml-auto">{SHOW_ACCOUNT && <AccountMenu />}</div>
+          <div className="ml-auto flex items-center gap-2">
+            {SHOW_ACCOUNT && <NotificationsBell />}
+            {SHOW_ACCOUNT && <AccountMenu />}
+          </div>
         </div>
       </header>
 
