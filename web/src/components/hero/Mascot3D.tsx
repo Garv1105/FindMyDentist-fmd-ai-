@@ -7,6 +7,7 @@ import { Environment, Lightformer, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { isPhone } from "@/lib/phone";
+import { model } from "@/lib/models";
 import Throttle from "./Throttle";
 
 /**
@@ -27,7 +28,8 @@ import Throttle from "./Throttle";
 // phones: the same model at 48k triangles, 1024px textures, 530 KB (gltf-transform: dequantize, weld, simplify 0.12,
 // resize, webp, meshopt). This module only loads in the browser, so isPhone() is safe here
 const PHONE = isPhone();
-const MODEL_URL = PHONE ? "/mascot-sitting-mobile.glb?v=1" : "/mascot-sitting-raw.glb?v=5";
+// served from Cloudinary when it has a copy (lib/models.ts), else from web/public
+const MODEL_URL = model(PHONE ? "/mascot-sitting-mobile.glb" : "/mascot-sitting-raw.glb");
 // const MODEL_URL = "/mascot-sitting.glb?v=20"; // rigged + animated (Fly, Meditate, face)
 const FADE = 0.45;
 const AMBIENT = ["LookAround", "Smile", "Nod"];
