@@ -24,10 +24,10 @@ Each part has one of two backend states:
 | 2.2 | Dentist and clinic profiles, claim a profile | DEMO | **Done** |
 | 2.3 | Booking flow | DEMO | **Done** |
 | 2.4 | My appointments | DEMO | **Done** |
-| 3.1 | Digital records vault | DEMO | Not started |
-| 3.2 | Sharing and access history | DEMO | Not started |
-| 3.3 | Treatment journey (Annex B) | DEMO | Not started |
-| 3.4 | Warranty certificates and public verification (Annex A) | DEMO | Not started |
+| 3.1 | Digital records vault | DEMO | **Done** |
+| 3.2 | Sharing and access history | DEMO | **Done** |
+| 3.3 | Treatment journey (Annex B) | DEMO | **Done** |
+| 3.4 | Warranty certificates and public verification (Annex A) | DEMO | **Done** |
 | 4.1 | AI assistant: full chat | DEMO | Not started (homepage UI exists, switched off) |
 | 4.2 | AI companion tools | DEMO | Not started |
 | 5.1 | Explore feed | DEMO | Not started (homepage teaser exists) |
@@ -444,6 +444,13 @@ Built in `src/components/auth/AuthForms.tsx`, against `/auth/*`: OTP sign-up, OT
   - Exclusions and conditions are as prominent as coverage.
   - Corrections show as new versions.
 - **Proposed API:** `GET /me/certificates`, `GET /certificates/{id}`, `GET /certificates/verify/{code}` (public, minimal fields).
+- **Built (all of Phase 3):**
+  - `components/main/records/` and `sample/records.ts`, `files.ts`, `journeys.ts`, `certificates.ts`, with 9 tests
+  - Routes: `/records`, `/records/[id]`, `/journey`, `/journey/[id]`, `/certificates/[id]`, and the public `/verify/[code]`
+  - File contents are kept in the browser's IndexedDB. Every view or download goes through a link that expires after 5 minutes, and each one is logged.
+  - "Download everything" makes a ZIP using fflate, which ships with `three`.
+  - Tested in a browser, end to end.
+- **Not done:** the certificate QR code. It needs a QR library (e.g. `uqr`), and installing one was blocked. Until then the page shows the code and a "Copy check link" button.
 
 ### Phase 4: AI assistant
 
