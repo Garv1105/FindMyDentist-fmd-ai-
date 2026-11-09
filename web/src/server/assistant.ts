@@ -11,35 +11,13 @@ import { SPECIALTIES } from "../lib/catalog.ts";
  * that book, message, pay or submit - so no prompt can make it do those things.
  */
 
-/* ---------------- escalation (SAF-04; wording to be clinically reviewed, SAF-01) ---------------- */
+import { guardText, isUrgent, URGENT_REPLY } from "../lib/aiSafety.ts";
 
-const URGENT: RegExp[] = [
-  /swell\w*.*\b(eye|neck|throat|jaw|face)\b|\b(eye|neck|face)\b.*swell/,
-  /(difficult|hard|trouble|can'?t)\s*(to\s*)?(breath|swallow|open (my )?mouth)/,
-  /(won'?t|doesn'?t|can'?t|not) stop(ped)? bleeding|bleeding (heavily|a lot)/,
-  /(knocked|fell|broke|broken).*(tooth|teeth|jaw)|tooth (fell|came) out|accident|injur/,
-  /(high )?fever.*(tooth|swell|pain)|(tooth|swell|pain).*fever/,
-];
-export const isUrgent = (text: string) => URGENT.some((r) => r.test(text.toLowerCase()));
-
-const URGENT_REPLY =
-  "What you describe can need urgent care. Please contact a dentist today. If there is swelling spreading to your eye or neck, difficulty breathing or swallowing, heavy bleeding that won't stop, or a serious injury, go to the nearest emergency department or call 112 now. FMD AI can't assess emergencies and isn't monitoring your symptoms.";
-
-/* ---------------- output guard ---------------- */
-
-const BLOCK: RegExp[] = [
-  /\b\d+\s?(mg|ml|mcg)\b/i, // dosing
-  /\b(take|start|prescribe)\b.*\b(antibiotic|amoxicillin|ibuprofen|paracetamol|painkiller)s?\b/i,
-  /\byou (definitely |certainly )?(have|need) (a |an )?(root canal|extraction|implant|cavity|infection|abscess)\b/i,
-];
-const DISCLAIMER = "This is general information, not a diagnosis. A dentist needs to examine you to know what's going on.";
+export { isUrgent };
 
 /** Applied to every provider's output: no dosing, no definitive diagnosis, allow-listed actions only. */
 export function guardReply(text: string, actions: unknown[]): { text: string; actions: NavAction[] } {
-  let out = text.trim().slice(0, 2000);
-  if (BLOCK.some((r) => r.test(out)))
-    out = "I can't recommend medicines or say what treatment you need. A dentist can examine you and advise safely. I can help you find one, or explain what to ask at your visit.";
-  if (!out.includes("not a diagnosis")) out = `${out}\n\n${DISCLAIMER}`;
+  const out = guardText(text);
   const safe = actions
     .filter((a): a is NavAction => {
       const x = a as NavAction;

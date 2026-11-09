@@ -50,10 +50,11 @@ export const MODEL_URLS = [...new Set([...Object.values(MODELS).map((a) => a.mod
  * Browsers cap a page at ~16 WebGL contexts (the hero takes some), so past LIVE the canvas scrolled away from longest ago
  * is released; its box then shows a snapshot of its own last frame until it is needed again (no visible change).
  */
-// phones allow far fewer WebGL contexts than desktops (Android Chrome kills the oldest past its cap and paints a white
-// "sad face" box), and the hero and assistant hold two more; a released canvas keeps showing a snapshot of its last
-// frame, so nothing visibly changes
-const LIVE = typeof window !== "undefined" && window.matchMedia("(hover: none) and (pointer: coarse)").matches ? 3 : 9;
+// phones allow far fewer WebGL contexts than desktops (Android Chrome caps a page at 8 and kills the oldest past it,
+// painting a white "sad face" box); the hero and assistant hold two more, so 5 + 2 leaves one spare. A released canvas
+// keeps showing a snapshot of its last frame, so nothing visibly changes
+// ponytail: fixed cap; if low-end phones still lose contexts, scale it by navigator.deviceMemory
+const LIVE = typeof window !== "undefined" && window.matchMedia("(hover: none) and (pointer: coarse)").matches ? 5 : 9;
 const live = new Map<number, { seen: number; visible: boolean; key: string; release: () => void }>();
 const snapshots = new Map<string, string>();
 let nextId = 0;

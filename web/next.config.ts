@@ -9,6 +9,10 @@ const nextConfig: NextConfig = {
   experimental: { agentUpgrade: "security" },
   // Every model and still is requested with ?v=N, so it can be cached forever (bump N to ship a change); the plain
   // artwork under /img has no version in its URL, so it revalidates in the background after a day
+  // the FastAPI backend, served from this site so its auth cookies are first-party (main-websie/server)
+  async rewrites() {
+    return [{ source: "/api/v1/:path*", destination: `${process.env.FMD_API_URL ?? "http://localhost:8000"}/api/v1/:path*` }];
+  },
   async headers() {
     const forever = [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }];
     return [

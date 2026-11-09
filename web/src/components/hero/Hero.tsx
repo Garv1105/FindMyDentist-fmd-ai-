@@ -106,10 +106,10 @@ function CinematicHero() {
   // Settled at -22% of --mh (≈9–10% of the stage height above the horizon); --mh is capped in globals.css so the
   // head stays below the nav at every viewport height.
   // It starts tiny and mostly behind the limb, rises out of the light while growing, then settles; it exits once.
-  const mascotY = useTransform(p, MASCOT_KEYS, ["14%", "14%", "4%", "-8%", "-17%", "-22%", "-22%", "-16%", "-16%"]);
-  const mScale = useTransform(p, MASCOT_KEYS, [0.14, 0.14, 0.29, 0.53, 0.75, 0.85, 0.85, 0.8, 0.8]);
+  const mascotY = useTransform(p, MASCOT_KEYS, ["14%", "14%", "4%", "-8%", "-17%", "-22%", "-16%", "-16%"]);
+  const mScale = useTransform(p, MASCOT_KEYS, [0.14, 0.14, 0.29, 0.53, 0.75, 0.85, 0.8, 0.8]);
   // two full turns while rising, slowing to face-on as it arrives
-  const rotY = useTransform(p, MASCOT_KEYS, [-720, -720, -470, -230, -60, 0, 0, 0, 0]);
+  const rotY = useTransform(p, MASCOT_KEYS, [-720, -720, -470, -230, -60, 0, 0, 0]);
   const mOpacity = useTransform(p, MASCOT_KEYS, MASCOT_OPACITY);
 
   // F - the assistant fades in and stays until the pin releases, so the page flows straight into the next section
@@ -118,7 +118,7 @@ function CinematicHero() {
   const [aiActive, setAiActive] = useState(false);
   // mascot: superman rise, then settles into meditation once it arrives; WebGL only runs while it is on screen
   const [settled, setSettled] = useState(false);
-  // once its spin has finished (facing the viewer, fully risen) it speaks, until it starts to leave
+  // as its spin winds down (nearly face-on) it speaks, until it is half gone
   const [speaking, setSpeaking] = useState(false);
   const [mascotOn, setMascotOn] = useState(false);
   const [mascotReady, setMascotReady] = useState(false);
@@ -128,7 +128,7 @@ function CinematicHero() {
     if (on !== aiActive) setAiActive(on); // each flag flips only at its own threshold
     const s = v >= PHASES.rise[1] - 0.03;
     if (s !== settled) setSettled(s);
-    const sp = v >= PHASES.rise[1] && v < PHASES.mascotOut[0];
+    const sp = v >= MASCOT_KEYS[4] && v < (PHASES.mascotOut[0] + PHASES.mascotOut[1]) / 2;
     if (sp !== speaking) setSpeaking(sp);
     const m = v > MASCOT_KEYS[1] - 0.02 && v < PHASES.mascotOut[1] + 0.01;
     if (m !== mascotOn) setMascotOn(m);
@@ -139,7 +139,7 @@ function CinematicHero() {
       id="top"
       ref={ref}
       aria-label="FindMyDentist introduction"
-      className="relative h-[295vh] md:h-[370vh]"
+      className="relative h-[235vh] md:h-[287vh]"
     >
       <div
         // lvh, not svh: on phones the stage fills the screen even once the browser toolbar has slid away (svh left a blank
