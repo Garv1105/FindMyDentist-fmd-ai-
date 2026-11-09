@@ -4,7 +4,7 @@ import { ArrowLeft, BadgeCheck, CircleAlert, Check, Plus, X } from "lucide-react
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
-import { Button, IconButton, Panel, Tag, type Tone } from "@/components/app/kit";
+import { Button, Chips, IconButton, Panel, Tag, type Tone } from "@/components/app/kit";
 import { Field, fieldCls, Sheet } from "@/components/app/Sheet";
 import { useRun } from "@/components/auth/AuthForms";
 import { Notice } from "@/components/Page";
@@ -63,7 +63,7 @@ export function DentistProfilePage() {
   );
 }
 
-function Section({ title, tag, text, children }: { title: string; tag?: ReactNode; text?: ReactNode; children: ReactNode }) {
+export function Section({ title, tag, text, children }: { title: string; tag?: ReactNode; text?: ReactNode; children: ReactNode }) {
   return (
     <Panel as="section" className="grid gap-4 p-5 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -211,33 +211,6 @@ async function shrink(file: File, size = 256) {
   c.height = Math.round(img.height * k);
   c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
   return c.toDataURL("image/jpeg", 0.85);
-}
-
-function Chips({ label, options, value, onChange }: { label: string; options: readonly string[]; value: string[]; onChange: (v: string[]) => void }) {
-  return (
-    <fieldset>
-      <legend className="mb-1.5 text-[13.5px] text-ink-3">{label}</legend>
-      <div className="flex flex-wrap gap-2">
-        {options.map((o) => {
-          const on = value.includes(o);
-          return (
-            <button
-              key={o}
-              type="button"
-              aria-pressed={on}
-              onClick={() => onChange(on ? value.filter((x) => x !== o) : [...value, o])}
-              className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13.5px] transition-colors ${
-                on ? "border-[color-mix(in_srgb,var(--accent)_50%,transparent)] bg-[var(--accent-soft)] text-ink" : "border-line text-ink-2 hover:border-line-strong hover:text-ink"
-              }`}
-            >
-              {on && <Check className="size-3.5" strokeWidth={2} />}
-              {o}
-            </button>
-          );
-        })}
-      </div>
-    </fieldset>
-  );
 }
 
 const num = (v: string) => (v === "" ? null : Number(v));

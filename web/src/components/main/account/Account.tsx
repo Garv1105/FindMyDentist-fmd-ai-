@@ -96,6 +96,12 @@ export function Account() {
 
       <Devices onSignOutAll={() => show("logout-all")} />
 
+      <Card title="Privacy and data" text="Your consents, which messages you get, a copy of your data, or deleting your account.">
+        <ButtonLink href="/account/privacy" size="sm" variant="secondary">
+          Manage privacy and data
+        </ButtonLink>
+      </Card>
+
       {(open === "email" || open === "email-verify") && <EmailSheet me={me} verifyOnly={open === "email-verify"} onDone={done} onClose={close} />}
       {open === "email-remove" && (
         <PasswordSheet

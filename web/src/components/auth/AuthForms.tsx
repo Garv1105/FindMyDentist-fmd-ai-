@@ -124,6 +124,7 @@ export function OtpStep({
   onBack,
   onResend,
   run,
+  demoCode,
 }: {
   to: string;
   busy: boolean;
@@ -131,6 +132,8 @@ export function OtpStep({
   onBack: () => void;
   onResend: () => Promise<void>;
   run: (fn: () => Promise<void>) => Promise<void>;
+  /** a flow with no backend yet shows its pretend code here instead of the dev backend's */
+  demoCode?: string;
 }) {
   const [code, setCode] = useState("");
   const [wait, setWait] = useState(RESEND_AFTER);
@@ -143,8 +146,8 @@ export function OtpStep({
     return () => clearTimeout(t);
   }, [wait]);
   useEffect(() => {
-    if (process.env.NODE_ENV !== "production") auth.devOtp().then(setDev);
-  }, [sent]);
+    if (!demoCode && process.env.NODE_ENV !== "production") auth.devOtp().then(setDev);
+  }, [sent, demoCode]);
 
   const resend = () =>
     run(async () => {
@@ -159,7 +162,7 @@ export function OtpStep({
       <p className="text-[14.5px] text-ink-2">
         Enter the 6-digit code sent to <span className="font-medium text-ink">{to}</span>.
       </p>
-      <Field label="Code" hint={dev ? `Development backend: the code is ${dev}` : undefined}>
+      <Field label="Code" hint={demoCode ? `Demo: the code is ${demoCode}` : dev ? `Development backend: the code is ${dev}` : undefined}>
         <input
           className={`${fieldCls} text-center text-[20px] tracking-[0.5em]`}
           value={code}

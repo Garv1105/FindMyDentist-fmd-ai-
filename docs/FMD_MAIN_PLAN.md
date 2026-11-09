@@ -19,7 +19,7 @@ Each part has one of two backend states:
 | 1.3 | Account: profile, email, two-step, devices | LIVE | **Done** |
 | 1.4 | Dentist profile | LIVE (partial) | **Done** |
 | 1.5 | Account type and onboarding | DEMO | **Done** |
-| 1.6 | Privacy and data: consents, communication preferences, export, deletion | DEMO | Not started |
+| 1.6 | Privacy and data: consents, communication preferences, export, deletion | DEMO | **Done** |
 | 2.1 | Find a dentist (search) | DEMO | Not started |
 | 2.2 | Dentist and clinic profiles, claim a profile | DEMO | Not started |
 | 2.3 | Booking flow | DEMO | Not started |
@@ -252,7 +252,26 @@ Built in `src/components/auth/AuthForms.tsx`, against `/auth/*`: OTP sign-up, OT
   - `GET /me/consents`, `POST /me/consents/{purpose}` `{granted}` (the backend already stores consents)
   - `GET` and `PUT /me/communication-preferences`
   - `POST /me/data-export`, `GET /me/data-export`
-  - `POST /me/deletion-request`, `GET /me/deletion-request`
+  - `POST /me/deletion-request`, `GET /me/deletion-request`, `DELETE /me/deletion-request` (cancel)
+- **Built:** `components/main/account/Privacy.tsx` at `/account/privacy`, linked from `/account`. Demo data in `sample/privacy.ts`, which holds the rules and is tested:
+  - required consents can't be withdrawn
+  - withdrawing marketing switches every offers channel off
+  - keep at least one appointment channel
+  - email only with a verified email
+  - the security row is fixed
+  - quiet hours need different start and end times
+  - the export link expires after 7 days
+- **Tested in a browser:**
+  - each consent rule
+  - offers locked until marketing consent
+  - email locked without a verified email
+  - the save errors
+  - export from preparing, to ready, to a real JSON download
+  - deletion: checkbox gate, wrong code refused, request received, cancelled
+- **Ask the backend team for:**
+  - the consent endpoints. The backend already stores consents at sign-up (terms, privacy notice, and offers when ticked), but there's no way to read or change them. The demo assumes offers were not ticked.
+  - an OTP purpose for confirming account deletion. The demo shows a pretend code.
+- **Needs a decision from FMD and legal:** how long deletion takes, and exactly which records are kept and for how long. The page avoids promising either.
 
 ### Phase 2: Find and book
 
