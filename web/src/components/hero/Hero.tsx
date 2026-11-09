@@ -21,6 +21,7 @@ import { ChatThread, useAssistant } from "./Assistant";
 import type { Mood } from "./AssistantMascot";
 import { MASCOT_KEYS, MASCOT_OPACITY, PHASES } from "./phases";
 import { RIM, RIM_APEX, RIM_H, RIM_W, rimPath, rimYAt } from "./rim";
+import { useAwake } from "@/lib/phone";
 
 /**
  * Cinematic hero: one scroll timeline (0 → 1) drives every layer, so the sequence
@@ -83,6 +84,7 @@ export default function Hero() {
 
 function CinematicHero() {
   const ref = useRef<HTMLElement>(null);
+  const awake = useAwake(); // phones: no 3D until the first scroll or touch (the still stands in)
   const { scrollYProgress: p } = useScroll({ target: ref, offset: ["start start", "end end"] });
 
   const [a0, a1] = PHASES.ai;
@@ -174,7 +176,7 @@ function CinematicHero() {
               <div className="absolute inset-y-0 left-1/2 w-[170%] -translate-x-1/2">
                 {/* a model that can't load leaves the sprite (it never reports ready) */}
                 <Contain>
-                  <Mascot3D active={mascotOn} base={settled ? "Meditate" : "Fly"} rotY={rotY} onReady={onMascotReady} />
+                  {awake && <Mascot3D active={mascotOn} base={settled ? "Meditate" : "Fly"} rotY={rotY} onReady={onMascotReady} />}
                 </Contain>
               </div>
               <SpeechBubble show={speaking} text="Let me take over…" />
@@ -339,6 +341,8 @@ function Earth({
   const hi2 = useTransform(spread, (v) => 50 + v * 50 - 4);
   const hi = useTransform(spread, (v) => 50 + v * 50 + 18);
   const mask = useMotionTemplate`linear-gradient(90deg, transparent ${lo}%, #000 ${lo2}%, #000 ${hi2}%, transparent ${hi}%)`;
+  // the planet is drawn once: 38% outside the lit span, full inside (same result as an unlit copy under a lit one)
+  const earthMask = useMotionTemplate`linear-gradient(90deg, rgb(0 0 0 / 0.38) ${lo}%, #000 ${lo2}%, #000 ${hi2}%, rgb(0 0 0 / 0.38) ${hi}%)`;
   // the travelling glints sit on the measured rim (SVG user units = source-image px)
   const reach = useTransform(spread, (v) => v * (IMG_W / 2));
   const rx = useTransform(reach, (r) => MID + r);
@@ -353,11 +357,13 @@ function Earth({
       className="pointer-events-none absolute left-1/2 w-[var(--ew)] -translate-x-1/2 [contain:layout_paint] will-change-[opacity]"
       style={{ aspectRatio: `${IMG_W} / ${IMG_H}`, opacity: fade, bottom: "var(--eb)" }}
     >
-      {/* unlit planet */}
-      <Image src="/img/hero/earth-4320.webp" alt="" fill quality={92} sizes="max(100vw, 135vh)" priority className="hero-earth opacity-[0.38]" />
-      {/* lit planet + horizon light, revealed outward from the centre */}
+      {/* the planet, lit outward from the centre. Phones: ~1.5x density is plenty for this soft, dimmed picture (the
+          band is ~1.35 screen-heights wide, so 70vh), instead of 3x pulling the 3840px file */}
+      <motion.div className="absolute inset-0" style={{ WebkitMaskImage: earthMask, maskImage: earthMask }}>
+        <Image src="/img/hero/earth-4320.webp" alt="" fill quality={75} sizes="(max-width: 767px) 70vh, max(100vw, 135vh)" priority className="hero-earth" />
+      </motion.div>
+      {/* horizon light, revealed outward from the centre */}
       <motion.div className="absolute inset-0" style={{ WebkitMaskImage: mask, maskImage: mask }}>
-        <Image src="/img/hero/earth-4320.webp" alt="" fill quality={92} sizes="max(100vw, 135vh)" loading="eager" className="hero-earth" />
         <motion.svg
           viewBox={`0 0 ${IMG_W} ${IMG_H}`}
           className="absolute inset-0 size-full"
@@ -429,6 +435,7 @@ function getSpeech(): SpeechCtor | null {
 
 /** `active`: on screen (the cinematic hero shows it only once its scroll story reaches the assistant) */
 function HeroAssistantStage({ active }: { active: boolean }) {
+  const awake = useAwake();
   const [text, setText] = useState("");
   const [listening, setListening] = useState(false);
   const rec = useRef<InstanceType<SpeechCtor> | null>(null);
@@ -702,10 +709,15 @@ function HeroAssistantStage({ active }: { active: boolean }) {
 
       {/* FMD AI's mascot, floated over its place (above); if its model can't load, the guide's picture stands in */}
       <motion.div style={{ x: fx, y: fy, width: fw, height: fh }} className="pointer-events-none absolute left-0 top-0 z-20">
-        {/* eslint-disable-next-line @next/next/no-img-element -- the fallback is a versioned still, cached forever */}
-        <Contain fallback={<img src="/models/stills/guide.webp?v=2" alt="" decoding="async" className="size-full object-contain object-bottom" />}>
-          <AssistantMascot mood={mood} active={active} />
-        </Contain>
+        {awake ? (
+          // eslint-disable-next-line @next/next/no-img-element -- the fallback is a versioned still, cached forever
+          <Contain fallback={<img src="/models/stills/guide.webp?v=3" alt="" decoding="async" className="size-full object-contain object-bottom" />}>
+            <AssistantMascot mood={mood} active={active} />
+          </Contain>
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element -- the same still, until the phone has been touched
+          <img src="/models/stills/guide.webp?v=3" alt="" decoding="async" className="size-full object-contain object-bottom" />
+        )}
       </motion.div>
     </div>
     </MotionConfig>

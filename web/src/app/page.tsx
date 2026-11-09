@@ -18,6 +18,7 @@ import Ribbon from "@/components/sections/Ribbon";
 import Trust from "@/components/sections/Trust";
 import Universe from "@/components/sections/Universe";
 import Walkthrough from "@/components/sections/Walkthrough";
+import { PauseOffscreen } from "@/components/ui";
 
 // the home page's own address (set here, not in the layout, so other pages don't inherit it)
 export const metadata: Metadata = { alternates: { canonical: "/" } };
@@ -27,6 +28,7 @@ export default function Home() {
   return (
     <DiscoveryProvider>
       <ModelPreloader />
+      <PauseOffscreen />
       <Navbar />
       <main>
         <Hero /> {/* 01 */}
