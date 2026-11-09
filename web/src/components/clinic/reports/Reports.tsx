@@ -10,29 +10,50 @@ import { MODES } from "@/sample/billing";
 import { CATEGORIES, collectionSheet, dailyOps, drillDown, getAlerts, previousPeriod, pulse, recordCashCount, signOffSheet, type Alert, type Filters } from "@/sample/reports";
 import { noShows, utilisation } from "@/sample/reports-schedule";
 import { newBySource, patientBase } from "@/sample/reports-patients";
+import { acceptanceReport, pendingReport, recallReport } from "@/sample/reports-treatment";
+import { gstRegister, procedureMix, revenueSummary } from "@/sample/reports-money";
 import { todayIst, useClinic } from "../Shell";
+import { GstRegister, ProcedureMix, RevenueSummary, type GstData, type MixData, type RevenueData } from "./MoneyReports";
 import { downloadCsv, fmt, inr, mask, MetricTile } from "./parts";
 import { NewBySource, PatientBase, type BaseData, type SourceData } from "./PatientReports";
 import { NoShows, Utilisation, type NoShowData, type UtilData } from "./ScheduleReports";
+import { Acceptance, Pending, Recall, type AcceptData, type PendingData, type RecallData } from "./TreatmentReports";
 
-type ReportId = "pulse" | "ops" | "collection" | "util" | "noshow" | "base" | "source";
+type ReportId = "pulse" | "ops" | "collection" | "util" | "noshow" | "base" | "source" | "recall" | "accept" | "pending" | "mix" | "revenue" | "gst";
 const NAV: { group: string; items: [id: string, label: string, stage?: number][] }[] = [
   { group: "Every day", items: [["pulse", "Clinic Pulse"], ["ops", "Daily operations"], ["collection", "Daily collection"]] },
   { group: "Schedule", items: [["util", "Utilisation"], ["noshow", "No-shows"]] },
-  { group: "Patients", items: [["base", "Patient base"], ["source", "New by source"], ["recall", "Recall", 3]] },
-  { group: "Treatment", items: [["accept", "Case acceptance", 3], ["pending", "Pending treatment", 3]] },
-  { group: "Money", items: [["mix", "Procedure mix", 4], ["revenue", "Revenue summary", 4], ["gst", "GST register", 4]] },
+  { group: "Patients", items: [["base", "Patient base"], ["source", "New by source"], ["recall", "Recall"]] },
+  { group: "Treatment", items: [["accept", "Case acceptance"], ["pending", "Pending treatment"]] },
+  { group: "Money", items: [["mix", "Procedure mix"], ["revenue", "Revenue summary"], ["gst", "GST register"]] },
 ];
-const TITLES: Record<ReportId, string> = { pulse: "Clinic Pulse", ops: "Daily operations", collection: "Daily collection", util: "Chair & dentist utilisation", noshow: "No-shows & cancellations", base: "Patient base", source: "New patients by source" };
+const TITLES: Record<ReportId, string> = {
+  pulse: "Clinic Pulse",
+  ops: "Daily operations",
+  collection: "Daily collection",
+  util: "Chair & dentist utilisation",
+  noshow: "No-shows & cancellations",
+  base: "Patient base",
+  source: "New patients by source",
+  recall: "Recall & follow-up",
+  accept: "Case acceptance",
+  pending: "Pending treatment",
+  mix: "Procedure mix & revenue",
+  revenue: "Revenue summary",
+  gst: "GST & invoice register",
+};
 /**
- * Spec access table: front desk sees the daily sheets and the appointment reports, with every ₹ figure left out;
- * revenue analysis and new-patient value stay with the owner.
+ * Spec access table: front desk sees the daily sheets, the appointment reports, recall and pending treatment, with
+ * every ₹ figure left out; revenue analysis, case acceptance and the GST register stay with the owner.
  */
-const ALLOWED: Record<string, ReportId[]> = { clinic_owner: ["pulse", "ops", "collection", "util", "noshow", "base", "source"], clinic_front_desk: ["ops", "collection", "util", "noshow", "base"] };
-/** Which filters apply to which report. */
-const RANGED: ReportId[] = ["pulse", "util", "noshow", "base", "source"];
-const BY_DENTIST: ReportId[] = ["pulse", "util", "noshow"];
-const BY_CATEGORY: ReportId[] = ["pulse", "util"];
+const ALLOWED: Record<string, ReportId[]> = {
+  clinic_owner: ["pulse", "ops", "collection", "util", "noshow", "base", "source", "recall", "accept", "pending", "mix", "revenue", "gst"],
+  clinic_front_desk: ["ops", "collection", "util", "noshow", "base", "recall", "pending"],
+};
+/** Which filters apply to which report (pending treatment is a snapshot of the last 12 months, not a period). */
+const RANGED: ReportId[] = ["pulse", "util", "noshow", "base", "source", "recall", "accept", "mix", "revenue", "gst"];
+const BY_DENTIST: ReportId[] = ["pulse", "util", "noshow", "accept", "pending", "mix"];
+const BY_CATEGORY: ReportId[] = ["pulse", "util", "accept", "pending", "mix"];
 
 const addDays = (date: string, n: number) => new Date(Date.parse(`${date}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 const RANGES = [
@@ -337,7 +358,23 @@ export function Reports() {
   const key = JSON.stringify({ report, filters, date, money });
 
   const [state, setState] = useState<
-    | { key: string; pulse?: PulseData; alerts?: Alert[]; ops?: Ops; sheet?: SheetData; util?: UtilData; noshow?: NoShowData; base?: BaseData; source?: SourceData }
+    | {
+        key: string;
+        pulse?: PulseData;
+        alerts?: Alert[];
+        ops?: Ops;
+        sheet?: SheetData;
+        util?: UtilData;
+        noshow?: NoShowData;
+        base?: BaseData;
+        source?: SourceData;
+        recall?: RecallData;
+        accept?: AcceptData;
+        pending?: PendingData;
+        mix?: MixData;
+        revenue?: RevenueData;
+        gst?: GstData;
+      }
     | { key: string; failed: true }
     | null
   >(null);
@@ -365,6 +402,12 @@ export function Reports() {
       noshow: () => noShows(clinic.id, f, { money: m }).then((n) => ({ key, noshow: n })),
       base: () => patientBase(clinic.id, f).then((b) => ({ key, base: b })),
       source: () => newBySource(clinic.id, f).then((s) => ({ key, source: s })),
+      recall: () => recallReport(clinic.id, f).then((r) => ({ key, recall: r })),
+      accept: () => acceptanceReport(clinic.id, f).then((a) => ({ key, accept: a })),
+      pending: () => pendingReport(clinic.id, f, { money: m }).then((p) => ({ key, pending: p })),
+      mix: () => procedureMix(clinic.id, f).then((x) => ({ key, mix: x })),
+      revenue: () => revenueSummary(clinic.id, f).then((r) => ({ key, revenue: r })),
+      gst: () => gstRegister(clinic.id, f).then((g) => ({ key, gst: g })),
     };
     jobs[report]().then(
       (s) => live && setState(s),
@@ -409,7 +452,19 @@ export function Reports() {
                   ? [...tileRows(ready.base.tiles), [], ["Month", "New", "Returning", "Reactivated"], ...ready.base.months.map((m) => [m.month, m.new, m.returning, m.reactivated]), [], ["Lapsed patient", "Last visit"], ...ready.base.lapsed.map((p) => [name(p.name), p.last])]
                   : ready.source
                     ? [["Source", "New patients", "First-visit revenue (₹)", "6-month revenue (₹)", "Under 6 months so far"], ...ready.source.rows.map((r) => [r.source, r.count, r.firstVisitInr, r.sixMonthInr, r.partial]), ["Total", ready.source.total.count, ready.source.total.firstVisitInr, ready.source.total.sixMonthInr, ready.source.total.partial]]
-                    : [];
+                    : ready.recall
+                      ? [...tileRows(ready.recall.tiles), [], ["Status", "Patient", "Due", "Days overdue", "Channel", "Attempts"], ...Object.entries(ready.recall.tabs).flatMap(([s, t]) => t.rows.map((r) => [s, name(r.name), r.due, r.daysOverdue ?? "", r.channel ?? "", r.attempts]))]
+                      : ready.accept
+                        ? [...tileRows(ready.accept.tiles), [], ["Split", "Group", "Presented", "Accepted", "Acceptance %", "By value %"], ...Object.entries(ready.accept.cuts).flatMap(([c, rs]) => rs.map((r) => [c, r.label, r.presented, r.accepted, r.value ?? "", r.byValue ?? ""])), [], ["Decline reason", "Count"], ...ready.accept.declineReasons.map((r) => [r.reason, r.count])]
+                        : ready.pending
+                          ? [["Group", "Patient", "Procedure", "Dentist", "Presented", "Age (days)", ...(money ? ["Estimate (₹)"] : [])], ...ready.pending.groups.flatMap((g) => g.rows.map((r) => [g.label, name(r.name), r.procedure, r.dentist, r.presented, r.ageDays, ...(money && "estimateInr" in r ? [r.estimateInr ?? ""] : [])]))]
+                          : ready.mix
+                            ? [["Category / procedure", "Count", "List fees (₹)", "Net (₹)", "Realised %"], ...ready.mix.categories.map((c) => [c.label, c.count, c.listInr, c.netInr, c.realised ?? ""]), [], ...ready.mix.top.map((p) => [p.label, p.count, p.listInr, p.netInr, p.realised ?? ""])]
+                            : ready.revenue
+                              ? [...tileRows(ready.revenue.tiles), [], ["Month", "Gross (₹)", "Discounts (₹)", "Net (₹)"], ...ready.revenue.bridge.map((m) => [m.label, m.grossInr, m.discountInr, m.netInr]), [], ["Discount reason", "Bills", "Amount (₹)"], ...ready.revenue.discounts.byReason.map((r) => [r.label, r.count, r.amountInr])]
+                              : ready.gst
+                                ? [["Invoice", "Date", "Patient", "Taxable (₹)", "GST rate", "GST (₹)", "Exempt (₹)", "Total (₹)", "Credit note"], ...ready.gst.rows.map((r) => [r.invoice, r.date, name(r.patientName), r.taxableInr, r.rates.join("/"), r.gstInr, r.exemptInr, r.totalInr, r.creditNote ? `void: ${r.creditNote.reason}` : ""])]
+                                : [];
     downloadCsv(`fmd-${report}-${ranged ? `${period.from}_${period.to}` : date}.csv`, header, rows);
     say("Report exported. The export is recorded with your name and time (demo).");
   };
@@ -451,18 +506,24 @@ export function Reports() {
 
       <div className="flex min-w-0 flex-col gap-4">
         <div className="flex flex-wrap items-center gap-2.5">
-          {ranged ? (
+          {ranged || report === "pending" ? (
             <>
-              <label className="sr-only" htmlFor="rep-range">
-                Period
-              </label>
-              <select id="rep-range" className={selectCls} value={range} onChange={(e) => setParam("range", e.target.value)}>
-                {RANGES.map(([k, l]) => (
-                  <option key={k} value={k}>
-                    {l}
-                  </option>
-                ))}
-              </select>
+              {ranged ? (
+                <>
+                  <label className="sr-only" htmlFor="rep-range">
+                    Period
+                  </label>
+                  <select id="rep-range" className={selectCls} value={range} onChange={(e) => setParam("range", e.target.value)}>
+                    {RANGES.map(([k, l]) => (
+                      <option key={k} value={k}>
+                        {l}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              ) : (
+                <p className="text-[14.5px] text-ink-2">Plans presented in the last 12 months, as of today</p>
+              )}
               {BY_DENTIST.includes(report) && (
                 <>
                   <label className="sr-only" htmlFor="rep-dentist">
@@ -540,6 +601,18 @@ export function Reports() {
           <PatientBase data={ready.base} onOpen={openDrill} onSay={say} />
         ) : ready.source ? (
           <NewBySource data={ready.source} onOpen={openDrill} onSay={say} />
+        ) : ready.recall ? (
+          <Recall data={ready.recall} onOpen={openDrill} onSay={say} />
+        ) : ready.accept ? (
+          <Acceptance data={ready.accept} onOpen={openDrill} />
+        ) : ready.pending ? (
+          <Pending data={ready.pending} money={money} onOpen={openDrill} onSay={say} />
+        ) : ready.mix ? (
+          <ProcedureMix data={ready.mix} onOpen={openDrill} />
+        ) : ready.revenue ? (
+          <RevenueSummary data={ready.revenue} onOpen={openDrill} />
+        ) : ready.gst ? (
+          <GstRegister data={ready.gst} identifiers={identifiers} onOpen={openDrill} />
         ) : report === "ops" && ready.ops ? (
           <DailyOps ops={ready.ops} onSay={say} />
         ) : ready.sheet ? (
