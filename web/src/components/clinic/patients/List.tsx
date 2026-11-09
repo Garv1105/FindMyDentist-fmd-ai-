@@ -158,8 +158,8 @@ export function PatientList() {
             <table className="hidden w-full text-left lg:table">
               <thead>
                 <tr className="border-b border-line text-[13px] text-ink-3">
-                  {["Patient", "Last visit", "Next", "Treatment", "Balance", "Consent"].map((h) => (
-                    <th key={h} className="px-5 py-3 font-medium">
+                  {["Patient", "Last visit", "Next", "Treatment", "Balance · consent"].map((h) => (
+                    <th key={h} className="px-4 py-3 font-medium first:pl-5">
                       {h}
                     </th>
                   ))}
@@ -168,8 +168,8 @@ export function PatientList() {
               <tbody>
                 {rows.map((p) => (
                   <tr key={p.id} className="border-b border-line text-[14.5px] last:border-0 hover:bg-[var(--surface-glass)]">
-                    <td className="px-5 py-3">
-                      <Link href={`${base}/patients/${p.id}`} className="flex items-center gap-3">
+                    <td className="px-4 py-3">
+                      <Link href={`${base}/patients/${p.id}`} className="flex items-center gap-3 whitespace-nowrap">
                         <Avatar p={p} />
                         <span>
                           <span className="block font-medium text-ink">{p.name}</span>
@@ -177,7 +177,7 @@ export function PatientList() {
                         </span>
                       </Link>
                     </td>
-                    <td className="px-5 py-3 text-ink">
+                    <td className="whitespace-nowrap px-4 py-3 text-ink">
                       {p.lastVisit ? (
                         <>
                           {p.lastVisit.date}
@@ -187,11 +187,13 @@ export function PatientList() {
                         <span className="text-ink-3">New patient</span>
                       )}
                     </td>
-                    <td className="px-5 py-3 text-ink">{p.next ? p.next.tone ? <Tag tone={p.next.tone}>{p.next.label}</Tag> : p.next.label : <span className="text-ink-3">—</span>}</td>
-                    <td className="px-5 py-3">{p.treatment ? <Tag tone={p.treatment.tone}>{p.treatment.label}</Tag> : <span className="text-ink-3">None</span>}</td>
-                    <td className={`px-5 py-3 ${p.balanceInr ? "text-ink" : "text-ink-3"}`}>{inr(p.balanceInr)}</td>
-                    <td className="px-5 py-3">
-                      <Tag tone={p.consent.tone}>{p.consent.label}</Tag>
+                    <td className="px-4 py-3 text-ink">{p.next ? p.next.tone ? <Tag tone={p.next.tone}>{p.next.label}</Tag> : p.next.label : <span className="text-ink-3">—</span>}</td>
+                    <td className="px-4 py-3">{p.treatment ? <Tag tone={p.treatment.tone}>{p.treatment.label}</Tag> : <span className="text-ink-3">None</span>}</td>
+                    <td className="px-4 py-3">
+                      <span className={`block ${p.balanceInr ? "text-ink" : "text-ink-3"}`}>{p.balanceInr ? `${inr(p.balanceInr)} due` : "Nothing due"}</span>
+                      <span className="mt-1 block">
+                        <Tag tone={p.consent.tone}>{p.consent.tone === "ok" ? `Consent: ${p.consent.label.toLowerCase()}` : p.consent.label}</Tag>
+                      </span>
                     </td>
                   </tr>
                 ))}
