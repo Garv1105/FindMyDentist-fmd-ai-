@@ -123,11 +123,14 @@ export function Onboarding() {
           <span className="font-medium text-ink">
             {t.label} membership · {t.price}.
           </span>{" "}
-          Until it&apos;s paid, your account works as a free account. Plans and payment are coming soon.
+          Until it&apos;s paid, your account works as a free account.
           {type === "student" && " FMD Scholar opens once your student ID is checked and your membership is active."}
           {type === "company" && " Your company page goes live once FMD verifies the company."}
         </p>
-        <ButtonLink href={next}>Go to FMD</ButtonLink>
+        <ButtonLink href={`/checkout/${type}`}>Pay for membership</ButtonLink>
+        <ButtonLink href={next} variant="secondary">
+          Go to FMD
+        </ButtonLink>
         <ButtonLink href="/account" variant="secondary">
           Your account
         </ButtonLink>

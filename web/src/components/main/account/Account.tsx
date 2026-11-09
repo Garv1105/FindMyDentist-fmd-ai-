@@ -96,6 +96,12 @@ export function Account() {
 
       <Devices onSignOutAll={() => show("logout-all")} />
 
+      <Card title="Membership" text="Your plan, renewal, usage, payments and receipts.">
+        <ButtonLink href="/membership" size="sm" variant="secondary">
+          Manage membership
+        </ButtonLink>
+      </Card>
+
       <Card title="Privacy and data" text="Your consents, which messages you get, a copy of your data, or deleting your account.">
         <ButtonLink href="/account/privacy" size="sm" variant="secondary">
           Manage privacy and data

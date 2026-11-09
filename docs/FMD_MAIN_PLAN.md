@@ -36,8 +36,8 @@ Each part has one of two backend states:
 | 5.4 | Saved items and following | DEMO | **Done** |
 | 6.1 | Concierge (FMD Edge): enquiry and status | DEMO | **Done** |
 | 7.1 | Jobs: browse, detail, post, my postings | DEMO | **Done** |
-| 8.1 | Plans and membership | DEMO | Not started |
-| 8.2 | Checkout, receipts, renewals, failed payments | DEMO | Not started |
+| 8.1 | Plans and membership | DEMO | **Done** |
+| 8.2 | Checkout, receipts, renewals, failed payments | DEMO | **Done** |
 | 9.1 | Notifications and preferences | DEMO | Not started |
 | 9.2 | Help centre and support tickets | DEMO | Not started |
 | 10.1 | Feedback and reviews (Annex G) | DEMO | Not started |
@@ -647,6 +647,16 @@ Built in `src/components/auth/AuthForms.tsx`, against `/auth/*`: OTP sign-up, OT
   - `POST /checkout` `{plan_id}` with `Idempotency-Key` returns a gateway order
   - `GET /payments/{id}`, `GET /me/payments`, `GET /me/invoices/{id}/pdf`
   - `POST /me/membership/cancel`
+- **Built (all of Phase 8):**
+  - Pages: `/plans`, `/membership`, `/checkout/[plan]`, `/billing`; a Membership card on `/account`; onboarding's "You're all set" screen links to payment
+  - `sample/billing.ts`, with 6 tests
+  - **Prices:** PDR §14, plus 18% GST. The GST rate is a demo assumption for FMD's accountant to confirm.
+  - **Payments:** a payment is paid only after the (simulated) gateway confirms it, and a double tap pays once. A retry after a failure is a new attempt with a new key.
+  - **Membership:** a 14-day grace period after the end date, then it ends. Cancelling within 7 days refunds in full; after that it runs to the end date (demo terms).
+  - **Usage:** meters warn at 80%. The Scholar extra (₹350) is shown as tentative and isn't on sale.
+- **Bugs found and fixed in testing:**
+  - "Try again" after a failed payment reused the failed attempt's key, so it could never succeed.
+  - A plan bought after cancelling inherited "renewal off".
 
 ### Phase 9: Notifications and help
 
