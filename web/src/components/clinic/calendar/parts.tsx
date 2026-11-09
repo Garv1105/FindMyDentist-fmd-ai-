@@ -94,7 +94,7 @@ function FreeRow({ slots, onBook }: { slots: FreeSlot[]; onBook: (s: FreeSlot) =
       <div className="flex flex-wrap gap-2">
         {slots.map((f) => (
           <button
-            key={`${f.chair}-${f.start}`}
+            key={`${f.branchId}-${f.chair}-${f.start}`}
             type="button"
             onClick={() => onBook(f)}
             className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--tone-ok)_45%,transparent)] px-3 py-1.5 text-[14px] text-ink hover:bg-[color-mix(in_srgb,var(--tone-ok)_10%,transparent)]"
@@ -102,7 +102,7 @@ function FreeRow({ slots, onBook }: { slots: FreeSlot[]; onBook: (s: FreeSlot) =
             <Plus className="size-3.5 text-[var(--tone-ok)]" strokeWidth={2.25} />
             <span className="font-semibold">{hm(f.start)}</span>
             <span className="text-ink-3">
-              {f.dentist} ·{f.minutes >= 120 ? `${Math.floor(f.minutes / 60)} h` : `${f.minutes} min`}
+              {f.dentist} · {f.minutes >= 120 ? `${Math.floor(f.minutes / 60)} h` : `${f.minutes} min`}
             </span>
           </button>
         ))}
@@ -178,7 +178,7 @@ export function ByDentist({ rows, onOpen, onBook }: { rows: { branchId: string; 
                   </button>
                 ) : (
                   <button
-                    key={`${i.chair}-${i.start}`}
+                    key={`${i.branchId}-${i.chair}-${i.start}`}
                     type="button"
                     onClick={() => onBook(i)}
                     className="min-w-[104px] rounded-xl border border-dashed border-[color-mix(in_srgb,var(--tone-ok)_55%,transparent)] px-3 py-2 text-left text-[var(--tone-ok)] hover:bg-[color-mix(in_srgb,var(--tone-ok)_6%,transparent)]"
