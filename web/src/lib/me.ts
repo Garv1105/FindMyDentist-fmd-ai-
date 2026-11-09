@@ -1,20 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useSyncExternalStore } from "react";
+import { auth, type Me } from "./fmd";
 
-export type Me = {
-  id: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  accountType: "patient" | "dentist" | "student" | "company";
-  language: string;
-  status: string;
-  roles: string[];
-  consents: Record<"terms" | "privacy" | "comms_appointments" | "comms_marketing" | "ai_history", boolean>;
-};
+export type { Me };
 
-/** JSON fetch that surfaces the server's human-readable message on failure. */
+/** JSON fetch for this site's own /api routes (assistant, concierge, waitlist); the FastAPI backend goes through lib/fmd. */
 export async function api<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
   const res = await fetch(path, {
     method: init.method ?? "GET",
@@ -26,23 +18,57 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
   return data as T;
 }
 
-/** The signed-in user (null = signed out, undefined = still loading). Refreshes on "fmd:auth". */
-export function useMe() {
-  const [me, setMe] = useState<Me | null | undefined>(undefined);
-  useEffect(() => {
-    let live = true;
-    const load = () =>
-      api<{ user: Me | null }>("/api/me")
-        .then((r) => live && setMe(r.user))
-        .catch(() => live && setMe(null));
-    load();
-    window.addEventListener("fmd:auth", load);
-    return () => {
-      live = false;
-      window.removeEventListener("fmd:auth", load);
-    };
-  }, []);
-  return me;
+/* The signed-in user, fetched once and shared by every component that asks (navbar, shell, assistant, concierge). */
+let current: Me | null | undefined; // undefined = not loaded yet
+let gen = 0;
+let loading = false;
+const listeners = new Set<() => void>();
+const notify = () => listeners.forEach((l) => l());
+
+function load() {
+  const g = ++gen; // a newer load (after login or logout) wins over an older one still in flight
+  loading = true;
+  auth
+    .me()
+    .catch(() => null)
+    .then((u) => {
+      if (g !== gen) return;
+      loading = false;
+      current = u;
+      notify();
+    });
 }
 
-export const authChanged = () => window.dispatchEvent(new Event("fmd:auth"));
+function subscribe(onChange: () => void) {
+  listeners.add(onChange);
+  if (current === undefined && !loading) load();
+  return () => void listeners.delete(onChange);
+}
+
+/** null = signed out, undefined = still loading (and always during server render). */
+export const useMe = () => useSyncExternalStore(subscribe, () => current, () => undefined);
+
+/** Call after logging in or out, or after changing account details. */
+export const authChanged = () => load();
+
+/**
+ * Ends this device's session, or every session with `everywhere`. Throws if the backend can't be reached: the HttpOnly
+ * cookies can only be cleared by it.
+ */
+export async function logout(everywhere = false) {
+  await (everywhere ? auth.logoutAll() : auth.logout());
+  gen++;
+  loading = false;
+  current = null;
+  notify();
+}
+
+/** For signed-in pages: sends signed-out visitors to /login and back here afterwards. undefined until a user is known. */
+export function useRequireMe() {
+  const me = useMe();
+  const router = useRouter();
+  useEffect(() => {
+    if (me === null) router.replace(`/login?next=${encodeURIComponent(location.pathname + location.search)}`);
+  }, [me, router]);
+  return me ?? undefined;
+}

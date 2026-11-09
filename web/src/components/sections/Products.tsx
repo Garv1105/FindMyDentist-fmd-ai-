@@ -37,7 +37,7 @@ const PRODUCTS = [
     name: "FMD Scholar",
     body: "A dentistry-focused academic AI workspace for doubts, viva, seminars and research.",
     points: ["Included with an active student membership", "Monthly usage limits apply"],
-    cta: { label: "Join as a student", href: "/signin" },
+    cta: { label: "Join as a student", href: "/register?as=student" },
   },
 ];
 type Product = (typeof PRODUCTS)[number];

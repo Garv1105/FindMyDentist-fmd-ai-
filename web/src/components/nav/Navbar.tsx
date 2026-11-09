@@ -5,6 +5,10 @@ import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, Menu, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { AccountMenu } from "@/components/main/AccountMenu";
+import { useMe } from "@/lib/me";
+import { SHOW_ACCOUNT } from "@/toggle";
 
 /** The brand mark: public/logo.png (fmd + the meditating mascot + FindMyDentist), trimmed to public/img/logo-fmd.webp */
 export function Logo() {
@@ -60,6 +64,8 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [hover, setHover] = useState<string | null>(null);
   const current = useCurrentSection();
+  const me = useMe();
+  const path = usePathname();
 
   useEffect(() => {
     const on = () => setScrolled(window.scrollY > 24);
@@ -114,6 +120,8 @@ export default function Navbar() {
           })}
         </ul>
         <div className="flex items-center gap-1.5">
+          {/* signed out on phones, Log in sits in the menu card: the bar has no room for it */}
+          {SHOW_ACCOUNT && <AccountMenu loginClassName="hidden sm:inline-flex" />}
           <Link
             href="/#coming-soon"
             onClick={() => setOpen(false)}
@@ -166,6 +174,18 @@ export default function Navbar() {
                 </motion.li>
               );
             })}
+            {SHOW_ACCOUNT && me === null && (
+              <li className="sm:hidden">
+                <Link
+                  href={path === "/" ? "/login" : `/login?next=${encodeURIComponent(path)}`}
+                  onClick={() => setOpen(false)}
+                  className="flex items-center justify-between rounded-2xl px-4 py-3 text-[16px] font-medium text-ink transition-colors hover:bg-white/[0.06]"
+                >
+                  Log in
+                  <ArrowRight className="size-4" strokeWidth={1.5} />
+                </Link>
+              </li>
+            )}
           </motion.ul>
         )}
       </AnimatePresence>

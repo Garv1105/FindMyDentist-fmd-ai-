@@ -46,6 +46,8 @@ export type Chat = ReturnType<typeof useAssistant>;
 
 /** FMD AI thinks this long at least before it answers (its mascot's thinking pose), however fast the answer comes */
 const MIN_THINK = 4500;
+/** Conversation history needs the assistant backend; flip with it. */
+const HISTORY_LIVE = false;
 /** then types the answer out, about CPS letters a second, never for more than MAX_TYPE seconds */
 const CPS = 45;
 const MAX_TYPE = 12;
@@ -177,7 +179,7 @@ export function ChatThread({ chat }: { chat: Chat }) {
           FMD AI · {status}
           {chat.devProvider && " · Development assistant: rule-based answers"}
         </p>
-        {me?.consents.ai_history && (
+        {HISTORY_LIVE && me && (
           <button aria-label="Conversation history" aria-pressed={showHistory} onClick={() => setShowHistory((s) => !s)} className="grid size-8 place-items-center rounded-full text-ink-3 hover:text-ink">
             <History className="size-4" strokeWidth={1.5} />
           </button>

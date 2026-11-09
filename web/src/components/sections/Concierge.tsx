@@ -181,7 +181,7 @@ export default function Concierge() {
     api<Config>("/api/concierge/config").then(setCfg).catch(() => setErr("FMD Edge is temporarily unavailable. Please try again shortly."));
   }, []);
 
-  const name = f.name ?? me?.name ?? "";
+  const name = f.name ?? me?.full_name ?? "";
   const contactValue = f.contactValue ?? (f.contactMethod === "email" ? me?.email : me?.phone?.replace("+91", "")) ?? "";
 
   const submit = async (e: FormEvent) => {
