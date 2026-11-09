@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, Compass, FolderLock, House, Search, Sparkles, UserRound, type LucideIcon } from "lucide-react";
+import { Briefcase, CalendarDays, Compass, FolderLock, House, Search, Sparkles, UserRound, type LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -20,6 +20,7 @@ const TOP: Item[] = [
   { href: "/explore", label: "Explore", Icon: Compass, ready: true },
   { href: "/records", label: "Records", Icon: FolderLock, ready: true },
   { href: "/appointments", label: "Appointments", Icon: CalendarDays, ready: true },
+  { href: "/jobs", label: "Jobs", Icon: Briefcase, ready: true },
 ];
 
 const TABS: Item[] = [

@@ -35,7 +35,7 @@ Each part has one of two backend states:
 | 5.3 | Create a post (dentists), consent gate, content import | DEMO | **Done** |
 | 5.4 | Saved items and following | DEMO | **Done** |
 | 6.1 | Concierge (FMD Edge): enquiry and status | DEMO | **Done** |
-| 7.1 | Jobs: browse, detail, post, my postings | DEMO | Not started |
+| 7.1 | Jobs: browse, detail, post, my postings | DEMO | **Done** |
 | 8.1 | Plans and membership | DEMO | Not started |
 | 8.2 | Checkout, receipts, renewals, failed payments | DEMO | Not started |
 | 9.1 | Notifications and preferences | DEMO | Not started |
@@ -610,6 +610,13 @@ Built in `src/components/auth/AuthForms.tsx`, against `/auth/*`: OTP sign-up, OT
   - `/jobs/mine`: active, expired and closed postings, with renew, edit and close.
 - **Rules:** postings expire (30 days by default) and can be renewed. Never imply FMD has verified an employer.
 - **Proposed API:** `GET /jobs?q&role&city&type&page`, `GET /jobs/{id}`, `POST /jobs`, `PATCH /jobs/{id}`, `POST /jobs/{id}/renew`, `POST /jobs/{id}/close`, `GET /me/jobs`.
+- **Built:**
+  - Pages: `/jobs`, `/jobs/[id]`, `/jobs/new` (also edits, with `?edit=`), `/jobs/mine`; "Jobs" added to the top bar; saved jobs appear in `/saved`
+  - `sample/jobs.ts`, with 4 tests
+  - Who may post: verified dentists, clinic owners (from the real backend's workspaces) and company accounts.
+  - Application is by email, an https link or phone, each checked.
+  - Listings run 30 days and can be renewed. Expired or closed listings are hidden from search; their own page says so and has no apply button.
+  - A new employer always shows "FMD hasn't verified this employer". Jobs can be reported.
 
 ### Phase 8: Plans and payments
 

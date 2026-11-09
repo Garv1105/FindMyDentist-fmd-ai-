@@ -13,6 +13,8 @@ import { useRequireMe } from "@/lib/me";
 import { following as listFollowing, myPosts, saveDraft, DEID_CHECKS, deleteDraft, importPreview, newDraft, toggleFollow, feed, type Author, type Draft, type DraftStatus, type FeedItem, type Kind } from "@/sample/content";
 import { getSaved } from "@/sample/saved";
 import { cardsFor, type ProviderCard } from "@/sample/providers";
+import { cardsForJobs, type Job } from "@/sample/jobs";
+import { JobCard } from "../jobs/Jobs";
 import { DentistCard } from "../dentists/Search";
 import { PostCard, Section } from "./Explore";
 
@@ -337,6 +339,7 @@ export function SavedPage() {
   const [posts, setPosts] = useState<FeedItem[]>([]);
   const [dentists, setDentists] = useState<ProviderCard[]>([]);
   const [follows, setFollows] = useState<Author[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const userId = me?.id;
   const load = useCallback(() => {
     if (!userId) return;
@@ -345,13 +348,14 @@ export function SavedPage() {
       setDentists(ds);
       setFollows(fs);
     });
+    getSaved(userId, "job").then((ids) => cardsForJobs(userId, ids)).then(setJobs);
   }, [userId]);
   useEffect(load, [load]);
   if (!me) return <div className="app-panel h-48 animate-pulse" aria-busy />;
   const tabs: [typeof tab, string][] = [
     ["posts", `Posts (${posts.length})`],
     ["dentists", `Dentists (${dentists.length})`],
-    ["jobs", "Jobs"],
+    ["jobs", `Jobs (${jobs.length})`],
     ["following", `Following (${follows.length})`],
   ];
   return (
@@ -388,7 +392,18 @@ export function SavedPage() {
         ) : (
           <Empty text="Dentists you save from their profiles appear here." href="/dentists" cta="Find a dentist" />
         ))}
-      {tab === "jobs" && <Empty text="Saved jobs will appear here once Jobs opens." />}
+      {tab === "jobs" &&
+        (jobs.length ? (
+          <ul className="grid gap-3 lg:grid-cols-2">
+            {jobs.map((j) => (
+              <li key={j.id}>
+                <JobCard j={j} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <Empty text="Jobs you save appear here." href="/jobs" cta="Dental jobs" />
+        ))}
       {tab === "following" &&
         (follows.length ? (
           <Panel className="overflow-hidden">
