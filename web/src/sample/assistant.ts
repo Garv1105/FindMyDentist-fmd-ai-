@@ -24,7 +24,7 @@ export const LANGUAGES = [
 export type Lang = (typeof LANGUAGES)[number]["code"];
 
 /** where a reply's buttons may lead: FMD pages only */
-const ALLOWED = ["/dentists", "/appointments", "/records", "/journey", "/assistant/tools/", "/#concierge"];
+const ALLOWED = ["/dentists", "/appointments", "/records", "/journey", "/assistant/tools/", "/concierge"];
 export type Action = { label: string; href: string };
 export type Attachment = { name: string; type: string; size: number };
 export type Message = {
@@ -50,7 +50,7 @@ const newId = (p: string) => `${p}-${Math.random().toString(36).slice(2, 10)}`;
 
 function toAction(a: NavAction): Action {
   const href =
-    a.target === "dentists" ? (a.specialty ? `/dentists?specialty=${encodeURIComponent(a.specialty)}` : "/dentists") : a.target === "concierge" ? "/#concierge" : `/${a.target}`;
+    a.target === "dentists" ? (a.specialty ? `/dentists?specialty=${encodeURIComponent(a.specialty)}` : "/dentists") : a.target === "concierge" ? "/concierge" : `/${a.target}`;
   return { label: a.label, href };
 }
 /** an FMD page (not another site, not "//elsewhere") on the allow-list */

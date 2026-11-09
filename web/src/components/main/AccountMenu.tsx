@@ -1,6 +1,6 @@
 "use client";
 
-import { Bookmark, CalendarDays, LogOut, UserRound } from "lucide-react";
+import { Bookmark, CalendarDays, LogOut, Sparkles, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
@@ -65,6 +65,9 @@ export function AccountMenu({ loginClassName = "" }: { loginClassName?: string }
           <div className="pt-1.5">
             <Link href="/appointments" onClick={close} className={itemCls}>
               <CalendarDays className="size-4" strokeWidth={1.5} /> My appointments
+            </Link>
+            <Link href="/concierge/enquiries" onClick={close} className={itemCls}>
+              <Sparkles className="size-4" strokeWidth={1.5} /> FMD Edge requests
             </Link>
             <Link href="/saved" onClick={close} className={itemCls}>
               <Bookmark className="size-4" strokeWidth={1.5} /> Saved

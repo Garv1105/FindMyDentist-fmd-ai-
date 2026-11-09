@@ -243,7 +243,7 @@ export function DentistSearch() {
             <Button variant="secondary" onClick={() => router.replace("/dentists", { scroll: false })}>
               Clear filters
             </Button>
-            <ButtonLink href="/#concierge" variant="secondary">
+            <ButtonLink href="/concierge" variant="secondary">
               Ask FMD Edge to help
             </ButtonLink>
           </div>

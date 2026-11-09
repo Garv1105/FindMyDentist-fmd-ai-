@@ -34,7 +34,7 @@ Each part has one of two backend states:
 | 5.2 | Post detail, comments, reports | DEMO | **Done** |
 | 5.3 | Create a post (dentists), consent gate, content import | DEMO | **Done** |
 | 5.4 | Saved items and following | DEMO | **Done** |
-| 6.1 | Concierge (FMD Edge): enquiry and status | DEMO | Not started (form exists, hidden) |
+| 6.1 | Concierge (FMD Edge): enquiry and status | DEMO | **Done** |
 | 7.1 | Jobs: browse, detail, post, my postings | DEMO | Not started |
 | 8.1 | Plans and membership | DEMO | Not started |
 | 8.2 | Checkout, receipts, renewals, failed payments | DEMO | Not started |
@@ -589,6 +589,15 @@ Built in `src/components/auth/AuthForms.tsx`, against `/auth/*`: OTP sign-up, OT
   - `POST /concierge/enquiries` returns `{reference}`
   - `GET /me/concierge/enquiries`, `GET /concierge/enquiries/{ref}`
   - `POST /concierge/enquiries/{ref}/cancel`, `POST /concierge/enquiries/{ref}/proposals/{id}/respond`
+- **Built:**
+  - `/concierge`, `/concierge/enquiries`, `/concierge/enquiries/[ref]`, and "FMD Edge requests" in the account menu
+  - `sample/concierge.ts`, with 3 tests
+  - A demo coordinator moves each request along: tries to reach you, gets in touch, arranges options, then waits for you.
+  - Nothing is final until every proposal is accepted. Declining sends the coordinator back to look again. Requests can be cancelled while open.
+  - FMD AI's "Ask FMD Edge" button and the dentist search's no-results help now open `/concierge`.
+- **Note:**
+  - The live homepage form and `/api/concierge/enquiries` (which emails the FMD team) are unchanged. The demo pages never send to them.
+  - The service areas shown are demo values until FMD decides them (open decision D4).
 
 ### Phase 7: Jobs
 
