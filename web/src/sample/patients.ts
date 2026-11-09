@@ -161,9 +161,11 @@ const basic = (s: PatientSummary): Omit<PatientDetail, keyof PatientSummary> => 
 /* ---------------- in-memory changes ---------------- */
 
 const amendments = new Map<string, Note["amendments"]>();
+const newNotes = new Map<string, Note[]>();
 const extra: PatientSummary[] = [];
 onReset.push(() => {
   amendments.clear();
+  newNotes.clear();
   extra.length = 0;
 });
 
@@ -194,7 +196,8 @@ export async function getPatient(clinicId: string, id: string): Promise<PatientD
   const s = all().find((p) => p.id === id);
   if (!s) return null;
   const rest = id === "p-arjun" ? ARJUN : basic(s);
-  return { ...s, ...rest, notes: rest.notes.map((n) => ({ ...n, amendments: [...n.amendments, ...(amendments.get(n.id) ?? [])] })) };
+  const notes = [...(newNotes.get(id) ?? []), ...rest.notes];
+  return { ...s, ...rest, notes: notes.map((n) => ({ ...n, amendments: [...n.amendments, ...(amendments.get(n.id) ?? [])] })) };
 }
 
 /** Signed notes can't be edited: the change is added beneath the original, with who, when and why. */
@@ -207,6 +210,18 @@ export async function amendNote(clinicId: string, patientId: string, noteId: str
   const today = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
   amendments.set(noteId, [...(amendments.get(noteId) ?? []), { date: today, by: input.by, reason: input.reason.trim(), text: input.text.trim() }]);
   return { ...note, amendments: [...note.amendments, amendments.get(noteId)!.at(-1)!] };
+}
+
+const todayLabel = () => new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
+
+/** A new clinical note, signed by its author as it is saved; from then on it can only be amended. */
+export async function addNote(clinicId: string, patientId: string, input: { text: string; by: string }): Promise<Note> {
+  if (!(await getPatient(clinicId, patientId))) throw new Error("Patient not found");
+  if (!input.text.trim()) throw new Error("Write the note");
+  const list = newNotes.get(patientId) ?? [];
+  const note: Note = { id: `n-${patientId}-new-${list.length + 1}`, date: todayLabel(), by: input.by, text: input.text.trim(), signed: true, amendments: [] };
+  newNotes.set(patientId, [note, ...list]);
+  return note;
 }
 
 export const planTotal = (plan: Plan) => plan.lines.reduce((n, l) => n + l.qty * l.feeInr, 0) - plan.discountInr;

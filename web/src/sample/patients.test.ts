@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
 import { resetSample } from "./clinic.ts";
-import { addPatient, amendNote, findDuplicates, getPatient, listPatients, planTotal } from "./patients.ts";
+import { addNote, addPatient, amendNote, findDuplicates, getPatient, listPatients, planTotal } from "./patients.ts";
 
 beforeEach(resetSample);
 const C = "smile-studio";
@@ -58,4 +58,12 @@ test("adding a patient: listed, and needs a name and a 10-digit phone", async ()
   assert.equal((await listPatients(C, { q: "kabir" }))[0]?.id, p.id);
   await assert.rejects(addPatient(C, { name: " ", phone: "9845077777", dob: "1990-04-02", sex: "M" }));
   await assert.rejects(addPatient(C, { name: "X", phone: "123", dob: "1990-04-02", sex: "M" }));
+});
+
+test("adding a note: signed, newest first, and needs text", async () => {
+  const n = await addNote(C, "p-arjun", { text: "Patient reports less pain.", by: "Dr. Rao" });
+  assert.equal(n.signed, true);
+  assert.equal((await getPatient(C, "p-arjun"))!.notes[0].id, n.id);
+  await assert.rejects(addNote(C, "p-arjun", { text: "   ", by: "Dr. Rao" }));
+  await assert.rejects(addNote(C, "nope", { text: "x", by: "Dr. Rao" }));
 });
