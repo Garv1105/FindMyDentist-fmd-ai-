@@ -1,12 +1,11 @@
 "use client";
 
 import { ArrowRight, Mic } from "lucide-react";
-import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useCallback, useRef, useState, type FormEvent } from "react";
 import { Button, Panel, Tag } from "@/components/app/kit";
 import { Sheet } from "@/components/app/Sheet";
 import type { DemoUser } from "@/lib/demo";
 import { briefingText, decideAiTask, type AiTask, type ClinicHome } from "@/sample/clinic";
-import { useDismiss } from "../dismiss";
 
 const SUGGESTIONS = ["Who's due for recall?", "Summarise yesterday's collections", "Find gaps in Thursday's schedule"];
 
