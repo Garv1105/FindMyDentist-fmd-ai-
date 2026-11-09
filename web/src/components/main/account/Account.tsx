@@ -102,6 +102,12 @@ export function Account() {
         </ButtonLink>
       </Card>
 
+      <Card title="Personalisation" text="What Explore and suggestions use, and how to change or reset it.">
+        <ButtonLink href="/account/personalisation" size="sm" variant="secondary">
+          Manage personalisation
+        </ButtonLink>
+      </Card>
+
       <Card title="Privacy and data" text="Your consents, which messages you get, a copy of your data, or deleting your account.">
         <ButtonLink href="/account/privacy" size="sm" variant="secondary">
           Manage privacy and data

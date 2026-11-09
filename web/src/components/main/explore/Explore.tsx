@@ -251,7 +251,16 @@ export function PostCard({ p, userId, onChange, full = false }: { p: FeedItem; u
           <Info className="size-4" strokeWidth={1.75} /> Why am I seeing this?
         </button>
       </footer>
-      {why && p.reason && <p className="rounded-xl bg-[var(--surface-glass)] px-3.5 py-2.5 text-[13.5px] text-ink-2">{p.reason}</p>}
+      {why && p.reason && (
+        <p className="rounded-xl bg-[var(--surface-glass)] px-3.5 py-2.5 text-[13.5px] text-ink-2">
+          {p.reason}{" "}
+          {!p.sponsored_by && userId && (
+            <Link href="/account/personalisation" className="font-medium text-ink underline underline-offset-4">
+              Change what you see
+            </Link>
+          )}
+        </p>
+      )}
       {note && <p role="status" className="text-[13px] text-ink-2">{note}</p>}
     </article>
   );

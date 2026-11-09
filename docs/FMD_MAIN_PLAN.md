@@ -40,9 +40,9 @@ Each part has one of two backend states:
 | 8.2 | Checkout, receipts, renewals, failed payments | DEMO | **Done** |
 | 9.1 | Notifications and preferences | DEMO | **Done** |
 | 9.2 | Help centre and support tickets | DEMO | **Done** |
-| 10.1 | Feedback and reviews (Annex G) | DEMO | Not started |
-| 10.2 | Personalisation controls (Annex D) | DEMO | Not started |
-| 10.3 | Referrals (Annex I), switched off by default | DEMO | Not started |
+| 10.1 | Feedback and reviews (Annex G) | DEMO | **Done** |
+| 10.2 | Personalisation controls (Annex D) | DEMO | **Done** |
+| 10.3 | Referrals (Annex I), switched off by default | DEMO | **Done** |
 | 11 | Cross-cutting: legal pages, accessibility, localisation, analytics events, journey QA | – | Not started |
 
 We work top to bottom, one part at a time. A part is ticked only once it meets §2 "Done for every part".
@@ -706,6 +706,12 @@ Built in `src/components/auth/AuthForms.tsx`, against `/auth/*`: OTP sign-up, OT
 - **Screens:** `/account/invite`: personal link or code, invited friends and their status, terms.
 - **Rules:** behind a `REFERRALS` flag that stays off until legal review. It's a patient-to-platform invite only, never a clinical referral, with no rewards for dentists.
 - **Proposed API:** `GET /me/referral`, `GET /me/referral/invites`.
+- **Built (all of Phase 10):**
+  - `sample/reviews.ts` and `personalisation.ts`, `components/main/trust/Trust.tsx`, with 4 tests
+  - **Feedback:** after a completed visit there's one invitation at a time, for visits in the last 30 days; "Not now" snoozes it for 14 days. It shows on My appointments, on the visit page and as a notification.
+  - **Ratings and reviews:** four 1–5 experience ratings, all required, written out in words rather than stars. Private or public. Public reviews are marked "Verified visit", low ones included, with clinic replies and a report option.
+  - **Personalisation:** `/account/personalisation` holds the switch, topics and concerns, what's used, and reset. Declared interests now lead the feed ahead of searches, only with the consent, and every card's reason links back to these controls.
+  - **Referrals:** `/account/invite` is behind `REFERRALS = false` in `toggle.ts`. Live users see "not open yet"; development shows a labelled preview. It's an invite to FMD only, never a clinical referral, with no rewards.
 
 ### Phase 11: Cross-cutting
 - **Legal pages:** `/terms` and `/privacy`, with placeholder text until legal provides the real content. The consent screens link to them.

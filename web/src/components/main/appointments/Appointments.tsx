@@ -25,6 +25,7 @@ import {
 } from "@/sample/bookings";
 import { CANCEL_TERMS, getAvailability, POLICY, type Availability, type Window } from "@/sample/providers";
 import { addToCalendar, TimePicker, windowLabel } from "../booking/Book";
+import { FeedbackCard } from "../trust/Trust";
 
 export const STATUS: Record<Status, { label: string; tone: Tone }> = {
   requested: { label: "Waiting for the clinic", tone: "accent" },
@@ -81,6 +82,7 @@ export function AppointmentsPage() {
           Book another
         </ButtonLink>
       </div>
+      <FeedbackCard me={me} />
       <div role="tablist" aria-label="Appointments" className="flex w-fit gap-1 rounded-full border border-line bg-[var(--surface-glass)] p-1">
         {(["upcoming", "past"] as const).map((t) => (
           <button
@@ -266,6 +268,8 @@ export function AppointmentPage() {
           </span>
         </p>
       )}
+
+      {b.status === "completed" && <FeedbackCard me={me} bookingId={b.id} />}
 
       <Panel as="section" className="grid gap-3 p-5 sm:p-6">
         <h2 className="text-[17px] font-medium text-ink">History</h2>

@@ -15,3 +15,6 @@ export const LOCAL_MODELS_VERSION = 6;
  * the waitlist until this is set to true.
  */
 export const SHOW_ACCOUNT = process.env.NODE_ENV !== "production";
+
+/** Invite friends (plan 10.3). Off until FMD's legal and professional-ethics review approves it (PDR Annex I). */
+export const REFERRALS = false;

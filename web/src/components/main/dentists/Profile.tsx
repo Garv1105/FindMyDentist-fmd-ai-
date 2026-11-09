@@ -14,6 +14,7 @@ import type { Me } from "@/lib/fmd";
 import { useMe } from "@/lib/me";
 import { getAvailability, getClinicPage, getClaims, getProvider, submitClaim, type Availability, type Claim, type ClinicPage, type ProviderProfile } from "@/sample/providers";
 import { getSaved, toggleSaved } from "@/sample/saved";
+import { ReviewsSection } from "../trust/Trust";
 import { DentistCard } from "./Search";
 
 function Back() {
@@ -131,6 +132,8 @@ export function ProviderPage() {
               <p className="text-[14.5px] text-ink">{p.qualifications.join(", ")}</p>
             </div>
           </Card>
+
+          <ReviewsSection dentistId={p.id} />
 
           <Card title="Treatments and fees">
             <ul className="divide-y divide-[var(--border)] rounded-2xl border border-line text-[14px]">

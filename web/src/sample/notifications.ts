@@ -8,6 +8,7 @@ import { listBookings, isUpcoming } from "./bookings.ts";
 import { listPayments } from "./billing.ts";
 import { listEnquiries } from "./concierge.ts";
 import { myPosts } from "./content.ts";
+import { feedbackInvites } from "./reviews.ts";
 import { read, write } from "./store.ts";
 
 export type Kind = "booking" | "reminder" | "edge" | "payment" | "security" | "post";
@@ -53,6 +54,9 @@ export async function listNotifications(userId: string, signedUpAt: string, now 
     if (d.status === "published" && d.submitted_at) out.push({ id: `post-pub-${d.id}`, kind: "post", title: "Your post is published", body: `“${d.title}” is live in Explore.`, at: d.publish_at ?? d.submitted_at, href: `/explore/${d.id}` });
     if (d.status === "rejected") out.push({ id: `post-rej-${d.id}`, kind: "post", title: "Your post wasn't approved", body: "See the reason and what to change.", at: d.submitted_at!, href: "/explore/mine" });
   }
+
+  for (const i of await feedbackInvites(userId, now))
+    out.push({ id: `fb-${i.booking_id}`, kind: "booking", title: "How was your visit?", body: `Tell ${i.clinic} how it went. It takes a minute.`, at: new Date(Date.parse(i.visit) + 3_600_000 * 3).toISOString(), href: `/appointments/${i.booking_id}` });
 
   out.push({ id: "sec-welcome", kind: "security", title: "New sign-in to your account", body: "If this wasn't you, sign out other devices in your account.", at: signedUpAt, href: "/account" });
 

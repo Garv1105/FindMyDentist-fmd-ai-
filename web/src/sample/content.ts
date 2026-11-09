@@ -11,6 +11,7 @@
  * case is submitted without documented consent and a de-identification check. Imports are links or official embeds
  * with the source and creator credited, never copied.
  */
+import { CONCERN_TOPICS, getInterests } from "./personalisation.ts";
 import { getConsents } from "./privacy.ts";
 import { read, write } from "./store.ts";
 
@@ -145,6 +146,9 @@ export async function feed(userId: string | null, tab: Tab, now = Date.now()): P
   const consent = userId ? (await getConsents(userId, iso(now))).some((c) => c.purpose === "personalisation" && c.granted) : false;
   const search = userId && consent ? read<string>(SEARCH_KEY(userId)) : null;
   const searchTopics = search ? TOPIC_WORDS.filter(([re]) => re.test(search)).flatMap(([, t]) => t) : [];
+  // what people told us comes before what they searched (Annex D); both only with the consent
+  const told = userId && consent ? await getInterests(userId) : { topics: [], concerns: [] };
+  const interestTopics = [...new Set([...told.topics, ...told.concerns.map((c) => CONCERN_TOPICS[c])])];
   const own = published(userId, m, now);
   const all = [...own, ...posts(now)];
   const organic = all.filter((p) => !p.sponsored_by);
@@ -153,7 +157,8 @@ export async function feed(userId: string | null, tab: Tab, now = Date.now()): P
   const why = (p: Post): string => {
     if (own.some((x) => x.id === p.id)) return "Your post.";
     if (m.following.includes(p.author.id)) return `From ${p.author.name}, whom you follow.`;
-    if (searchTopics.includes(p.topic)) return `Because you searched for “${search}”. You can turn this off in Privacy and data.`;
+    if (interestTopics.includes(p.topic)) return `Because you said you're interested in ${p.topic.toLowerCase()}. You can change this in Personalisation.`;
+    if (searchTopics.includes(p.topic)) return `Because you searched for “${search}”. You can change this in Personalisation.`;
     return "General dental education, shown to everyone.";
   };
 
@@ -163,7 +168,7 @@ export async function feed(userId: string | null, tab: Tab, now = Date.now()): P
   else if (tab === "reels") list = organic.filter((p) => p.kind === "video");
   else {
     // matches for the last search first, then everything else newest first: never only the past searches
-    const rank = (p: Post) => (searchTopics.includes(p.topic) ? 0 : m.following.includes(p.author.id) ? 1 : 2);
+    const rank = (p: Post) => (interestTopics.includes(p.topic) ? 0 : searchTopics.includes(p.topic) ? 1 : m.following.includes(p.author.id) ? 2 : 3);
     list = [...organic].sort((a, b) => rank(a) - rank(b) || b.published_at.localeCompare(a.published_at));
     // one sponsored post, labelled, in the third place; never in Following
     if (ad && list.length >= 2) list.splice(2, 0, ad);
