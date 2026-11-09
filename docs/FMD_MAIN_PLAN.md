@@ -30,10 +30,10 @@ Each part has one of two backend states:
 | 3.4 | Warranty certificates and public verification (Annex A) | DEMO | **Done** |
 | 4.1 | AI assistant: full chat | DEMO | **Done** |
 | 4.2 | AI companion tools | DEMO | **Done** |
-| 5.1 | Explore feed | DEMO | Not started (homepage teaser exists) |
-| 5.2 | Post detail, comments, reports | DEMO | Not started |
-| 5.3 | Create a post (dentists), consent gate, content import | DEMO | Not started |
-| 5.4 | Saved items and following | DEMO | Not started |
+| 5.1 | Explore feed | DEMO | **Done** |
+| 5.2 | Post detail, comments, reports | DEMO | **Done** |
+| 5.3 | Create a post (dentists), consent gate, content import | DEMO | **Done** |
+| 5.4 | Saved items and following | DEMO | **Done** |
 | 6.1 | Concierge (FMD Edge): enquiry and status | DEMO | Not started (form exists, hidden) |
 | 7.1 | Jobs: browse, detail, post, my postings | DEMO | Not started |
 | 8.1 | Plans and membership | DEMO | Not started |
@@ -554,6 +554,15 @@ Built in `src/components/auth/AuthForms.tsx`, against `/auth/*`: OTP sign-up, OT
 #### 5.4 Saved items and following: DEMO
 - **Screens:** `/saved` with tabs for posts, dentists and jobs, plus a "Following" list with unfollow.
 - **Proposed API:** `GET /me/saves?type`, `POST`/`DELETE /saves`, `GET /me/following`, `POST`/`DELETE /follows/{dentist_id}`.
+- **Built (all of Phase 5):**
+  - Pages: `/explore` (For you, Following, Learn, Reels), `/explore/[postId]`, `/explore/new`, `/explore/mine`, `/saved`
+  - `sample/content.ts`, with 6 tests
+  - Every card has "Why am I seeing this?". One sponsored post sits third, labelled as paid, and never appears in Following.
+  - A dentist search shapes the feed only with the personalisation consent; the search page records searches through `noteSearch`.
+  - Poll results show only after you vote.
+  - Reports need a reason.
+  - Posting is for verified dentists only. Patient cases need documented consent and all four privacy checks. Links are allowed from YouTube, Instagram and LinkedIn only, with the creator credited. Posts go through review, then are published or scheduled, and a rejected post shows its reason.
+- **Demo limit:** a dentist's own uploaded image or video isn't stored, so a published image or video post shows text only. Linked posts and articles are complete.
 
 ### Phase 6: Concierge (FMD Edge)
 

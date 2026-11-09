@@ -17,7 +17,7 @@ type Item = { href: string; label: string; Icon: LucideIcon; ready: boolean };
 const TOP: Item[] = [
   { href: "/assistant", label: "Ask FMD AI", Icon: Sparkles, ready: true },
   { href: "/dentists", label: "Find a dentist", Icon: Search, ready: true },
-  { href: "/explore", label: "Explore", Icon: Compass, ready: false },
+  { href: "/explore", label: "Explore", Icon: Compass, ready: true },
   { href: "/records", label: "Records", Icon: FolderLock, ready: true },
   { href: "/appointments", label: "Appointments", Icon: CalendarDays, ready: true },
 ];
@@ -25,7 +25,7 @@ const TOP: Item[] = [
 const TABS: Item[] = [
   { href: "/", label: "Home", Icon: House, ready: true },
   { href: "/dentists", label: "Find", Icon: Search, ready: true },
-  { href: "/explore", label: "Explore", Icon: Compass, ready: false },
+  { href: "/explore", label: "Explore", Icon: Compass, ready: true },
   { href: "/records", label: "Records", Icon: FolderLock, ready: true },
   { href: "/account", label: "Me", Icon: UserRound, ready: true },
 ];

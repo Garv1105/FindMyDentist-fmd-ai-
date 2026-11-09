@@ -434,3 +434,11 @@ export async function submitClaim(
 export async function getAvailability(dentistId: string, booked?: ReadonlySet<number>): Promise<Availability> {
   return availability(dentistId, Date.now(), booked);
 }
+
+/** Cards for given dentists (saved ones, for example), in the order asked. */
+export async function cardsFor(ids: string[], now = Date.now()): Promise<ProviderCard[]> {
+  return ids.flatMap((id) => {
+    const r = rowOf(id);
+    return r ? [card(r, {}, now)] : [];
+  });
+}

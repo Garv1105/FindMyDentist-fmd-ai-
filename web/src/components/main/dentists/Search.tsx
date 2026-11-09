@@ -10,6 +10,8 @@ import { Avatar, Verification } from "@/components/providers";
 import { SponsoredBadge } from "@/components/ui";
 import { LANGUAGES, SERVICES, SPECIALTIES } from "@/lib/catalog";
 import { feeRange, when } from "@/lib/format";
+import { noteSearch } from "@/sample/content";
+import { useMe } from "@/lib/me";
 import { PLACES, searchProviders, type Filters, type ProviderCard, type SearchResult } from "@/sample/providers";
 
 
@@ -51,6 +53,7 @@ const FILTERS: { key: string; label: string; options: Opt[]; needsLocation?: boo
 export function DentistSearch() {
   const params = useSearchParams();
   const router = useRouter();
+  const me = useMe();
   const key = params.toString();
   const f = parse(params);
   const hasLocation = f.lat !== undefined && f.lng !== undefined;
@@ -93,6 +96,7 @@ export function DentistSearch() {
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const where = loc.trim();
+    noteSearch(me?.id ?? null, q);
     // typing a place replaces "near me"
     set({ q: q.trim() || null, loc: where || null, ...(where ? { lat: null, lng: null, within: null, sort: f.sort === "distance" ? null : (f.sort ?? null) } : {}) });
   };
