@@ -48,10 +48,10 @@ export function Kpis({ home, base }: { home: ClinicHome; base: string }) {
       />
       <Kpi href={`${base}/billing`} label={`Collected ${day}`} value={inr(m.collectedInr)} sub={`${inr(m.outstandingInr)} outstanding · ${plural(m.outstandingPatients, "patient")}`} />
       <Kpi
-        href={`${base}/inventory`}
+        href={`${base}/tasks`}
         label="Needs attention"
-        value={a.stockAlerts + a.unsignedNotes}
-        sub={`${plural(a.stockAlerts, "stock alert")} · ${plural(a.unsignedNotes, "unsigned note")}`}
+        value={a.unsignedNotes + a.overdueFollowUps}
+        sub={`${plural(a.unsignedNotes, "unsigned note")} · ${plural(a.overdueFollowUps, "overdue follow-up")}`}
       />
     </div>
   );

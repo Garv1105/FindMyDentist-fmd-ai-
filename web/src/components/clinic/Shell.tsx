@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  BarChart3, Boxes, CalendarDays, Check, ChevronDown, CreditCard, House, ListChecks, LogOut, MapPin, Menu,
+  BarChart3, CalendarDays, Check, ChevronDown, CreditCard, House, ListChecks, LogOut, MapPin, Menu,
   Settings, Sparkles, Users, UsersRound, X, type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
@@ -50,13 +50,12 @@ export function useClinic() {
 
 /* ---------------- navigation ---------------- */
 
-type NavKey = "calendar" | "inventory" | "tasks" | "ai";
+type NavKey = "calendar" | "tasks" | "ai";
 const NAV: [slug: string, label: string, Icon: LucideIcon, count?: NavKey][] = [
   ["", "Home", House],
   ["calendar", "Calendar", CalendarDays, "calendar"],
   ["patients", "Patients", UsersRound],
   ["billing", "Billing", CreditCard],
-  ["inventory", "Inventory", Boxes, "inventory"],
   ["tasks", "Tasks", ListChecks, "tasks"],
   ["reports", "Reports", BarChart3],
   ["ai", "AI manager", Sparkles, "ai"],
@@ -295,7 +294,6 @@ export function ClinicShell({ children }: { children: ReactNode }) {
     getClinicHome(clinic.id, { date: todayIst(), branchId }).then((h) =>
       setCounts({
         calendar: h.counts.total,
-        inventory: h.attention.stockAlerts,
         tasks: h.followUps.filter((f) => !f.done).length,
         ai: h.tasks.filter((t) => t.needsApproval && t.status === "proposed").length,
       }),
