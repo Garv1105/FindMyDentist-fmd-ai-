@@ -57,8 +57,12 @@ export const formatPhone = (phone: string) => {
 };
 export const isPhone = (phone: string) => tenDigits(phone).length === 10;
 
-/** A preview person with this mobile number, however it's typed. */
-export const userByPhone = (phone: string) => (isPhone(phone) ? (DEMO_USERS.find((u) => tenDigits(u.phone) === tenDigits(phone)) ?? null) : null);
+/** A preview person or a created account with this mobile number, however it's typed. Demo people come first. */
+export const userByPhone = (phone: string, created: DemoUser[] = []) =>
+  isPhone(phone) ? ([...DEMO_USERS, ...created].find((u) => tenDigits(u.phone) === tenDigits(phone)) ?? null) : null;
+
+/** Sign-up refuses a number that already has an account, so one number always means one person. */
+export const phoneTaken = (phone: string, created: DemoUser[]) => userByPhone(phone, created) !== null;
 
 /** A new preview account. Clinic owners and staff join the demo clinic so FMD Clinic has something to show. */
 export function makeUser(input: { name: string; role: DemoRole; phone: string }): DemoUser {

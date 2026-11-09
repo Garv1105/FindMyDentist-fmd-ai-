@@ -6,7 +6,7 @@ import { Suspense, useState, type FormEvent } from "react";
 import { Button, Panel } from "@/components/app/kit";
 import { Field, fieldCls } from "@/components/app/Sheet";
 import { Page } from "@/components/Page";
-import { formatPhone, homeOf, isPhone, makeUser, PREVIEW_CODE, ROLES, safeNext, userByPhone, type DemoRole, type DemoUser } from "@/lib/demo";
+import { formatPhone, homeOf, isPhone, makeUser, phoneTaken, PREVIEW_CODE, ROLES, safeNext, userByPhone, type DemoRole, type DemoUser } from "@/lib/demo";
 import { useDemoUser } from "@/lib/useDemoUser";
 
 type Mode = "signin" | "signup";
@@ -16,7 +16,7 @@ function SignIn() {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next");
-  const { signIn } = useDemoUser();
+  const { signIn, accounts } = useDemoUser();
   const [mode, setMode] = useState<Mode>(params.get("mode") === "signup" ? "signup" : "signin");
   const [step, setStep] = useState<Step>({ kind: "form" });
   const [phone, setPhone] = useState("");
@@ -36,9 +36,10 @@ function SignIn() {
     setError("");
     if (!isPhone(phone)) return setError("Enter a 10-digit mobile number");
     if (mode === "signin") {
-      const found = userByPhone(phone);
+      const found = userByPhone(phone, accounts);
       return setStep(found ? { kind: "code", user: found } : { kind: "unknown" });
     }
+    if (phoneTaken(phone, accounts)) return setError("There's already an account with this number. Sign in instead.");
     try {
       setStep({ kind: "code", user: makeUser({ name, role, phone }) });
     } catch (err) {

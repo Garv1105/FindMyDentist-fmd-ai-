@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Empty, Panel } from "@/components/app/kit";
 import { Reveal } from "@/components/ui";
-import { listBills } from "@/sample/billing";
+import { dayBills } from "@/sample/billing";
 import { getClinicHome, type AiTask, type ClinicHome, type FollowUp } from "@/sample/clinic";
 import { useClinic } from "../Shell";
 import { AiBriefing } from "./AiBriefing";
@@ -36,10 +36,10 @@ export function Home() {
 
   useEffect(() => {
     let live = true;
-    Promise.all([getClinicHome(clinic.id, { date, branchId }), listBills(clinic.id, { branchId })]).then(
+    Promise.all([getClinicHome(clinic.id, { date, branchId }), dayBills(clinic.id, { branchId, date })]).then(
       ([h, bills]) => {
         if (!live) return;
-        const day = bills.filter((b) => b.date === date && b.status === "paid");
+        const day = bills.filter((b) => b.status === "paid");
         setCollected({ totalInr: day.reduce((n, b) => n + b.amountInr, 0), count: day.length });
         setHome(h);
         setKey(want);

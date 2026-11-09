@@ -48,7 +48,7 @@ export function Kpis({ home, base, collected }: { home: ClinicHome; base: string
       />
       <Kpi href={`${base}/billing`} label={`Collected ${day}`} value={inr(collected.totalInr)} sub={collected.count ? `${plural(collected.count, "bill")}, all paid in full` : "No bills yet"} />
       <Kpi
-        href={`${base}/tasks`}
+        href={`${base}/patients`}
         label="Needs attention"
         value={a.unsignedNotes + a.overdueFollowUps}
         sub={`${plural(a.unsignedNotes, "unsigned note")} · ${plural(a.overdueFollowUps, "overdue follow-up")}`}

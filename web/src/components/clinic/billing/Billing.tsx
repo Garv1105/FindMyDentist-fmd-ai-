@@ -170,7 +170,12 @@ function RecordPayment({ clinicId, onClose, onSave }: { clinicId: string; onClos
             value={name}
             onChange={(e) => {
               setName(e.target.value);
-              setFilled(false);
+              // a different name after picking someone: their phone and ID no longer apply
+              if (filled) {
+                setPhone("");
+                setPatientId("");
+                setFilled(false);
+              }
             }}
             autoComplete="off"
             role="combobox"
