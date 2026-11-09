@@ -1,12 +1,11 @@
 "use client";
 
 import { ArrowRight, Mic } from "lucide-react";
-import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { createPortal } from "react-dom";
+import { useCallback, useRef, useState, type FormEvent } from "react";
 import { Button, Panel, Tag } from "@/components/app/kit";
+import { Sheet } from "@/components/app/Sheet";
 import type { DemoUser } from "@/lib/demo";
 import { briefingText, decideAiTask, type AiTask, type ClinicHome } from "@/sample/clinic";
-import { useDismiss } from "../dismiss";
 
 const SUGGESTIONS = ["Who's due for recall?", "Summarise yesterday's collections", "Find gaps in Thursday's schedule"];
 
@@ -36,66 +35,44 @@ function Emphasised({ text }: { text: string }) {
 
 /** PRD 7.4 preview: what will happen, to whom, before anything is approved. */
 function ReviewDialog({ task, onClose, onApprove }: { task: AiTask; onClose: () => void; onApprove: () => void }) {
-  const box = useRef<HTMLDivElement>(null);
-  useDismiss(true, onClose, box);
-  useEffect(() => {
-    box.current?.querySelector<HTMLElement>("button")?.focus();
-  }, []);
-  // keep Tab inside the dialog
-  const trap = (e: KeyboardEvent) => {
-    if (e.key !== "Tab" || !box.current) return;
-    const f = [...box.current.querySelectorAll<HTMLElement>("button")];
-    const [first, last] = [f[0], f.at(-1)];
-    const to = e.shiftKey ? (document.activeElement === first ? last : null) : document.activeElement === last ? first : null;
-    if (!to) return;
-    e.preventDefault();
-    to.focus();
-  };
   const p = task.preview;
-  // drawn on <body>: inside a card, the card's backdrop blur would trap a fixed overlay in some browsers
-  return createPortal(
-    <div data-overlay className="fixed inset-0 z-50 grid place-items-end bg-black/60 sm:place-items-center sm:p-4">
-      <div ref={box} role="dialog" aria-modal="true" aria-labelledby="review-title" onKeyDown={trap} className="app-panel w-full max-w-[520px] rounded-b-none p-6 sm:rounded-b-[22px]">
-        <p className="text-[13px] text-ink-3">FMD Manager · {task.source.replace(/^From: /, "from ")}</p>
-        <h2 id="review-title" className="mt-1 text-[19px] font-medium text-ink">
-          {task.title}
-        </h2>
-        {p && "recipients" in p && (
-          <>
-            <p className="mt-4 text-[13px] font-medium uppercase tracking-[0.1em] text-ink-3">Recipients</p>
-            <ul className="mt-1.5 space-y-1 text-[15px] text-ink-2">
-              {p.recipients.map((r) => (
-                <li key={r}>{r}</li>
-              ))}
-            </ul>
-            <p className="mt-4 text-[13px] font-medium uppercase tracking-[0.1em] text-ink-3">Message</p>
-            <p className="mt-1.5 rounded-2xl border border-line bg-[var(--surface-glass)] p-3.5 text-[15px] leading-relaxed text-ink-2">{p.message}</p>
-          </>
-        )}
-        {p && "lines" in p && (
-          <dl className="mt-4 divide-y divide-[var(--border)] text-[15px]">
-            {p.lines.map(([k, v]) => (
-              <div key={k} className="flex justify-between py-2 text-ink-2">
-                <dt>{k}</dt>
-                <dd>{v}</dd>
-              </div>
+  return (
+    <Sheet title={task.title} onClose={onClose}>
+      <p className="-mt-2 mb-1 text-[13.5px] text-ink-3">FMD Manager · {task.source.replace(/^From: /, "from ")}</p>
+      {p && "recipients" in p && (
+        <>
+          <p className="mt-4 text-[13px] font-medium uppercase tracking-[0.1em] text-ink-3">Recipients</p>
+          <ul className="mt-1.5 space-y-1 text-[15px] text-ink-2">
+            {p.recipients.map((r) => (
+              <li key={r}>{r}</li>
             ))}
-            <div className="flex justify-between py-2 font-medium text-ink">
-              <dt>Total</dt>
-              <dd>{p.total}</dd>
+          </ul>
+          <p className="mt-4 text-[13px] font-medium uppercase tracking-[0.1em] text-ink-3">Message</p>
+          <p className="mt-1.5 rounded-2xl border border-line bg-[var(--surface-glass)] p-3.5 text-[15px] leading-relaxed text-ink-2">{p.message}</p>
+        </>
+      )}
+      {p && "lines" in p && (
+        <dl className="mt-4 divide-y divide-[var(--border)] text-[15px]">
+          {p.lines.map(([k, v]) => (
+            <div key={k} className="flex justify-between py-2 text-ink-2">
+              <dt>{k}</dt>
+              <dd>{v}</dd>
             </div>
-          </dl>
-        )}
-        <p className="mt-4 text-[13.5px] text-ink-3">This is a preview: approving here doesn&apos;t send or order anything.</p>
-        <div className="mt-5 flex justify-end gap-2.5">
-          <Button variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={onApprove}>Approve</Button>
-        </div>
+          ))}
+          <div className="flex justify-between py-2 font-medium text-ink">
+            <dt>Total</dt>
+            <dd>{p.total}</dd>
+          </div>
+        </dl>
+      )}
+      <p className="mt-4 text-[13.5px] text-ink-3">This is a preview: approving here doesn&apos;t send or order anything.</p>
+      <div className="mt-5 flex justify-end gap-2.5">
+        <Button variant="secondary" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button onClick={onApprove}>Approve</Button>
       </div>
-    </div>,
-    document.body,
+    </Sheet>
   );
 }
 
