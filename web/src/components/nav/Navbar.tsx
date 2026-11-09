@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, Menu, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import AccountMenu from "./AccountMenu";
 
 /** The brand mark: public/logo.png (fmd + the meditating mascot + FindMyDentist), trimmed to public/img/logo-fmd.webp */
 export function Logo() {
@@ -119,8 +120,9 @@ export default function Navbar() {
             onClick={() => setOpen(false)}
             className="btn-primary cta-pulse h-11 gap-1.5 whitespace-nowrap pl-5 pr-4 text-[13.5px]"
           >
-            Join Waitlist<ArrowRight className="cta-arrow size-4" strokeWidth={2} />
+            <span className="hidden sm:inline">Join&nbsp;</span>Waitlist<ArrowRight className="cta-arrow size-4" strokeWidth={2} />
           </Link>
+          <AccountMenu />
           <button
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}

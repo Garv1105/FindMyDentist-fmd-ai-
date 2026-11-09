@@ -62,8 +62,8 @@ test("briefing mentions the real numbers", async () => {
 
 test("briefing drops clauses that are zero", async () => {
   const h = await home();
-  const t = briefingText({ ...h, counts: { ...h.counts, unconfirmed: 0, recallDue: 0 }, lowStock: null });
-  assert.doesNotMatch(t, /haven't confirmed|recall|run out/);
+  const t = briefingText({ ...h, counts: { ...h.counts, unconfirmed: 0, recallDue: 0 } });
+  assert.doesNotMatch(t, /haven't confirmed|recall/);
 });
 
 test("approving twice is harmless", async () => {
@@ -155,4 +155,23 @@ test("the week isn't the same every day: Saturday is mornings only", () => {
   assert.equal(count("2026-11-10"), 14);
   assert.ok(count("2026-11-14") < count("2026-11-12") && count("2026-11-12") < count("2026-11-10"));
   assert.ok(dayAppointments("main", "2026-11-14", now).every((a) => a.start.slice(11, 16) < "13:00"));
+});
+
+test("no inventory: no stock in Home, the briefing or the AI tasks; recall needs approval instead", async () => {
+  const h = await home();
+  assert.ok(!("stockAlerts" in h.attention));
+  assert.ok(!("lowStock" in h));
+  assert.doesNotMatch(briefingText(h), /stock|run out|composite/i);
+  assert.ok(!h.tasks.some((t) => /purchase order/i.test(t.title)));
+  const recall = h.tasks.find((t) => t.id === "t-recall");
+  assert.equal(recall?.needsApproval, true);
+  assert.ok(recall?.preview && "recipients" in recall.preview && recall.preview.recipients.length === 2);
+  assert.equal(h.attention.unsignedNotes, 2);
+  assert.equal(h.attention.overdueFollowUps, 1);
+  assert.ok(!(await listNotices("smile-studio")).some((n) => /inventory|reorder/i.test(n.text + n.href)));
+});
+
+test("Home has no outstanding money figures (full payment only)", async () => {
+  const h = await home();
+  assert.ok(!("money" in h));
 });
