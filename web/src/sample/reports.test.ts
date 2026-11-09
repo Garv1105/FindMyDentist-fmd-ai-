@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
 import { dayBills, recordPayment, voidBill } from "./billing.ts";
-import { dayAppointments, resetSample } from "./clinic.ts";
+import { dayAppointments, FEES, resetSample } from "./clinic.ts";
 import { setStatus } from "./calendar.ts";
 import {
   CATEGORY, collectionSheet, dailyOps, drillDown, getAlerts, METRICS, metric, previousPeriod, pulse, recordCashCount, signOffSheet,
@@ -24,7 +24,9 @@ test("every metric has one definition: label, formula, numerator, denominator", 
     assert.ok(m.label && m.formula && m.numerator, id);
     assert.ok(!/wait|overrun|refund/i.test(m.formula + m.label), `${id} mentions a removed concept`);
   }
-  for (const id of ["netRevenue", "revenuePerChairHour", "chairUtilisation", "noShowRate", "newPatients", "caseAcceptance", "recallOverdue", "averageRating"]) assert.ok(METRICS[id], id);
+  for (const id of ["netRevenue", "revenuePerChairHour", "chairUtilisation", "noShowRate", "newPatients", "caseAcceptance", "recallOverdue", "averageRating",
+    "lateCancelRate", "lostChairHours", "lostRevenue", "rebookRate", "dentistUtilisation", "emptyChairHours", "nextFreeSlot", "activePatients", "returningPatients", "reactivatedPatients", "lapsedPatients"]) assert.ok(METRICS[id], id);
+  assert.match(METRICS.noShowRate.formula, /late cancels/);
 });
 
 test("every treatment maps to one procedure group", () => {
@@ -40,22 +42,50 @@ test("net revenue = paid bills' list fees − discounts, excluding GST and voids
   assert.equal((await metric(C, "netRevenue", { ...nov, branchId: "main", now })).value, expected - (bills[0].items[0].listFeeInr - bills[0].items[0].discountInr));
 });
 
-test("no-show rate = no-shows ÷ (attended + no-shows); cancelled visits are left out", async () => {
+test("no-show rate = no-shows ÷ (attended + no-shows + late cancels); clinic cancels are left out", async () => {
   const list = appts(nov.from, nov.to);
   const ns = list.filter((a) => a.status === "no_show").length;
   const att = list.filter((a) => a.status === "completed").length;
+  const late = list.filter((a) => a.missed?.cancel?.by === "patient" && a.missed.cancel.noticeHours < 24).length;
+  assert.ok(list.some((a) => a.missed?.cancel?.by === "clinic"), "sample has clinic cancels to leave out");
   const r = await metric(C, "noShowRate", { ...nov, branchId: "main", now });
-  assert.equal(r.value, Math.round((ns / (att + ns)) * 1000) / 10);
-  assert.deepEqual([r.numerator, r.denominator], [ns, att + ns]);
-  // cancel an attended-looking future visit: the rate's inputs for the past week don't change
+  assert.equal(r.value, Math.round((ns / (att + ns + late)) * 1000) / 10);
+  assert.deepEqual([r.numerator, r.denominator], [ns, att + ns + late]);
+  // cancel a future visit: the rate's inputs for the past week don't change
   await setStatus(C, "main-2026-11-11-11:45", "cancel", new Date("2026-11-10T10:00:00+05:30"));
   assert.equal((await metric(C, "noShowRate", { ...nov, branchId: "main", now })).value, r.value);
 });
 
-test("chair utilisation = attended booked minutes ÷ open chair minutes (9–19 less lunch, Mon–Sat)", async () => {
+test("late-cancel rate = patient cancels with < 24 h notice ÷ scheduled", async () => {
+  const list = appts(nov.from, nov.to);
+  const late = list.filter((a) => a.missed?.cancel?.by === "patient" && a.missed.cancel.noticeHours < 24);
+  const r = await metric(C, "lateCancelRate", { ...nov, branchId: "main", now });
+  assert.deepEqual([r.numerator, r.denominator], [late.length, list.length]);
+  assert.ok((await drillDown(C, "lateCancelRate", { ...nov, branchId: "main", now })).every((a) => a.missed!.cancel!.noticeHours < 24));
+});
+
+test("lost chair-hours and lost revenue (an estimate) come from no-shows + late cancels; rebook rate from the same visits", async () => {
+  const list = appts(nov.from, nov.to);
+  const lost = list.filter((a) => a.status === "no_show" || (a.missed?.cancel?.by === "patient" && a.missed.cancel.noticeHours < 24));
+  const f = { ...nov, branchId: "main", now };
+  assert.equal((await metric(C, "lostChairHours", f)).value, Math.round((lost.reduce((n, a) => n + a.minutes, 0) / 60) * 10) / 10);
+  assert.equal((await metric(C, "lostRevenue", f)).value, lost.reduce((n, a) => n + FEES[a.type], 0));
+  assert.equal(METRICS.lostRevenue.estimate, true);
+  const rb = await metric(C, "rebookRate", f);
+  assert.deepEqual([rb.numerator, rb.denominator], [lost.filter((a) => a.missed?.rebooked).length, lost.length]);
+  assert.equal((await drillDown(C, "lostRevenue", f)).length, lost.length);
+});
+
+test("dentist utilisation leaves out the hygienist's chair", async () => {
+  const list = appts(nov.from, nov.to).filter((a) => a.status === "completed" && !a.dentist.includes("hygienist"));
+  const r = await metric(C, "dentistUtilisation", { ...nov, branchId: "main", now });
+  assert.deepEqual([r.numerator, r.denominator], [list.reduce((n, a) => n + a.minutes, 0), (5 * 540 + 240) * 2]);
+});
+
+test("chair utilisation = attended booked minutes ÷ open chair minutes (9–19 less lunch, Saturdays 9–13)", async () => {
   const list = appts(nov.from, nov.to);
   const attended = list.filter((a) => a.status === "completed").reduce((n, a) => n + a.minutes, 0);
-  const available = 6 * 3 * 540; // 6 open days × 3 chairs × 9 hours
+  const available = (5 * 540 + 240) * 3; // Mon–Fri 9 hours, Saturday 9–13, × 3 chairs
   const r = await metric(C, "chairUtilisation", { ...nov, branchId: "main", now });
   assert.deepEqual([r.numerator, r.denominator], [attended, available]);
   assert.equal(r.value, Math.round((attended / available) * 1000) / 10);
@@ -69,7 +99,7 @@ test("revenue per chair-hour = net revenue ÷ attended chair-hours", async () =>
 
 test("no data (a Sunday) gives no value, not 0 or NaN", async () => {
   const sun = { from: "2026-11-08", to: "2026-11-08", branchId: "main", now };
-  for (const id of ["noShowRate", "chairUtilisation", "revenuePerChairHour", "caseAcceptance", "averageRating"]) assert.equal((await metric(C, id, sun)).value, null, id);
+  for (const id of ["noShowRate", "chairUtilisation", "revenuePerChairHour", "caseAcceptance", "averageRating", "lateCancelRate", "rebookRate", "dentistUtilisation"]) assert.equal((await metric(C, id, sun)).value, null, id);
   assert.equal((await metric(C, "netRevenue", sun)).value, 0);
 });
 

@@ -1,8 +1,9 @@
 "use client";
 
 import { Info } from "lucide-react";
-import { useId } from "react";
-import type { MetricDef } from "@/sample/reports";
+import { useId, type ReactNode } from "react";
+import { Panel } from "@/components/app/kit";
+import { DRILLABLE, type MetricDef, type Tile } from "@/sample/reports";
 
 export const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
@@ -11,11 +12,13 @@ export function fmt(v: number | null | undefined, unit: MetricDef["unit"]) {
   if (unit === "inr") return inr(v);
   if (unit === "pct") return `${v}%`;
   if (unit === "rating") return `${v} ★`;
+  if (unit === "hours") return `${v.toLocaleString("en-IN")} h`;
+  if (unit === "days") return v === 0 ? "today" : `${v} day${v === 1 ? "" : "s"}`;
   return v.toLocaleString("en-IN");
 }
 
 /** Lower is better for these; a rise shows in amber. */
-const LOWER_IS_BETTER = new Set(["noShowRate", "recallOverdue"]);
+const LOWER_IS_BETTER = new Set(["noShowRate", "recallOverdue", "lateCancelRate", "lostChairHours", "lostRevenue", "emptyChairHours", "nextFreeSlot", "lapsedPatients"]);
 
 /** "▲ 8% vs last period" for money and counts; "▲ 2.1 pts" for percentages. */
 export function Delta({ id, unit, cur, prev, label }: { id: string; unit: MetricDef["unit"]; cur: number | null; prev: number | null; label: string }) {
@@ -68,7 +71,94 @@ export function Formula({ def }: { def: MetricDef }) {
 }
 
 export function EstimateBadge() {
-  return <span className="rounded-full border border-dashed border-[color-mix(in_srgb,var(--tone-warn)_60%,transparent)] px-2 py-px text-[11.5px] font-semibold text-[var(--tone-warn)]">Estimate</span>;
+  return <span className="rounded-full border border-dashed border-[color-mix(in_srgb,var(--tone-warn)_60%,transparent)] px-2 py-px text-[12.5px] font-semibold text-[var(--tone-warn)]">Estimate</span>;
+}
+
+/** One KPI: value (opens its rows when it has any), ⓘ formula, change vs last period and last year, 12-week line. */
+export function MetricTile({ t, onOpen, note }: { t: Tile; onOpen: (id: string, label: string) => void; note?: ReactNode }) {
+  const drillable = DRILLABLE.includes(t.id);
+  return (
+    <Panel className="min-w-0 p-3.5 sm:p-4">
+      <div className="flex items-start justify-between gap-2">
+        <span className="text-[13.5px] text-ink-3">{t.def.label}</span>
+        <Formula def={t.def} />
+      </div>
+      <button
+        type="button"
+        onClick={() => onOpen(t.id, t.def.label)}
+        disabled={!drillable}
+        className="mt-0.5 block text-left text-[24px] font-light tracking-[-0.03em] text-ink enabled:hover:underline enabled:hover:decoration-[var(--accent)] enabled:hover:underline-offset-4 disabled:cursor-default sm:text-[28px]"
+        aria-label={`${t.def.label}: ${fmt(t.value, t.def.unit)}${drillable ? ". Show the rows behind it" : ""}`}
+      >
+        {fmt(t.value, t.def.unit)}
+      </button>
+      {(t.def.estimate || note) && (
+        <p className="mt-0.5 flex flex-wrap items-center gap-2 text-[13px] text-ink-3">
+          {note}
+          {t.def.estimate && <EstimateBadge />}
+        </p>
+      )}
+      {t.series.length > 0 && (
+        <>
+          <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[12.5px]">
+            <Delta id={t.id} unit={t.def.unit} cur={t.value} prev={t.previous} label="vs last period" />
+            <Delta id={t.id} unit={t.def.unit} cur={t.value} prev={t.lastYear} label="vs last year" />
+          </p>
+          <Sparkline values={t.series} warn={LOWER_IS_BETTER.has(t.id)} />
+        </>
+      )}
+    </Panel>
+  );
+}
+
+/** A labelled horizontal bar: label, bar scaled to `max`, value text. */
+export function BarRow({ label, value, max, text, tone = "accent", sub }: { label: string; value: number; max: number; text: string; tone?: "accent" | "warn" | "bad" | "muted"; sub?: string }) {
+  const color = { accent: "var(--accent)", warn: "var(--tone-warn)", bad: "var(--tone-bad)", muted: "var(--text-muted)" }[tone];
+  return (
+    <li className="grid grid-cols-[minmax(0,9.5rem)_minmax(0,1fr)_auto] items-center gap-3 py-1.5 text-[14.5px]">
+      <span className="min-w-0 text-ink">
+        {label}
+        {sub && <span className="block text-[12.5px] text-ink-3">{sub}</span>}
+      </span>
+      <span className="h-2 rounded-full bg-[var(--button-secondary)]" aria-hidden>
+        <span className="block h-full rounded-full" style={{ width: `${max ? Math.max(2, (value / max) * 100) : 0}%`, background: color }} />
+      </span>
+      <span className="text-right tabular-nums text-ink-2">{text}</span>
+    </li>
+  );
+}
+
+/** Stacked monthly bars with a legend. */
+export function StackedBars({ months, series, label }: { months: { label: string; values: number[] }[]; series: { name: string; color: string }[]; label: string }) {
+  const max = Math.max(1, ...months.map((m) => m.values.reduce((a, b) => a + b, 0)));
+  return (
+    <figure aria-label={label}>
+      <div className="flex h-40 items-end gap-2 sm:gap-3">
+        {months.map((m) => {
+          const total = m.values.reduce((a, b) => a + b, 0);
+          return (
+            <div key={m.label} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1">
+              <span className="text-[12.5px] tabular-nums text-ink-3">{total}</span>
+              <div className="flex w-full max-w-14 flex-col-reverse overflow-hidden rounded-md" style={{ height: `${(total / max) * 100}%` }} title={`${m.label}: ${series.map((s, i) => `${s.name} ${m.values[i]}`).join(", ")}`}>
+                {m.values.map((v, i) => (
+                  <span key={series[i].name} style={{ height: `${total ? (v / total) * 100 : 0}%`, background: series[i].color }} />
+                ))}
+              </div>
+              <span className="text-[12.5px] text-ink-3">{m.label}</span>
+            </div>
+          );
+        })}
+      </div>
+      <figcaption className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-ink-2">
+        {series.map((s) => (
+          <span key={s.name} className="inline-flex items-center gap-1.5">
+            <span className="size-2.5 rounded-sm" style={{ background: s.color }} aria-hidden />
+            {s.name}
+          </span>
+        ))}
+      </figcaption>
+    </figure>
+  );
 }
 
 /** Download rows as CSV with a header saying what, when and by whom. */
