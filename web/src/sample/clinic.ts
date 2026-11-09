@@ -60,7 +60,6 @@ export type ClinicHome = {
     unconfirmedNextDay: number;
     recallDue: number;
   };
-  money: { collectedInr: number; outstandingInr: number; outstandingPatients: number };
   attention: { unsignedNotes: number; overdueFollowUps: number };
   /** "9:30" style IST time of the first appointment, or null */
   firstAt: string | null;
@@ -81,7 +80,8 @@ const CLINIC: Clinic = {
   ],
 };
 
-const FEES: Record<string, number> = {
+/** What each treatment costs; every visit is paid in full on the day. */
+export const FEES: Record<string, number> = {
   "Scaling & polishing": 1800, Filling: 2500, "Check-up": 500, "Crown preparation": 9000, "Root canal, visit 2": 6500,
   Consultation: 500, "Extraction, 38": 3500, "Braces review": 1500, Whitening: 8000, "Kids' check-up": 600,
 };
@@ -203,9 +203,9 @@ const FOLLOW_UPS: Record<string, FollowUp[]> = {
   ],
 };
 
-const BRANCH_EXTRAS: Record<string, { recallDue: number; unsignedNotes: number; outstandingInr: number; outstandingPatients: number }> = {
-  main: { recallDue: 2, unsignedNotes: 2, outstandingInr: 12000, outstandingPatients: 4 },
-  kora: { recallDue: 4, unsignedNotes: 1, outstandingInr: 3500, outstandingPatients: 1 },
+const BRANCH_EXTRAS: Record<string, { recallDue: number; unsignedNotes: number }> = {
+  main: { recallDue: 2, unsignedNotes: 2 },
+  kora: { recallDue: 4, unsignedNotes: 1 },
 };
 
 const NOTICES: Omit<Notice, "read">[] = [
@@ -309,7 +309,7 @@ export async function getClinicHome(clinicId: string, opts: { date: string; bran
   const nextDay = ids.flatMap((b) => dayAppointments(b, addDays(opts.date, 1), now));
   const count = (s: ApptStatus) => appts.filter((a) => a.status === s).length;
   const extras = ids.map((b) => BRANCH_EXTRAS[b]);
-  const sum = (k: "recallDue" | "unsignedNotes" | "outstandingInr" | "outstandingPatients") => extras.reduce((n, e) => n + e[k], 0);
+  const sum = (k: "recallDue" | "unsignedNotes") => extras.reduce((n, e) => n + e[k], 0);
   const finished = new Set<ApptStatus>(["completed", "no_show", "cancelled"]);
 
   return {
@@ -324,11 +324,6 @@ export async function getClinicHome(clinicId: string, opts: { date: string; bran
       unconfirmed: count("unconfirmed"),
       unconfirmedNextDay: nextDay.filter((a) => a.status === "unconfirmed").length,
       recallDue: sum("recallDue"),
-    },
-    money: {
-      collectedInr: appts.filter((a) => a.status === "completed").reduce((n, a) => n + (FEES[a.type] ?? 0), 0),
-      outstandingInr: sum("outstandingInr"),
-      outstandingPatients: sum("outstandingPatients"),
     },
     attention: {
       unsignedNotes: sum("unsignedNotes"),

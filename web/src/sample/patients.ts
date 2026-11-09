@@ -5,7 +5,7 @@
 import { onReset, requireClinic } from "./clinic.ts";
 
 export type Tone = "ok" | "warn" | "bad" | "accent" | "muted";
-export type Flag = "recall" | "balance" | "in_treatment" | "consent_missing";
+export type Flag = "recall" | "in_treatment" | "consent_missing";
 
 export type PatientSummary = {
   id: string;
@@ -20,7 +20,6 @@ export type PatientSummary = {
   lastVisit?: { date: string; what: string };
   next?: { label: string; tone?: Tone };
   treatment?: { label: string; tone: Tone };
-  balanceInr: number;
   consent: { label: string; tone: Tone };
   flags: Flag[];
 };
@@ -49,17 +48,17 @@ export type PatientDetail = PatientSummary & {
 const initials = (name: string) => name.replace(/^Dr\. /, "").split(/\s+/).filter((w) => /^[A-Z]/.test(w)).map((w) => w[0]).slice(0, 2).join("");
 
 const SUMMARIES: Omit<PatientSummary, "initials">[] = [
-  { id: "p-arjun", pid: "FMD-00412", name: "Arjun Mehta", sex: "M", age: 34, phone: "+91 98450 12345", dob: "1992-03-14", lastVisit: { date: "3 Nov", what: "Root canal, visit 1" }, next: { label: "Today 11:00" }, treatment: { label: "Root canal · 2 of 3", tone: "accent" }, balanceInr: 4500, consent: { label: "Complete", tone: "ok" }, flags: ["balance", "in_treatment"] },
-  { id: "p-arjun-k", pid: "FMD-01177", name: "Arjun K. Mehta", sex: "M", age: 34, phone: "+91 98450 12345", dob: "1992-03-14", lastVisit: { date: "2 Sep", what: "Consultation" }, balanceInr: 0, consent: { label: "Complete", tone: "ok" }, flags: [] },
-  { id: "p-priya", pid: "FMD-00388", name: "Priya Sharma", sex: "F", age: 29, phone: "+91 99860 44120", dob: "1997-07-22", lastVisit: { date: "Today", what: "Scaling" }, balanceInr: 0, consent: { label: "Complete", tone: "ok" }, flags: [] },
-  { id: "p-ravi", pid: "FMD-00241", name: "Ravi Nair", sex: "M", age: 52, phone: "+91 90080 77812", dob: "1974-01-09", lastVisit: { date: "6 Nov", what: "Crown try-in" }, next: { label: "Follow-up overdue", tone: "bad" }, treatment: { label: "Crown · fitting", tone: "accent" }, balanceInr: 6000, consent: { label: "Complete", tone: "ok" }, flags: ["balance", "in_treatment"] },
-  { id: "p-meera", pid: "FMD-00197", name: "Meera Joshi", sex: "F", age: 41, phone: "+91 98861 30045", dob: "1985-11-30", lastVisit: { date: "8 May", what: "Check-up" }, next: { label: "Recall due", tone: "warn" }, balanceInr: 0, consent: { label: "Marketing opt-in missing", tone: "warn" }, flags: ["recall", "consent_missing"] },
-  { id: "p-sana", pid: "FMD-00655", name: "Sana Qureshi", sex: "F", age: 16, phone: "+91 97400 55120", dob: "2010-06-18", guardian: "Farhan Qureshi", lastVisit: { date: "13 Oct", what: "Braces adjustment" }, next: { label: "Today 14:00" }, treatment: { label: "Braces · month 7 of 18", tone: "accent" }, balanceInr: 1500, consent: { label: "Guardian signed", tone: "ok" }, flags: ["balance", "in_treatment"] },
-  { id: "p-lakshmi", pid: "FMD-00301", name: "Lakshmi Narayan", sex: "F", age: 58, phone: "+91 94480 21901", dob: "1968-02-02", lastVisit: { date: "27 Oct", what: "Crown planning" }, next: { label: "Today 10:15" }, treatment: { label: "Crown · preparation", tone: "accent" }, balanceInr: 0, consent: { label: "Complete", tone: "ok" }, flags: ["in_treatment"] },
-  { id: "p-vikram", pid: "FMD-00733", name: "Vikram Patel", sex: "M", age: 27, phone: "+91 99160 88234", dob: "1999-09-05", lastVisit: { date: "30 Oct", what: "Consultation" }, next: { label: "Today 12:00" }, balanceInr: 0, consent: { label: "Extraction consent pending", tone: "warn" }, flags: ["consent_missing"] },
-  { id: "p-neha", pid: "FMD-00820", name: "Neha Kulkarni", sex: "F", age: 31, phone: "+91 99001 22334", dob: "1995-12-12", next: { label: "Today 11:45" }, balanceInr: 0, consent: { label: "Complete", tone: "ok" }, flags: [] },
-  { id: "p-divya", pid: "FMD-00509", name: "Divya Pillai", sex: "F", age: 36, phone: "+91 98804 66710", dob: "1990-08-27", lastVisit: { date: "14 Apr", what: "Scaling" }, next: { label: "Today 15:30" }, balanceInr: 0, consent: { label: "Complete", tone: "ok" }, flags: ["recall"] },
-  { id: "p-rohan", pid: "FMD-00266", name: "Rohan Gupta", sex: "M", age: 45, phone: "+91 90350 11873", dob: "1981-05-03", lastVisit: { date: "Today", what: "Scaling" }, balanceInr: 0, consent: { label: "Complete", tone: "ok" }, flags: [] },
+  { id: "p-arjun", pid: "FMD-00412", name: "Arjun Mehta", sex: "M", age: 34, phone: "+91 98450 12345", dob: "1992-03-14", lastVisit: { date: "3 Nov", what: "Root canal, visit 1" }, next: { label: "Today 11:00" }, treatment: { label: "Root canal · 2 of 3", tone: "accent" }, consent: { label: "Complete", tone: "ok" }, flags: ["in_treatment"] },
+  { id: "p-arjun-k", pid: "FMD-01177", name: "Arjun K. Mehta", sex: "M", age: 34, phone: "+91 98450 12345", dob: "1992-03-14", lastVisit: { date: "2 Sep", what: "Consultation" }, consent: { label: "Complete", tone: "ok" }, flags: [] },
+  { id: "p-priya", pid: "FMD-00388", name: "Priya Sharma", sex: "F", age: 29, phone: "+91 99860 44120", dob: "1997-07-22", lastVisit: { date: "Today", what: "Scaling" }, consent: { label: "Complete", tone: "ok" }, flags: [] },
+  { id: "p-ravi", pid: "FMD-00241", name: "Ravi Nair", sex: "M", age: 52, phone: "+91 90080 77812", dob: "1974-01-09", lastVisit: { date: "6 Nov", what: "Crown try-in" }, next: { label: "Follow-up overdue", tone: "bad" }, treatment: { label: "Crown · fitting", tone: "accent" }, consent: { label: "Complete", tone: "ok" }, flags: ["in_treatment"] },
+  { id: "p-meera", pid: "FMD-00197", name: "Meera Joshi", sex: "F", age: 41, phone: "+91 98861 30045", dob: "1985-11-30", lastVisit: { date: "8 May", what: "Check-up" }, next: { label: "Recall due", tone: "warn" }, consent: { label: "Marketing opt-in missing", tone: "warn" }, flags: ["recall", "consent_missing"] },
+  { id: "p-sana", pid: "FMD-00655", name: "Sana Qureshi", sex: "F", age: 16, phone: "+91 97400 55120", dob: "2010-06-18", guardian: "Farhan Qureshi", lastVisit: { date: "13 Oct", what: "Braces adjustment" }, next: { label: "Today 14:00" }, treatment: { label: "Braces · month 7 of 18", tone: "accent" }, consent: { label: "Guardian signed", tone: "ok" }, flags: ["in_treatment"] },
+  { id: "p-lakshmi", pid: "FMD-00301", name: "Lakshmi Narayan", sex: "F", age: 58, phone: "+91 94480 21901", dob: "1968-02-02", lastVisit: { date: "27 Oct", what: "Crown planning" }, next: { label: "Today 10:15" }, treatment: { label: "Crown · preparation", tone: "accent" }, consent: { label: "Complete", tone: "ok" }, flags: ["in_treatment"] },
+  { id: "p-vikram", pid: "FMD-00733", name: "Vikram Patel", sex: "M", age: 27, phone: "+91 99160 88234", dob: "1999-09-05", lastVisit: { date: "30 Oct", what: "Consultation" }, next: { label: "Today 12:00" }, consent: { label: "Extraction consent pending", tone: "warn" }, flags: ["consent_missing"] },
+  { id: "p-neha", pid: "FMD-00820", name: "Neha Kulkarni", sex: "F", age: 31, phone: "+91 99001 22334", dob: "1995-12-12", next: { label: "Today 11:45" }, consent: { label: "Complete", tone: "ok" }, flags: [] },
+  { id: "p-divya", pid: "FMD-00509", name: "Divya Pillai", sex: "F", age: 36, phone: "+91 98804 66710", dob: "1990-08-27", lastVisit: { date: "14 Apr", what: "Scaling" }, next: { label: "Today 15:30" }, consent: { label: "Complete", tone: "ok" }, flags: ["recall"] },
+  { id: "p-rohan", pid: "FMD-00266", name: "Rohan Gupta", sex: "M", age: 45, phone: "+91 90350 11873", dob: "1981-05-03", lastVisit: { date: "Today", what: "Scaling" }, consent: { label: "Complete", tone: "ok" }, flags: [] },
 ];
 
 const ARJUN: Omit<PatientDetail, keyof PatientSummary> = {
@@ -79,7 +78,7 @@ const ARJUN: Omit<PatientDetail, keyof PatientSummary> = {
     { date: "Today · 11:00", kind: "upcoming", title: "Root canal, visit 2 · tooth 36", detail: "Dr. Rao · Chair 2" },
     { date: "4 Nov · WhatsApp", kind: "message", title: "Reminder sent: post-op care", detail: "Template \"After root canal\" · delivered, read" },
     { date: "3 Nov · visit", kind: "visit", title: "Root canal, visit 1 · tooth 36", detail: "Access opening, working length 21 mm. Note signed by Dr. Rao · X-ray attached" },
-    { date: "3 Nov · billing", kind: "payment", title: "Payment ₹6,000 · UPI", detail: "Receipt R-2311-041" },
+    { date: "3 Nov · billing", kind: "payment", title: "Bill ₹9,000 paid in full · UPI", detail: "Root canal, visit 1 · receipt B-261103-041" },
     { date: "28 Oct · plan", kind: "plan", title: "Treatment plan accepted · ₹13,500", detail: "Root canal 36 + crown, signed by the patient" },
     { date: "28 Oct · visit", kind: "visit", title: "Consultation · pain lower left", detail: "X-ray taken: deep decay in 36 reaching the nerve" },
   ],
@@ -129,8 +128,8 @@ const ARJUN: Omit<PatientDetail, keyof PatientSummary> = {
     { name: "Medical history form", kind: "PDF", date: "2023" },
   ],
   payments: [
-    { date: "3 Nov", amountInr: 6000, mode: "UPI", ref: "R-2311-041" },
-    { date: "28 Oct", amountInr: 3000, mode: "Card", ref: "R-2310-288" },
+    { date: "3 Nov", amountInr: 9000, mode: "UPI", ref: "B-261103-041" },
+    { date: "28 Oct", amountInr: 500, mode: "Card", ref: "B-261028-288" },
   ],
 };
 
@@ -224,6 +223,9 @@ export async function addNote(clinicId: string, patientId: string, input: { text
   return note;
 }
 
+/** A patient by exact name, for screens that only know the name (sync: sample data only). */
+export const patientByName = (name: string) => all().find((p) => p.name === name) ?? null;
+
 export const planTotal = (plan: Plan) => plan.lines.reduce((n, l) => n + l.qty * l.feeInr, 0) - plan.discountInr;
 
 export async function addPatient(clinicId: string, input: { name: string; phone: string; dob: string; sex: "F" | "M" }): Promise<PatientSummary> {
@@ -242,7 +244,6 @@ export async function addPatient(clinicId: string, input: { name: string; phone:
     age: Number.isFinite(age) ? age : 0,
     phone: `+91 ${d.slice(0, 5)} ${d.slice(5)}`,
     dob: input.dob,
-    balanceInr: 0,
     consent: { label: "To be signed", tone: "warn" },
     flags: ["consent_missing"],
   };

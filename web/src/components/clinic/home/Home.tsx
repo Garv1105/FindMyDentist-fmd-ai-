@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Empty, Panel } from "@/components/app/kit";
 import { Reveal } from "@/components/ui";
+import { listBills } from "@/sample/billing";
 import { getClinicHome, type AiTask, type ClinicHome, type FollowUp } from "@/sample/clinic";
 import { useClinic } from "../Shell";
 import { AiBriefing } from "./AiBriefing";
@@ -28,15 +29,18 @@ function Loading() {
 export function Home() {
   const { clinic, user, base, date, branchId } = useClinic();
   const [home, setHome] = useState<ClinicHome | null>(null);
+  const [collected, setCollected] = useState({ totalInr: 0, count: 0 });
   const [key, setKey] = useState("");
   const [failed, setFailed] = useState("");
   const want = `${date}|${branchId}`;
 
   useEffect(() => {
     let live = true;
-    getClinicHome(clinic.id, { date, branchId }).then(
-      (h) => {
+    Promise.all([getClinicHome(clinic.id, { date, branchId }), listBills(clinic.id, { branchId })]).then(
+      ([h, bills]) => {
         if (!live) return;
+        const day = bills.filter((b) => b.date === date && b.status === "paid");
+        setCollected({ totalInr: day.reduce((n, b) => n + b.amountInr, 0), count: day.length });
         setHome(h);
         setKey(want);
         setFailed("");
@@ -66,7 +70,7 @@ export function Home() {
         <AiBriefing home={home} user={user} clinicId={clinic.id} onTask={putTask} />
       </Reveal>
       <Reveal y={12} delay={0.06}>
-        <Kpis home={home} base={base} />
+        <Kpis home={home} base={base} collected={collected} />
       </Reveal>
       <Reveal y={12} delay={0.12} className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
         <NextAppointments appts={home.next} base={base} isToday={home.isToday} />

@@ -170,3 +170,8 @@ test("no inventory: no stock in Home, the briefing or the AI tasks; recall needs
   assert.equal(h.attention.overdueFollowUps, 1);
   assert.ok(!(await listNotices("smile-studio")).some((n) => /inventory|reorder/i.test(n.text + n.href)));
 });
+
+test("Home has no outstanding money figures (full payment only)", async () => {
+  const h = await home();
+  assert.ok(!("money" in h));
+});

@@ -20,8 +20,8 @@ function Kpi({ href, label, value, sub, children }: { href: string; label: strin
 }
 
 /** The four numbers under the briefing; each opens the page that explains it. */
-export function Kpis({ home, base }: { home: ClinicHome; base: string }) {
-  const { counts: c, money: m, attention: a } = home;
+export function Kpis({ home, base, collected }: { home: ClinicHome; base: string; collected: { totalInr: number; count: number } }) {
+  const { counts: c, attention: a } = home;
   const day = home.isToday ? "today" : "this day";
   const bar = (n: number, color: string) => (n ? <i className="block h-full" style={{ width: `${(n / c.total) * 100}%`, background: color }} /> : null);
   return (
@@ -46,7 +46,7 @@ export function Kpis({ home, base }: { home: ClinicHome; base: string }) {
         value={c.unconfirmed + c.unconfirmedNextDay}
         sub={`${c.unconfirmed} ${day} · ${c.unconfirmedNextDay} ${home.isToday ? "tomorrow" : "the next day"}`}
       />
-      <Kpi href={`${base}/billing`} label={`Collected ${day}`} value={inr(m.collectedInr)} sub={`${inr(m.outstandingInr)} outstanding · ${plural(m.outstandingPatients, "patient")}`} />
+      <Kpi href={`${base}/billing`} label={`Collected ${day}`} value={inr(collected.totalInr)} sub={collected.count ? `${plural(collected.count, "bill")}, all paid in full` : "No bills yet"} />
       <Kpi
         href={`${base}/tasks`}
         label="Needs attention"
