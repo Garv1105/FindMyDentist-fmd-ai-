@@ -1,7 +1,7 @@
 /**
  * FMD Clinic billing sample data (PRD 6.5, as the owner runs it): every bill is paid in full when it's raised, so
  * nothing is ever "due". Each completed visit is a bill on its day; payments recorded at the desk are added on top.
- * Refunds and voids are owner-only, need a reason, and are recorded; FMD never moves money.
+ * There are no refunds. A bill raised by mistake can be voided by the owner, with a reason kept on record.
  *
  * Later (with FMD Manager): bills raised automatically from completed appointments, patient details pre-filled,
  * staff only choosing the payment mode.
@@ -9,9 +9,27 @@
 import { CHAIRS, dayAppointments, FEES, istDate, onReset, requireClinic } from "./clinic.ts";
 import { patientByName, patientByPhone } from "./patients.ts";
 
-export const MODES = ["UPI", "Card", "Cash", "Net banking"] as const;
+export const MODES = ["UPI", "Cash", "Card", "Bank transfer", "Insurance", "EMI partner"] as const;
 export type Mode = (typeof MODES)[number];
-export type BillStatus = "paid" | "refunded" | "void";
+export type BillStatus = "paid" | "void";
+
+/**
+ * GST rate per treatment, as set by the clinic (its CA confirms the mapping; nothing here is tax advice).
+ * Sample values: healthcare treatments exempt, cosmetic whitening at 18%.
+ */
+export const GST_RATES: Record<string, number> = { Whitening: 18 };
+const gstRateFor = (treatment: string) => GST_RATES[treatment] ?? 0;
+
+export const DISCOUNT_REASONS = ["Returning patient", "Family member", "Senior citizen", "Staff", "Dental camp", "Other"] as const;
+
+export type BillLine = { what: string; listFeeInr: number; discountInr: number; gstRate: number; gstInr: number; amountInr: number };
+
+/** One line: discount comes off the list fee, then GST is added on what's left. */
+export function line(what: string, listFeeInr: number, discountInr = 0, gstRate = 0): BillLine {
+  const taxable = listFeeInr - discountInr;
+  const gstInr = Math.round((taxable * gstRate) / 100);
+  return { what, listFeeInr, discountInr, gstRate, gstInr, amountInr: taxable + gstInr };
+}
 
 export type Bill = {
   id: string;
@@ -21,13 +39,15 @@ export type Bill = {
   patientName: string;
   patientId: string;
   phone: string;
-  items: { what: string; amountInr: number }[];
+  items: BillLine[];
+  /** paid in full: the sum of the lines */
   amountInr: number;
+  discount?: { amountInr: number; reason: string; approvedBy: string };
   mode: Mode;
   ref?: string;
   by: string;
   status: BillStatus;
-  change?: { kind: "refund" | "void"; reason: string; by: string; date: string };
+  change?: { kind: "void"; reason: string; by: string; date: string };
 };
 
 /* ---------------- in-memory changes ---------------- */
@@ -63,7 +83,10 @@ function visitBills(branchId: string, date: string, now: Date): Bill[] {
     .filter((a) => a.status === "completed")
     .map((a, i) => {
       const end = new Date(Date.parse(a.start) + a.minutes * 60_000 + 5.5 * 3600_000).toISOString().slice(11, 16);
-      const amountInr = FEES[a.type] ?? 1000;
+      const fee = FEES[a.type] ?? 1000;
+      // a few returning patients get 10% off, approved by the owner (sample)
+      const off = hash(`${a.id}-d`) % 7 === 0 ? Math.round(fee / 10) : 0;
+      const l = line(`${a.type} · ${a.dentist}`, fee, off, gstRateFor(a.type));
       return {
         id: `B-${compact(date)}-${branchId === "main" ? "" : `${branchId.toUpperCase()}-`}${a.start.slice(11, 16).replace(":", "")}`,
         branchId,
@@ -71,8 +94,9 @@ function visitBills(branchId: string, date: string, now: Date): Bill[] {
         time: end,
         patientName: a.patientName,
         ...whoIs(a.patientName),
-        items: [{ what: `${a.type} · ${a.dentist}`, amountInr }],
-        amountInr,
+        items: [l],
+        amountInr: l.amountInr,
+        ...(off ? { discount: { amountInr: off, reason: "Returning patient", approvedBy: "Dr. Ananya Rao" } } : {}),
         mode: MODES[(hash(a.id) + i) % MODES.length],
         by: branchId === "main" ? "Kavya Menon" : "Front desk",
         status: "paid" as const,
@@ -82,7 +106,7 @@ function visitBills(branchId: string, date: string, now: Date): Bill[] {
 
 const withChange = (b: Bill): Bill => {
   const c = changes.get(b.id);
-  return c ? { ...b, change: c, status: c.kind === "refund" ? "refunded" : "void" } : b;
+  return c ? { ...b, change: c, status: "void" } : b;
 };
 
 /** One day's bills (any date, not just this month), newest first. */
@@ -144,15 +168,32 @@ export async function getBillingSummary(clinicId: string, opts: { branchId: stri
     byMode[b.mode].count++;
   }
   const sum = (list: Bill[]) => list.reduce((n, b) => n + b.amountInr, 0);
-  const refunded = bills.filter((b) => b.status === "refunded");
   return {
-    today: { totalInr: sum(todays), count: todays.length, byMode, bills: todays },
-    month: { totalInr: sum(paid), count: paid.length, averageInr: paid.length ? Math.round(sum(paid) / paid.length) : 0 },
-    refunds: { totalInr: sum(refunded), count: refunded.length, voids: bills.filter((b) => b.status === "void").length },
+    today: {
+      totalInr: sum(todays),
+      count: todays.length,
+      byMode,
+      bills: todays,
+      discounts: todays.filter((b) => b.discount).map((b) => ({ billId: b.id, patientName: b.patientName, ...b.discount! })),
+    },
+    month: { totalInr: sum(paid), count: paid.length, averageInr: paid.length ? Math.round(sum(paid) / paid.length) : 0, voids: bills.filter((b) => b.status === "void").length, discountsInr: paid.reduce((n, b) => n + (b.discount?.amountInr ?? 0), 0) },
   };
 }
 
-export type PaymentInput = { branchId: string; name: string; phone: string; patientId: string; amountInr: number; mode: Mode; ref?: string; by: string; what?: string };
+export type PaymentInput = {
+  branchId: string;
+  name: string;
+  phone: string;
+  patientId: string;
+  /** the fee before any discount */
+  amountInr: number;
+  mode: Mode;
+  discountInr?: number;
+  discountReason?: string;
+  ref?: string;
+  by: string;
+  what?: string;
+};
 
 /** A payment taken at the desk: always the full amount, with a receipt (the bill) straight away. */
 export async function recordPayment(clinicId: string, input: PaymentInput, now = new Date()): Promise<Bill> {
@@ -163,6 +204,11 @@ export async function recordPayment(clinicId: string, input: PaymentInput, now =
   if (d.length !== 10) throw new Error("Enter a 10-digit mobile number");
   if (!Number.isInteger(input.amountInr) || input.amountInr <= 0) throw new Error("Enter the amount in whole rupees");
   if (!MODES.includes(input.mode)) throw new Error("Choose how the patient paid");
+  const off = input.discountInr ?? 0;
+  if (!Number.isInteger(off) || off < 0) throw new Error("Enter the discount in whole rupees");
+  if (off >= input.amountInr) throw new Error("The discount must be less than the fee");
+  if (off > 0 && !input.discountReason?.trim()) throw new Error("Give a reason for the discount");
+  const l = line(input.what?.trim() || "Treatment", input.amountInr, off);
   const today = istDate(now);
   const ist = new Date(now.getTime() + 5.5 * 3600_000);
   const bill: Bill = {
@@ -174,8 +220,9 @@ export async function recordPayment(clinicId: string, input: PaymentInput, now =
     // no ID typed: reuse the patient this phone belongs to, else give a new patient their first ID
     patientId: input.patientId.trim() || patientByPhone(d)?.pid || `FMD-${String(13000 + recorded.length).padStart(5, "0")}`,
     phone: fmtPhone(d),
-    items: [{ what: input.what?.trim() || "Treatment", amountInr: input.amountInr }],
-    amountInr: input.amountInr,
+    items: [l],
+    amountInr: l.amountInr,
+    ...(off ? { discount: { amountInr: off, reason: input.discountReason!.trim(), approvedBy: input.by } } : {}),
     mode: input.mode,
     ref: input.ref?.trim() || undefined,
     by: input.by,
@@ -187,20 +234,14 @@ export async function recordPayment(clinicId: string, input: PaymentInput, now =
 
 type ChangeBy = { reason: string; by: string; role: string };
 
-function change(kind: "refund" | "void") {
-  return async (clinicId: string, id: string, who: ChangeBy, now = new Date()): Promise<Bill> => {
-    requireClinic(clinicId);
-    if (who.role !== "clinic_owner") throw new Error(`Only the clinic owner can ${kind} a bill`);
-    if (!who.reason.trim()) throw new Error(`Give a reason for the ${kind}`);
-    const bill = monthBills("all", now).find((b) => b.id === id);
-    if (!bill) throw new Error("Bill not found");
-    if (bill.status !== "paid") throw new Error(`This bill is already ${bill.status === "void" ? "void" : "refunded"}`);
-    changes.set(id, { kind, reason: who.reason.trim(), by: who.by, date: istDate(now) });
-    return withChange(bill);
-  };
+/** Cancels a bill raised by mistake (e.g. entered twice). Owner only, with a reason; the bill stays in the list, struck through. */
+export async function voidBill(clinicId: string, id: string, who: ChangeBy, now = new Date()): Promise<Bill> {
+  requireClinic(clinicId);
+  if (who.role !== "clinic_owner") throw new Error("Only the clinic owner can void a bill");
+  if (!who.reason.trim()) throw new Error("Give a reason for voiding the bill");
+  const bill = monthBills("all", now).find((b) => b.id === id);
+  if (!bill) throw new Error("Bill not found");
+  if (bill.status !== "paid") throw new Error("This bill is already void");
+  changes.set(id, { kind: "void", reason: who.reason.trim(), by: who.by, date: istDate(now) });
+  return withChange(bill);
 }
-
-/** Records a refund; the money goes back through the clinic's own bank or payment app. */
-export const refundBill = change("refund");
-/** Cancels a bill raised by mistake; it stays in the list, struck through. */
-export const voidBill = change("void");
