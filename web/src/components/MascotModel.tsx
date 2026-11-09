@@ -15,9 +15,13 @@ type Props = {
   onReady: () => void;
   /** a picture of the first rendered frame: the placeholder if this canvas is ever released */
   onSnapshot: (dataUrl: string) => void;
+  /** the browser killed this canvas's WebGL context (phones cap how many can live at once) */
+  onLost?: () => void;
 };
 
 const FOV = 20;
+/** touch-only devices: phones and tablets */
+export const PHONE = typeof window !== "undefined" && window.matchMedia("(hover: none) and (pointer: coarse)").matches;
 
 type V3 = [number, number, number];
 /** a studio: ambient, lavender bounce from below, directional lights [position, intensity, colour] and the softboxes
@@ -380,13 +384,15 @@ export default function MascotModel(props: Props) {
   return (
     <Canvas
       frameloop="demand"
-      // up to 2x: crisp on retina screens (only the boxes on screen animate, so the cost stays small)
-      dpr={[1, 2]}
+      // up to 2x: crisp on retina screens (only the boxes on screen animate, so the cost stays small); phones 1.5x, ~44%
+      // less GPU memory per canvas, so Android doesn't kill contexts (the white "sad face" box)
+      dpr={PHONE ? [1, 1.5] : [1, 2]}
       camera={{ position: [0, 0, dist], fov: FOV }}
       gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.NeutralToneMapping;
         gl.toneMappingExposure = 1.05;
+        gl.domElement.addEventListener("webglcontextlost", () => props.onLost?.(), { once: true });
       }}
       style={{ pointerEvents: "none" }}
     >

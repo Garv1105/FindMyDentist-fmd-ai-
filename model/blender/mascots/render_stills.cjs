@@ -26,8 +26,12 @@ const LOOKS = new Function(`${js}; return LOOKS;`)();
 const glassPatch = src.slice(src.indexOf("function glassify"), src.indexOf("\n}\n", src.indexOf("function glassify")) + 3);
 
 const SIZE = 1200; // px tall; phones show the boxes at up to ~300 css px × 3
-const SS = 2; // rendered at SS× and downscaled: supersampled edges, as clean as the live canvases
-const jobs = Object.entries(LOOKS).map(([file, look]) => ({
+const SS = 3; // rendered at SS× and downscaled: supersampled edges, cleaner than the live canvases
+// WebP quality: 0.97 keeps the eye rims and saturated blues/reds clean at ~100 KB a still (1 = lossless, ~500 KB)
+const QUALITY = Number(process.env.QUALITY || 0.97);
+// ONLY=vault,reading  re-renders just those
+const ONLY = process.env.ONLY ? process.env.ONLY.split(",").map((n) => n + ".glb") : null;
+const jobs = Object.entries(LOOKS).filter(([file]) => !ONLY || ONLY.includes(file)).map(([file, look]) => ({
   file,
   look,
   align: file === "tooth.glb" ? "center" : "bottom",
@@ -52,6 +56,9 @@ for (const [ji, j] of J.entries()) {
   const cam = new THREE.PerspectiveCamera(20, j.aspect, 0.1, 1000);
   cam.position.set(0, 0, 0.56 / Math.tan(THREE.MathUtils.degToRad(10)));
   const s = (await loader.loadAsync("/m/" + ji)).scene;
+  // textures filtered at full anisotropy, as the live canvases do: crisp eye rims, brows and glasses
+  const aniso = gl.capabilities.getMaxAnisotropy();
+  s.traverse((o) => { if (o.isMesh) for (const t of [o.material.map, o.material.normalMap, o.material.roughnessMap, o.material.clearcoatNormalMap]) if (t) { t.anisotropy = aniso; t.needsUpdate = true; } });
   if (L.glass) glassify(s, L.glass);
   s.rotation.y = THREE.MathUtils.degToRad(L.turn || 0);
   s.updateMatrixWorld(true);
@@ -86,7 +93,7 @@ for (const [ji, j] of J.entries()) {
   const ctx = small.getContext("2d");
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
   ctx.drawImage(gl.domElement, 0, 0, small.width, small.height);
-  await fetch("/save?f=" + j.file.replace(".glb", ".webp"), { method: "POST", body: small.toDataURL("image/webp", 0.92) });
+  await fetch("/save?f=" + j.file.replace(".glb", ".webp"), { method: "POST", body: small.toDataURL("image/webp", ${QUALITY}) });
   gl.dispose();
 }
 window.DONE = 1;
