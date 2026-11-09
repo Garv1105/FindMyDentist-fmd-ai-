@@ -8,28 +8,46 @@ import { Field, fieldCls, Sheet } from "@/components/app/Sheet";
 import { CHAIRS, type Appointment } from "@/sample/clinic";
 import { MODES } from "@/sample/billing";
 import { CATEGORIES, collectionSheet, dailyOps, drillDown, getAlerts, previousPeriod, pulse, recordCashCount, signOffSheet, type Alert, type Filters } from "@/sample/reports";
+import { noShows, utilisation } from "@/sample/reports-schedule";
+import { newBySource, patientBase } from "@/sample/reports-patients";
 import { todayIst, useClinic } from "../Shell";
-import { Delta, downloadCsv, EstimateBadge, fmt, Formula, inr, mask, Sparkline } from "./parts";
+import { downloadCsv, fmt, inr, mask, MetricTile } from "./parts";
+import { NewBySource, PatientBase, type BaseData, type SourceData } from "./PatientReports";
+import { NoShows, Utilisation, type NoShowData, type UtilData } from "./ScheduleReports";
 
-type ReportId = "pulse" | "ops" | "collection";
+type ReportId = "pulse" | "ops" | "collection" | "util" | "noshow" | "base" | "source";
 const NAV: { group: string; items: [id: string, label: string, stage?: number][] }[] = [
   { group: "Every day", items: [["pulse", "Clinic Pulse"], ["ops", "Daily operations"], ["collection", "Daily collection"]] },
-  { group: "Schedule", items: [["util", "Utilisation", 2], ["noshow", "No-shows", 2]] },
-  { group: "Patients", items: [["base", "Patient base", 2], ["source", "New by source", 2], ["recall", "Recall", 3]] },
+  { group: "Schedule", items: [["util", "Utilisation"], ["noshow", "No-shows"]] },
+  { group: "Patients", items: [["base", "Patient base"], ["source", "New by source"], ["recall", "Recall", 3]] },
   { group: "Treatment", items: [["accept", "Case acceptance", 3], ["pending", "Pending treatment", 3]] },
   { group: "Money", items: [["mix", "Procedure mix", 4], ["revenue", "Revenue summary", 4], ["gst", "GST register", 4]] },
 ];
-/** Spec access table: front desk sees the daily sheets only (no revenue analysis). */
-const ALLOWED: Record<string, ReportId[]> = { clinic_owner: ["pulse", "ops", "collection"], clinic_front_desk: ["ops", "collection"] };
+const TITLES: Record<ReportId, string> = { pulse: "Clinic Pulse", ops: "Daily operations", collection: "Daily collection", util: "Chair & dentist utilisation", noshow: "No-shows & cancellations", base: "Patient base", source: "New patients by source" };
+/**
+ * Spec access table: front desk sees the daily sheets and the appointment reports, with every ₹ figure left out;
+ * revenue analysis and new-patient value stay with the owner.
+ */
+const ALLOWED: Record<string, ReportId[]> = { clinic_owner: ["pulse", "ops", "collection", "util", "noshow", "base", "source"], clinic_front_desk: ["ops", "collection", "util", "noshow", "base"] };
+/** Which filters apply to which report. */
+const RANGED: ReportId[] = ["pulse", "util", "noshow", "base", "source"];
+const BY_DENTIST: ReportId[] = ["pulse", "util", "noshow"];
+const BY_CATEGORY: ReportId[] = ["pulse", "util"];
 
 const addDays = (date: string, n: number) => new Date(Date.parse(`${date}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 const RANGES = [
   ["this-month", "This month"],
   ["last-7", "Last 7 days"],
   ["last-month", "Last month"],
+  ["last-6m", "Last 6 months"],
 ] as const;
 function rangeOf(key: string, today: string) {
   if (key === "last-7") return { from: addDays(today, -6), to: today };
+  if (key === "last-6m") {
+    const [y, m] = today.split("-").map(Number);
+    const first = new Date(Date.UTC(y, m - 6, 1)).toISOString().slice(0, 10);
+    return { from: first, to: today };
+  }
   if (key === "last-month") {
     const first = `${today.slice(0, 8)}01`;
     const end = addDays(first, -1);
@@ -40,7 +58,9 @@ function rangeOf(key: string, today: string) {
 const short = (d: string) => new Date(`${d}T12:00:00+05:30`).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
 const selectCls = "h-10 rounded-full border border-line bg-[var(--surface-glass)] px-3.5 text-[14px] text-ink outline-none [color-scheme:dark] hover:border-line-strong";
 const TONE: Record<Alert["tone"], string> = { ok: "bg-[var(--tone-ok)]", warn: "bg-[var(--tone-warn)]", bad: "bg-[var(--tone-bad)]" };
-const STATUS_TAG: Partial<Record<Appointment["status"], [Tone, string]>> = { no_show: ["bad", "No-show"], completed: ["ok", "Attended"] };
+const STATUS_TAG: Partial<Record<Appointment["status"], [Tone, string]>> = { no_show: ["bad", "No-show"], completed: ["ok", "Attended"], cancelled: ["warn", "Cancelled"] };
+const cancelTag = (a: Appointment): [Tone, string] | undefined =>
+  a.status === "cancelled" && a.missed?.cancel ? ["warn", a.missed.cancel.noticeHours < 24 ? `Cancelled ${a.missed.cancel.noticeHours} h before` : "Cancelled"] : STATUS_TAG[a.status];
 
 type PulseData = Awaited<ReturnType<typeof pulse>>;
 
@@ -51,31 +71,7 @@ function Pulse({ data, alerts, onOpen }: { data: PulseData; alerts: Alert[]; onO
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {data.tiles.map((t) => (
-          <Panel key={t.id} className="p-4">
-            <div className="flex items-start justify-between gap-2">
-              <span className="text-[13.5px] text-ink-3">{t.def.label}</span>
-              <Formula def={t.def} />
-            </div>
-            <button
-              type="button"
-              onClick={() => onOpen(t.id, t.def.label)}
-              disabled={!["noShowRate", "newPatients", "chairUtilisation", "caseAcceptance"].includes(t.id)}
-              className="mt-0.5 block text-left text-[28px] font-light tracking-[-0.03em] text-ink enabled:hover:underline enabled:hover:decoration-[var(--accent)] enabled:hover:underline-offset-4 disabled:cursor-default"
-              aria-label={`${t.def.label}: ${fmt(t.value, t.def.unit)}. Show the rows behind it`}
-            >
-              {fmt(t.value, t.def.unit)}
-            </button>
-            {t.id === "caseAcceptance" && (
-              <p className="mt-0.5 flex items-center gap-2 text-[13px] text-ink-3">
-                by value {fmt(t.byValue ?? null, "pct")} <EstimateBadge />
-              </p>
-            )}
-            <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[12.5px]">
-              <Delta id={t.id} unit={t.def.unit} cur={t.value} prev={t.previous} label="vs last period" />
-              <Delta id={t.id} unit={t.def.unit} cur={t.value} prev={t.lastYear} label="vs last year" />
-            </p>
-            <Sparkline values={t.series} warn={t.id === "noShowRate"} />
-          </Panel>
+          <MetricTile key={t.id} t={t} onOpen={onOpen} note={t.id === "caseAcceptance" ? `by value ${fmt(t.byValue ?? null, "pct")}` : undefined} />
         ))}
       </div>
       <Panel as="section" className="p-4 sm:p-5">
@@ -330,10 +326,21 @@ export function Reports() {
   const [today] = useState(todayIst);
   const [asOf] = useState(() => new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(11, 16));
   const period = rangeOf(range, today);
-  const filters: Filters = { ...period, branchId, dentist: dentist || undefined, category: category || undefined };
-  const key = JSON.stringify({ report, filters, date });
+  // only the filters that apply to this report, so the data and the export never claim a filter that wasn't used
+  const filters: Filters = {
+    ...period,
+    branchId,
+    dentist: report && BY_DENTIST.includes(report) && dentist ? dentist : undefined,
+    category: report && BY_CATEGORY.includes(report) && category ? category : undefined,
+  };
+  const money = user.role === "clinic_owner";
+  const key = JSON.stringify({ report, filters, date, money });
 
-  const [state, setState] = useState<{ key: string; pulse?: PulseData; alerts?: Alert[]; ops?: Ops; sheet?: SheetData } | { key: string; failed: true } | null>(null);
+  const [state, setState] = useState<
+    | { key: string; pulse?: PulseData; alerts?: Alert[]; ops?: Ops; sheet?: SheetData; util?: UtilData; noshow?: NoShowData; base?: BaseData; source?: SourceData }
+    | { key: string; failed: true }
+    | null
+  >(null);
   const [version, setVersion] = useState(0);
   const [drill, setDrill] = useState<{ label: string; rows: Appointment[] } | null>(null);
   const [counting, setCounting] = useState(false);
@@ -349,14 +356,17 @@ export function Reports() {
   useEffect(() => {
     if (!report) return;
     let live = true;
-    const f = JSON.parse(key).filters as Filters;
-    const job =
-      report === "pulse"
-        ? Promise.all([pulse(clinic.id, f), getAlerts(clinic.id, { branchId: f.branchId })]).then(([p, a]) => ({ key, pulse: p, alerts: a }))
-        : report === "ops"
-          ? dailyOps(clinic.id, { date, branchId: f.branchId }).then((o) => ({ key, ops: o }))
-          : collectionSheet(clinic.id, { date, branchId: f.branchId }).then((s) => ({ key, sheet: s }));
-    job.then(
+    const { filters: f, money: m } = JSON.parse(key) as { filters: Filters; money: boolean };
+    const jobs: Record<ReportId, () => Promise<NonNullable<typeof state>>> = {
+      pulse: () => Promise.all([pulse(clinic.id, f), getAlerts(clinic.id, { branchId: f.branchId })]).then(([p, a]) => ({ key, pulse: p, alerts: a })),
+      ops: () => dailyOps(clinic.id, { date, branchId: f.branchId }).then((o) => ({ key, ops: o })),
+      collection: () => collectionSheet(clinic.id, { date, branchId: f.branchId }).then((s) => ({ key, sheet: s })),
+      util: () => utilisation(clinic.id, f, { money: m }).then((u) => ({ key, util: u })),
+      noshow: () => noShows(clinic.id, f, { money: m }).then((n) => ({ key, noshow: n })),
+      base: () => patientBase(clinic.id, f).then((b) => ({ key, base: b })),
+      source: () => newBySource(clinic.id, f).then((s) => ({ key, source: s })),
+    };
+    jobs[report]().then(
       (s) => live && setState(s),
       () => live && setState({ key, failed: true }),
     );
@@ -369,24 +379,43 @@ export function Reports() {
   const ready = state && state.key === key ? state : null;
   const dentists = [...new Set(Object.values(CHAIRS).flat().map((c) => c.dentist))];
 
+  const ranged = RANGED.includes(report);
   const exportCsv = () => {
     if (!ready || "failed" in ready) return;
     const header = [
-      `FMD Clinic report: ${report === "pulse" ? "Clinic Pulse" : report === "ops" ? "Daily operations" : "Daily collection"}`,
-      report === "pulse" ? `Range: ${period.from} to ${period.to}` : `Date: ${date}`,
-      `Filters: branch ${branchId}${dentist ? `, ${dentist}` : ""}${category ? `, ${category}` : ""}`,
+      `FMD Clinic report: ${TITLES[report]}`,
+      ranged ? `Range: ${period.from} to ${period.to}` : `Date: ${date}`,
+      `Filters: branch ${branchId}${filters.dentist ? `, ${filters.dentist}` : ""}${filters.category ? `, ${filters.category}` : ""}`,
       `Exported ${new Date().toISOString()} by ${user.name}${identifiers ? " (identifiers included)" : " (names masked)"}`,
     ];
-    const rows: (string | number)[][] =
-      report === "pulse" && ready.pulse
-        ? [["Metric", "Value", "Previous period", "Last year", "Formula"], ...ready.pulse.tiles.map((t) => [t.def.label, fmt(t.value, t.def.unit), fmt(t.previous, t.def.unit), fmt(t.lastYear, t.def.unit), t.def.formula])]
-        : report === "ops" && ready.ops
-          ? [["Figure", "Value"], ["Scheduled", ready.ops.scheduled], ["Completed", ready.ops.completed], ["No-show", ready.ops.noShow], ["Cancelled", ready.ops.cancelled], ["Via FMD Main", ready.ops.viaFmd], ["Unconfirmed tomorrow", ready.ops.unconfirmedTomorrow.map((n) => mask(n, identifiers)).join("; ")]]
+    type Row = (string | number)[];
+    const tileRows = (tiles: { def: { label: string; unit: Parameters<typeof fmt>[1]; formula: string }; value: number | null; previous: number | null; lastYear: number | null }[]): Row[] => [
+      ["Metric", "Value", "Previous period", "Last year", "Formula"],
+      ...tiles.map((t) => [t.def.label, fmt(t.value, t.def.unit), fmt(t.previous, t.def.unit), fmt(t.lastYear, t.def.unit), t.def.formula]),
+    ];
+    const name = (n: string) => mask(n, identifiers);
+    const rows: Row[] =
+      ready.pulse
+        ? tileRows(ready.pulse.tiles)
+        : ready.ops
+          ? [["Figure", "Value"], ["Scheduled", ready.ops.scheduled], ["Completed", ready.ops.completed], ["No-show", ready.ops.noShow], ["Cancelled", ready.ops.cancelled], ["Walk-ins", ready.ops.walkIns], ["Via FMD Main", ready.ops.viaFmd], ["Unconfirmed tomorrow", ready.ops.unconfirmedTomorrow.map(name).join("; ")]]
           : ready.sheet
             ? [["Method", "Bills", "Amount (₹)"], ...MODES.map((m) => [m, ready.sheet!.byMode[m].count, ready.sheet!.byMode[m].totalInr]), ["Total", ready.sheet.count, ready.sheet.totalInr]]
-            : [];
-    downloadCsv(`fmd-${report}-${report === "pulse" ? `${period.from}_${period.to}` : date}.csv`, header, rows);
+            : ready.util
+              ? [...tileRows(ready.util.tiles), [], ["Chair", "Person", "Used %", ...(money ? ["₹ per chair-hour"] : []), "Next free (days)"], ...ready.util.chairs.map((c) => [`${c.chair} (${c.branchId})`, c.dentist, c.util ?? "", ...(money ? [c.inrPerHour ?? ""] : []), c.nextFree ?? ""])]
+              : ready.noshow
+                ? [...tileRows(ready.noshow.tiles), [], ["Reason", "Missed visits"], ...ready.noshow.reasons.map((r) => [r.reason, r.count]), [], ["Split", "Group", "No-show %", "No-shows", "Visits"], ...Object.entries(ready.noshow.cuts).flatMap(([c, rs]) => rs.map((r) => [c, r.label, r.value ?? "", r.numerator, r.denominator])), [], ["Missed twice or more", "No-shows", "Late cancels", "Last"], ...ready.noshow.repeat.map((p) => [name(p.name), p.noShows, p.lateCancels, p.last])]
+                : ready.base
+                  ? [...tileRows(ready.base.tiles), [], ["Month", "New", "Returning", "Reactivated"], ...ready.base.months.map((m) => [m.month, m.new, m.returning, m.reactivated]), [], ["Lapsed patient", "Last visit"], ...ready.base.lapsed.map((p) => [name(p.name), p.last])]
+                  : ready.source
+                    ? [["Source", "New patients", "First-visit revenue (₹)", "6-month revenue (₹)", "Under 6 months so far"], ...ready.source.rows.map((r) => [r.source, r.count, r.firstVisitInr, r.sixMonthInr, r.partial]), ["Total", ready.source.total.count, ready.source.total.firstVisitInr, ready.source.total.sixMonthInr, ready.source.total.partial]]
+                    : [];
+    downloadCsv(`fmd-${report}-${ranged ? `${period.from}_${period.to}` : date}.csv`, header, rows);
     say("Report exported. The export is recorded with your name and time (demo).");
+  };
+  const openDrill = async (id: string, label: string, extra?: Partial<Filters>, keep?: (a: Appointment) => boolean) => {
+    const rows = await drillDown(clinic.id, id, { ...filters, ...extra });
+    setDrill({ label, rows: keep ? rows.filter(keep) : rows });
   };
 
   return (
@@ -395,7 +424,7 @@ export function Reports() {
         <nav aria-label="Reports" className="flex gap-1 overflow-x-auto [scrollbar-width:none] lg:flex-col lg:overflow-visible">
           {NAV.map((g) => (
             <div key={g.group} className="contents lg:block">
-              <p className="hidden px-2.5 pb-1 pt-3 text-[11.5px] font-medium uppercase tracking-[0.12em] text-ink-3 first:pt-1 lg:block">{g.group}</p>
+              <p className="hidden px-2.5 pb-1 pt-3 text-[12.5px] font-medium uppercase tracking-[0.12em] text-ink-3 first:pt-1 lg:block">{g.group}</p>
               {g.items.map(([id, label, stage]) => {
                 const on = report === id;
                 const usable = !stage && allowed.includes(id as ReportId);
@@ -411,7 +440,7 @@ export function Reports() {
                   </button>
                 ) : (
                   <span key={id} className="hidden items-center justify-between rounded-xl px-2.5 py-2 text-[14px] text-ink-3 lg:flex">
-                    {label} {stage && <span className="text-[11.5px]">stage {stage}</span>}
+                    {label} {stage && <span className="text-[12.5px]">stage {stage}</span>}
                   </span>
                 );
               })}
@@ -422,7 +451,7 @@ export function Reports() {
 
       <div className="flex min-w-0 flex-col gap-4">
         <div className="flex flex-wrap items-center gap-2.5">
-          {report === "pulse" ? (
+          {ranged ? (
             <>
               <label className="sr-only" htmlFor="rep-range">
                 Period
@@ -434,31 +463,39 @@ export function Reports() {
                   </option>
                 ))}
               </select>
-              <label className="sr-only" htmlFor="rep-dentist">
-                Dentist
-              </label>
-              <select id="rep-dentist" className={selectCls} value={dentist} onChange={(e) => setParam("dentist", e.target.value)}>
-                <option value="">All dentists</option>
-                {dentists.map((d) => (
-                  <option key={d}>{d}</option>
-                ))}
-              </select>
-              <label className="sr-only" htmlFor="rep-category">
-                Procedure group
-              </label>
-              <select id="rep-category" className={selectCls} value={category} onChange={(e) => setParam("category", e.target.value)}>
-                <option value="">All procedures</option>
-                {CATEGORIES.map((c) => (
-                  <option key={c}>{c}</option>
-                ))}
-              </select>
+              {BY_DENTIST.includes(report) && (
+                <>
+                  <label className="sr-only" htmlFor="rep-dentist">
+                    Dentist
+                  </label>
+                  <select id="rep-dentist" className={selectCls} value={dentist} onChange={(e) => setParam("dentist", e.target.value)}>
+                    <option value="">All dentists</option>
+                    {dentists.map((d) => (
+                      <option key={d}>{d}</option>
+                    ))}
+                  </select>
+                </>
+              )}
+              {BY_CATEGORY.includes(report) && (
+                <>
+                  <label className="sr-only" htmlFor="rep-category">
+                    Procedure group
+                  </label>
+                  <select id="rep-category" className={selectCls} value={category} onChange={(e) => setParam("category", e.target.value)}>
+                    <option value="">All procedures</option>
+                    {CATEGORIES.map((c) => (
+                      <option key={c}>{c}</option>
+                    ))}
+                  </select>
+                </>
+              )}
             </>
           ) : (
             <p className="text-[14.5px] text-ink-2">For {new Date(`${date}T12:00:00+05:30`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Kolkata" })} · change the day with the date picker above</p>
           )}
           <span className="ml-auto text-[13px] text-ink-3">
             Data as of {asOf}
-            {report === "pulse" && ` · ${short(period.from)}–${short(period.to)} vs ${short(previousPeriod(period).from)}–${short(previousPeriod(period).to)}`}
+            {ranged && ` · ${short(period.from)}–${short(period.to)} vs ${short(previousPeriod(period).from)}–${short(previousPeriod(period).to)}`}
           </span>
           {user.role === "clinic_owner" && (
             <label className="inline-flex items-center gap-2 text-[13.5px] text-ink-2">
@@ -493,12 +530,16 @@ export function Reports() {
               </Button>
             </div>
           </Panel>
-        ) : report === "pulse" && ready.pulse ? (
-          <Pulse
-            data={ready.pulse}
-            alerts={ready.alerts ?? []}
-            onOpen={async (id, label) => setDrill({ label, rows: await drillDown(clinic.id, id, filters) })}
-          />
+        ) : ready.pulse ? (
+          <Pulse data={ready.pulse} alerts={ready.alerts ?? []} onOpen={openDrill} />
+        ) : ready.util ? (
+          <Utilisation data={ready.util} money={money} onOpen={openDrill} calendarHref={`/clinic/${clinic.id}/calendar?filter=free&branch=${branchId}`} />
+        ) : ready.noshow ? (
+          <NoShows data={ready.noshow} onOpen={openDrill} onSay={say} />
+        ) : ready.base ? (
+          <PatientBase data={ready.base} onOpen={openDrill} onSay={say} />
+        ) : ready.source ? (
+          <NewBySource data={ready.source} onOpen={openDrill} onSay={say} />
         ) : report === "ops" && ready.ops ? (
           <DailyOps ops={ready.ops} onSay={say} />
         ) : ready.sheet ? (
@@ -529,7 +570,7 @@ export function Reports() {
           ) : (
             <ul className="max-h-[50dvh] overflow-y-auto">
               {drill.rows.slice(0, 100).map((a) => {
-                const tag = STATUS_TAG[a.status];
+                const tag = cancelTag(a);
                 return (
                   <li key={a.id} className="flex items-center justify-between gap-3 border-t border-line py-2.5 text-[14.5px] first:border-0">
                     <span className="min-w-0">
