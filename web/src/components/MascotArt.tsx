@@ -143,6 +143,7 @@ export default function MascotArt({ src, model, sizes, className = "object-conta
   const warmTurn = useRef<(() => void) | null>(null); // set while this box is the one warming up
   const phone = usePhone();
   const [loaded, setLoaded] = useState<string | null>(null); // phones: the model whose loop has loaded
+  const lost = useRef<() => void>(() => {}); // the browser killed this box's canvas: drop it, its picture shows
 
   useEffect(() => {
     if (!url || !box.current || isPhone()) return; // phones never set up a canvas (no warm-up turn either)
@@ -152,6 +153,11 @@ export default function MascotArt({ src, model, sizes, className = "object-conta
     const release = () => {
       setMounted(false);
       setReady(null);
+    };
+    lost.current = () => {
+      live.delete(id);
+      release();
+      warmTurn.current?.(); // if it was warming up, move the queue on
     };
     // the warm-up turn: mount the canvas off screen (paused), move on once its snapshot is taken
     warmTotal += 1;
@@ -243,6 +249,7 @@ export default function MascotArt({ src, model, sizes, className = "object-conta
             align={align}
             active={visible}
             onReady={() => setReady(url)}
+            onLost={() => lost.current()}
             onSnapshot={(d) => {
               snapshots.set(key, d);
               snapped((n) => n + 1);
