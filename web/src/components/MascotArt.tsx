@@ -4,6 +4,8 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { isPhone, usePhone } from "@/lib/phone";
+import { rigPath } from "@/lib/device";
+import { model } from "@/lib/models";
 import Contain from "./Contain";
 
 const MascotModel = dynamic(() => import("./MascotModel"), { ssr: false });
@@ -14,7 +16,9 @@ const MascotModel = dynamic(() => import("./MascotModel"), { ssr: false });
  * motions are MascotModel's MOTIONS). public/models/compressed holds the same models unrigged (build_porcelain.sh).
  */
 // bump ?v= whenever the models are rebuilt, or browsers keep the cached old ones
-const M = (name: string) => `/models/rig/${name}.glb?v=4`;
+// Cloudinary when it has a copy (lib/models.ts); low-memory devices and narrow windows get swaraj's lighter rig-mobile
+// builds (lib/device.ts). Phones never load these: they play the pre-rendered loops.
+const M = (name: string) => model(rigPath(name));
 type Art = { model: string; overlay?: { src: string; style: React.CSSProperties } };
 const MODELS: Record<string, Art> = {
   "/img/mascots/mascot-guide-1024.webp": { model: M("guide") },

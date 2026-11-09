@@ -8,6 +8,7 @@ import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { PORCELAIN } from "../MascotModel";
 import { isPhone } from "@/lib/phone";
+import { model } from "@/lib/models";
 import Throttle from "./Throttle";
 
 /**
@@ -21,7 +22,7 @@ import Throttle from "./Throttle";
 // phones: the same model at 35k triangles, 512px textures, 344 KB (gltf-transform: dequantize, weld, simplify 0.3,
 // resize, meshopt; face shapes and clips kept). This module only loads in the browser, so isPhone() is safe here
 const PHONE = isPhone();
-export const ASSISTANT_URL = PHONE ? "/models/assistant-mobile.glb?v=1" : "/models/assistant.glb?v=1";
+export const ASSISTANT_URL = model(PHONE ? "/models/assistant-mobile.glb" : "/models/assistant.glb"); // Cloudinary when it has a copy
 // phones: PORCELAIN's 7 lights folded into 3 (warm key, blue side, blue rim)
 const PHONE_DIRS: [V3, number, string][] = [
   [[1.6, 1.6, 3.4], 3.2, "#fff6ee"],
