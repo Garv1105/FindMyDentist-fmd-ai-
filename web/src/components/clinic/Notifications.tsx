@@ -46,7 +46,7 @@ export function Notifications({ clinicId, base }: { clinicId: string; base: stri
             ref={panel}
             role="dialog"
             aria-label="Notifications"
-            className="app-panel fixed inset-x-0 bottom-0 z-50 max-h-[75dvh] overflow-y-auto rounded-b-none p-4 lg:absolute lg:inset-x-auto lg:bottom-auto lg:right-0 lg:top-[calc(100%+10px)] lg:w-[380px] lg:rounded-b-[22px]"
+            className="app-panel app-solid fixed inset-x-0 bottom-0 z-50 max-h-[75dvh] overflow-y-auto rounded-b-none p-4 lg:absolute lg:inset-x-auto lg:bottom-auto lg:right-0 lg:top-[calc(100%+10px)] lg:w-[380px] lg:rounded-b-[22px]"
           >
             <div className="mb-1 flex items-center justify-between">
               <p className="text-[16px] font-medium text-ink">Notifications</p>

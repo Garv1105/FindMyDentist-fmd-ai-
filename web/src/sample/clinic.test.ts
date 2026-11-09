@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
 import {
-  cleanBranch, cleanDate, briefingText, decideAiTask, getClinic, getClinicHome, listNotices, markNoticesRead, resetSample, toggleFollowUp,
+  CHAIRS, cleanBranch, cleanDate, briefingText, dayAppointments, decideAiTask, getClinic, getClinicHome, listNotices, markNoticesRead, resetSample, toggleFollowUp,
 } from "./clinic.ts";
 
 beforeEach(resetSample);
@@ -116,4 +116,43 @@ test("cleanBranch keeps known branches or all", async () => {
   assert.equal(cleanBranch("all", c), "all");
   assert.equal(cleanBranch("nope", c), "main");
   assert.equal(cleanBranch(null, c), "main");
+});
+
+test("no chair is double-booked, and nothing crosses lunch or closing", async () => {
+  for (const branchId of ["main", "kora"]) {
+    const appts = dayAppointments(branchId, "2026-11-10", now);
+    const byChair = Map.groupBy(appts, (a) => a.chair);
+    for (const [chair, list] of byChair) {
+      const spans = list.map((a) => [Date.parse(a.start), Date.parse(a.start) + a.minutes * 60_000] as const).sort((x, y) => x[0] - y[0]);
+      for (let i = 1; i < spans.length; i++) assert.ok(spans[i][0] >= spans[i - 1][1], `${branchId} ${chair} overlap`);
+      for (const [s, e] of spans) {
+        const lunchS = Date.parse("2026-11-10T13:00:00+05:30"), lunchE = Date.parse("2026-11-10T14:00:00+05:30");
+        assert.ok(e <= lunchS || s >= lunchE, `${branchId} ${chair} crosses lunch`);
+        assert.ok(e <= Date.parse("2026-11-10T19:00:00+05:30"), `${branchId} ${chair} after closing`);
+      }
+    }
+  }
+});
+
+test("each chair has one dentist", async () => {
+  for (const branchId of ["main", "kora"]) {
+    const appts = dayAppointments(branchId, "2026-11-10", now);
+    for (const c of CHAIRS[branchId]) assert.ok(appts.filter((a) => a.chair === c.chair).every((a) => a.dentist === c.dentist), `${branchId} ${c.chair}`);
+  }
+  assert.deepEqual(CHAIRS.main.map((c) => c.chair), ["Chair 1", "Chair 2", "Chair 3"]);
+});
+
+test("appointment ids are unique on every day of the week", () => {
+  for (let d = 9; d <= 14; d++) {
+    const date = `2026-11-${String(d).padStart(2, "0")}`;
+    const ids = ["main", "kora"].flatMap((b) => dayAppointments(b, date, now)).map((a) => a.id);
+    assert.equal(new Set(ids).size, ids.length, date);
+  }
+});
+
+test("the week isn't the same every day: Saturday is mornings only", () => {
+  const count = (date: string) => dayAppointments("main", date, now).length;
+  assert.equal(count("2026-11-10"), 14);
+  assert.ok(count("2026-11-14") < count("2026-11-12") && count("2026-11-12") < count("2026-11-10"));
+  assert.ok(dayAppointments("main", "2026-11-14", now).every((a) => a.start.slice(11, 16) < "13:00"));
 });

@@ -159,7 +159,7 @@ function Picker({ label, icon: Icon, choices, footer }: { label: string; icon: L
         <ChevronDown className="size-3.5 text-ink-3" strokeWidth={1.75} />
       </button>
       {open && (
-        <div ref={box} data-picker-menu className={`app-panel absolute top-[calc(100%+8px)] z-40 w-[220px] p-1.5 ${alignLeft ? "left-0" : "right-0"}`}>
+        <div ref={box} data-picker-menu className={`app-panel app-solid absolute top-[calc(100%+8px)] z-40 w-[220px] p-1.5 ${alignLeft ? "left-0" : "right-0"}`}>
           {choices.map((c) => (
             <button
               key={c.key}
