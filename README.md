@@ -2,7 +2,7 @@
 
 A dentistry-only platform connecting patients, dentists, clinics, dental students and dental companies through AI-guided discovery, booking, records, content, clinic operations and care coordination. The product definition is the **Master PDR** (`FMD_Master_PDR_Expanded_Revised.pdf`, sections 1–21 plus annex A–N).
 
-> **Status: pre-release.** Milestones 0–3 are built and tested (Main, FMD Edge, Clinic OS, Clinic AI manager). Scholar, the Admin/Accountant portals and the annex features are not built yet. Everything runs on **demo data and clearly labelled development stand-ins** for outside services (SMS, AI models, payments, storage). Nothing here is a compliance certification; see [What is not live](#what-is-not-live).
+> **Status: pre-release.** The landing page is live. FMD Clinic is being built screen by screen on sample data (Home, Calendar, Patients and Billing so far); FMD Main and FMD Scholar follow. See [`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md) for phases and status, and [`docs/PRD_CHANGES.md`](docs/PRD_CHANGES.md) for what differs from the PRD. Everything runs on **demo data and clearly labelled development stand-ins** for outside services (SMS, AI models, payments, storage). Nothing here is a compliance certification; see [What is not live](#what-is-not-live).
 
 Stack: Next.js 16 (App Router, Cache Components) · React 19 · TypeScript · Tailwind CSS 4 · Motion · Lucide · Node's built-in SQLite for development.
 

@@ -11,12 +11,9 @@ import { useClinic } from "../Shell";
 const FILTERS: [Flag | "", string][] = [
   ["", "All"],
   ["recall", "Due for recall"],
-  ["balance", "Balance due"],
   ["in_treatment", "Treatment in progress"],
   ["consent_missing", "Missing consent"],
 ];
-
-const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
 function Avatar({ p }: { p: PatientSummary }) {
   return <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--surface-elevated)] text-[13.5px] font-semibold text-ink ring-1 ring-[var(--border-strong)]">{p.initials}</span>;
@@ -158,7 +155,7 @@ export function PatientList() {
             <table className="hidden w-full text-left lg:table">
               <thead>
                 <tr className="border-b border-line text-[13px] text-ink-3">
-                  {["Patient", "Last visit", "Next", "Treatment", "Balance · consent"].map((h) => (
+                  {["Patient", "Last visit", "Next", "Treatment", "Consent"].map((h) => (
                     <th key={h} className="px-4 py-3 font-medium first:pl-5">
                       {h}
                     </th>
@@ -190,10 +187,7 @@ export function PatientList() {
                     <td className="px-4 py-3 text-ink">{p.next ? p.next.tone ? <Tag tone={p.next.tone}>{p.next.label}</Tag> : p.next.label : <span className="text-ink-3">—</span>}</td>
                     <td className="px-4 py-3">{p.treatment ? <Tag tone={p.treatment.tone}>{p.treatment.label}</Tag> : <span className="text-ink-3">None</span>}</td>
                     <td className="px-4 py-3">
-                      <span className={`block ${p.balanceInr ? "text-ink" : "text-ink-3"}`}>{p.balanceInr ? `${inr(p.balanceInr)} due` : "Nothing due"}</span>
-                      <span className="mt-1 block">
-                        <Tag tone={p.consent.tone}>{p.consent.tone === "ok" ? `Consent: ${p.consent.label.toLowerCase()}` : p.consent.label}</Tag>
-                      </span>
+                      <Tag tone={p.consent.tone}>{p.consent.label}</Tag>
                     </td>
                   </tr>
                 ))}
@@ -211,7 +205,6 @@ export function PatientList() {
                       <span className="mt-1.5 flex flex-wrap gap-1.5">
                         {p.next && <Tag tone={p.next.tone ?? "accent"}>{p.next.label}</Tag>}
                         {p.treatment && <Tag tone={p.treatment.tone}>{p.treatment.label}</Tag>}
-                        {p.balanceInr > 0 && <Tag tone="muted">{inr(p.balanceInr)} due</Tag>}
                         {p.consent.tone !== "ok" && <Tag tone={p.consent.tone}>{p.consent.label}</Tag>}
                       </span>
                     </span>
