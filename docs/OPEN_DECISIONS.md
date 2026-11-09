@@ -50,4 +50,10 @@ Annex L requires a decision log with owner, date and impact. The PRD (§21, Anne
 | 9 Nov 2026 | Demo sign-in with roles + homepage profile menu, so live-site visitors can explore every part | No real auth until the backend | Real auth (FastAPI) is wired in |
 | 9 Nov 2026 | Free stock photos/videos (Pexels, Unsplash) for the preview | Investor-ready look now; client media later | Client media supplied |
 
+| 9 Nov 2026 | **No refunds** anywhere; owner can void a bill raised by mistake, with a reason | Owner decision | - |
+| 9 Nov 2026 | Bills carry **discount (with reason) and GST** per line; GST rates are a clinic setting for its CA to confirm | Reports spec; GST register | CA confirms the GST mapping |
+| 9 Nov 2026 | Payment modes: UPI, Cash, Card, Bank transfer, Insurance, EMI partner | Reports spec | - |
+| 9 Nov 2026 | **No waiting-time or overrun metrics** in any report | Owner: not practical to measure in real life | - |
+| 9 Nov 2026 | Reports built from `fmd-clinic-reports-prompt.md` in 4 stages, frontend first; dark theme kept | Owner | Backend phase adds the analytics pipeline and RLS |
+
 All product-level changes to the PRD are summarised in [`PRD_CHANGES.md`](PRD_CHANGES.md).
