@@ -26,6 +26,8 @@ export const metadata: Metadata = { alternates: { canonical: "/" } };
 // Homepage order (01–13) is fixed by the FMD homepage brief.
 export default function Home() {
   return (
+    // the homepage is drawn for the dark look (its planet, glows and artwork), so it keeps it whichever theme is chosen
+    <div data-theme="obsidian-royal" className="contents">
     <DiscoveryProvider>
       <ModelPreloader />
       <PauseOffscreen />
@@ -50,5 +52,6 @@ export default function Home() {
       </main>
       <Footer /> {/* 13 */}
     </DiscoveryProvider>
+    </div>
   );
 }

@@ -81,7 +81,7 @@ const DONE_NOTE: Record<string, string> = {
   "t-recall": "Sent to 2 patients (demo, nothing was sent)",
 };
 
-function TaskCard({ task, clinicId, onChange }: { task: AiTask; clinicId: string; onChange: (t: AiTask) => void }) {
+export function TaskCard({ task, clinicId, onChange }: { task: AiTask; clinicId: string; onChange: (t: AiTask) => void }) {
   const [reviewing, setReviewing] = useState(false);
   const decide = async (d: "approve" | "skip" | "undo") => onChange(await decideAiTask(clinicId, task.id, d));
   const opener = useRef<HTMLButtonElement>(null);

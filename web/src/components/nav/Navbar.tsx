@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, Menu, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import AccountMenu from "./AccountMenu";
+import { ThemeToggle } from "./ThemeSwitcher";
 
 /** The brand mark: public/logo.png (fmd + the meditating mascot + FindMyDentist), trimmed to public/img/logo-fmd.webp */
 export function Logo() {
@@ -27,6 +29,7 @@ const LINKS = [
   // { label: "Dentists", href: "/#dentists" }, // hidden with the Dentists section
   { label: "Trust", href: "/#trust" },
   { label: "Products", href: "/#products" },
+  { label: "Jobs", href: "/jobs" }, // a page, not a homepage section
 ];
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -35,7 +38,7 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 function useCurrentSection() {
   const [current, setCurrent] = useState("");
   useEffect(() => {
-    const els = LINKS.map((l) => document.getElementById(l.href.slice(2))).filter((e): e is HTMLElement => !!e);
+    const els = LINKS.map((l) => document.getElementById(l.href.replace("/#", ""))).filter((e): e is HTMLElement => !!e);
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries) if (e.isIntersecting) setCurrent(e.target.id);
@@ -61,6 +64,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [hover, setHover] = useState<string | null>(null);
   const current = useCurrentSection();
+  const pathname = usePathname();
 
   useEffect(() => {
     const on = () => setScrolled(window.scrollY > 24);
@@ -79,7 +83,7 @@ export default function Navbar() {
         <Logo />
         <ul className="hidden items-center xl:flex" onMouseLeave={() => setHover(null)}>
           {LINKS.map((l) => {
-            const id = l.href.slice(2);
+            const id = l.href.replace("/#", "");
             const on = current === id;
             return (
               <li key={l.href} className="relative">
@@ -122,6 +126,8 @@ export default function Navbar() {
           >
             <span className="hidden sm:inline">Join&nbsp;</span>Waitlist<ArrowRight className="cta-arrow size-4" strokeWidth={2} />
           </Link>
+          {/* the homepage stays dark (see app/page.tsx); everywhere else can switch */}
+          {pathname !== "/" && <ThemeToggle />}
           <AccountMenu />
           <button
             aria-label={open ? "Close menu" : "Open menu"}
@@ -154,7 +160,7 @@ export default function Navbar() {
             className="nav-matte mx-auto mt-2 max-w-[1280px] origin-top overflow-hidden rounded-[28px] !bg-[color-mix(in_srgb,var(--surface)_93%,transparent)] p-2 xl:hidden"
           >
             {LINKS.map((l, i) => {
-              const on = current === l.href.slice(2);
+              const on = current === l.href.replace("/#", "");
               return (
                 <motion.li key={l.href} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.35, ease: EASE, delay: 0.04 * i }}>
                   <a

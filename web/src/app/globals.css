@@ -1399,3 +1399,16 @@ html.theme-anim *::after {
     }
   }
 }
+
+/* ---------------- Light looks for the app surfaces ----------------
+   Status colours darkened so text in them reads on white (each at least 4.5:1 on #fff), and native controls follow the
+   page: several app controls pin color-scheme: dark for the dark looks. */
+:is([data-theme="pearl-light"], [data-theme="silver-light"], [data-theme="white-royal"]) {
+  --tone-ok: #13773d;
+  --tone-warn: #a34e00;
+  --tone-bad: #c0262d;
+  color-scheme: light;
+}
+:is([data-theme="pearl-light"], [data-theme="silver-light"], [data-theme="white-royal"]) :is(select, input, textarea) {
+  color-scheme: light !important;
+}
