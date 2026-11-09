@@ -1,5 +1,7 @@
 # FindMyDentist (FMD): End-to-End Product & Build Plan
 
+> **Update, 9 Nov 2026:** where this plan conflicts with [`docs/PRD_CHANGES.md`](docs/PRD_CHANGES.md) or [`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md), those win. Notable changes: FMD Clinic is dark (not light), has no inventory, and takes full payment only; work is phased frontend-first on sample data.
+
 | | |
 |---|---|
 | **Version** | 1.0 (draft for review) |

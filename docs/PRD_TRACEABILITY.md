@@ -1,5 +1,7 @@
 # FMD - PRD Traceability Matrix
 
+> **Update, 9 Nov 2026:** the sections below audit an October prototype that was built in a separate fork and not merged here. For current status see [`IMPLEMENTATION_ROADMAP.md`](IMPLEMENTATION_ROADMAP.md) (phases C1–C6, M1–M5), and for agreed departures from the PRD see [`PRD_CHANGES.md`](PRD_CHANGES.md). In particular, inventory (§6.6) is removed and billing is full payment only (§6.5).
+
 **Sources:** `FMD_Master_PDR_Expanded_Revised.pdf` - Master PDR §1–21 (baseline 2 Oct 2026) + Expanded Product & Technical Annex A–N (4 Oct 2026).
 **Last audited:** 11 Oct 2026 against the `web/` Next.js 16 prototype.
 **Rule:** a status changes only with evidence (file path + test). A visible UI alone is never "Implemented and tested".
