@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Download, FileText, Grid2x2, List, Pencil, Share2, ShieldCheck, Sparkles, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, Download, FileText, Grid2x2, List, Pencil, Share2, ShieldCheck, Trash2, Upload } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -12,6 +12,7 @@ import { istDate, timeLabel, when } from "@/lib/format";
 import type { Me } from "@/lib/fmd";
 import { useRequireMe } from "@/lib/me";
 import { listJourneys, type Journey } from "@/sample/journeys";
+import { ReportSummaryPanel } from "../assistant/Tools";
 import { CLINICS } from "@/sample/providers";
 import {
   accessEvents,
@@ -708,14 +709,7 @@ export function RecordPage() {
               ))}
             </dl>
           </Panel>
-          {r.type === "report" && (
-            <Panel className="grid gap-2 p-5">
-              <h2 className="flex items-center gap-2 text-[15px] font-medium text-ink">
-                <Sparkles className="size-4" strokeWidth={1.75} /> Plain-language summary
-              </h2>
-              <p className="text-[13.5px] text-ink-3">FMD AI will explain reports like this in plain words once it&apos;s live. Summaries will be labelled as AI and won&apos;t replace your dentist&apos;s advice.</p>
-            </Panel>
-          )}
+          {(r.type === "report" || r.type === "plan") && <ReportSummaryPanel recordId={r.id} />}
           <Panel as="section" className="grid gap-3 p-5">
             <h2 className="text-[15px] font-medium text-ink">Who opened it</h2>
             <ol className="grid gap-2.5">

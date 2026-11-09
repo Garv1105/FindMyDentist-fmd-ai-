@@ -15,7 +15,7 @@ import { AccountMenu } from "./AccountMenu";
 type Item = { href: string; label: string; Icon: LucideIcon; ready: boolean };
 
 const TOP: Item[] = [
-  { href: "/#assistant", label: "Ask FMD AI", Icon: Sparkles, ready: true }, // → /assistant with part 4.1
+  { href: "/assistant", label: "Ask FMD AI", Icon: Sparkles, ready: true },
   { href: "/dentists", label: "Find a dentist", Icon: Search, ready: true },
   { href: "/explore", label: "Explore", Icon: Compass, ready: false },
   { href: "/records", label: "Records", Icon: FolderLock, ready: true },

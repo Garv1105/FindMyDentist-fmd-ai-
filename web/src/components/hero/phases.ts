@@ -4,32 +4,30 @@
  *
  *   0 ─ title fades, light awakens ─ mascot rises & grows ─ hold ─ mascot fades ─ AI chat ─ 1 (pin releases)
  *
- * Once the assistant is fully in, only a short tail (~0.13 of the pin) remains before the pin releases: a long
- * pinned stretch where nothing moves reads as the page being stuck.
+ * No hold once the mascot has risen: it starts to leave straight away. Once the assistant is fully in, only a short tail
+ * (~0.18 of the pin) remains before the pin releases: a long pinned stretch where nothing moves reads as the page being stuck.
  */
 export const PHASES = {
-  title: [0.023, 0.124], // A: headline leaves
-  core: [0.023, 0.148], // A: centre light intensifies, sky darkens
-  spread: [0.031, 0.381], // A→C: light travels along the rim, still spreading as the mascot rises
-  rise: [0.062, 0.397], // C: mascot emerges small from behind the rim and grows into its pose
-  hold: [0.397, 0.704], // D: settled pose, held for a good while (about a screen of scrolling) while it meditates
-  mascotOut: [0.704, 0.774], // E: fade + slight recede, once
-  ai: [0.774, 0.874], // F: assistant fades in the instant the mascot is gone; short tail, then the pin releases
+  title: [0.033, 0.179], // A: headline leaves
+  core: [0.033, 0.214], // A: centre light intensifies, sky darkens
+  spread: [0.045, 0.55], // A→C: light travels along the rim, still spreading as the mascot rises
+  rise: [0.089, 0.573], // C: mascot emerges small from behind the rim and grows into its pose
+  mascotOut: [0.573, 0.674], // E: fade + slight recede, once, as soon as it has risen
+  ai: [0.674, 0.818], // F: assistant fades in the instant the mascot is gone; short tail, then the pin releases
 };
 
 /** Keyframe inputs shared by every mascot transform (strictly increasing). */
 export const MASCOT_KEYS = [
   0,
   PHASES.rise[0],
-  0.124, // quarter of the way up: still small, mostly behind the rim
-  0.21,
+  0.179, // quarter of the way up: still small, mostly behind the rim
   0.303,
-  PHASES.rise[1],
-  PHASES.mascotOut[0],
+  0.437,
+  PHASES.rise[1], // = mascotOut[0]
   PHASES.mascotOut[1],
   1,
 ];
-export const MASCOT_OPACITY = [0, 0, 1, 1, 1, 1, 1, 0, 0];
+export const MASCOT_OPACITY = [0, 0, 1, 1, 1, 1, 0, 0];
 
 /** Piecewise-linear lookup, same as motion's useTransform with clamping. */
 export function at(p: number, xs: number[], ys: number[]) {

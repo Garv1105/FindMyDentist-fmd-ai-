@@ -28,8 +28,8 @@ Each part has one of two backend states:
 | 3.2 | Sharing and access history | DEMO | **Done** |
 | 3.3 | Treatment journey (Annex B) | DEMO | **Done** |
 | 3.4 | Warranty certificates and public verification (Annex A) | DEMO | **Done** |
-| 4.1 | AI assistant: full chat | DEMO | Not started (homepage UI exists, switched off) |
-| 4.2 | AI companion tools | DEMO | Not started |
+| 4.1 | AI assistant: full chat | DEMO | **Done** |
+| 4.2 | AI companion tools | DEMO | **Done** |
 | 5.1 | Explore feed | DEMO | Not started (homepage teaser exists) |
 | 5.2 | Post detail, comments, reports | DEMO | Not started |
 | 5.3 | Create a post (dentists), consent gate, content import | DEMO | Not started |
@@ -494,6 +494,17 @@ Built in `src/components/auth/AuthForms.tsx`, against `/auth/*`: OTP sign-up, OT
   - `POST /assistant/tools/{budget|insurance|report-summary}`
   - `GET` and `POST /me/reminders`
   - `GET` and `PUT /me/dental-history`
+- **Built (all of Phase 4):**
+  - `/assistant`: chat with saved chats (only with the AI-history consent), files, voice and a language switch. Voice uses the browser's own speech recognition.
+  - `/assistant/tools/[budget|insurance|reminders|history]`, plus a report summary on report and plan records
+  - `sample/assistant.ts` and `companion.ts`, with 7 tests. Answers come from the reviewed rule set in `server/adapters/ai.ts`.
+  - The safety rules moved to `lib/aiSafety.ts`, so every answer, from the demo or a future model, goes through the same checks: urgent symptoms escalate, no dosing, no diagnosis, disclaimer always present.
+  - Reply buttons are navigation only, from an allow-list of FMD pages.
+  - The homepage assistant is unchanged (still in "coming soon" mode); "Ask FMD AI" in the app shell opens `/assistant`.
+- **Demo limits, said plainly in the UI:**
+  - replies are in English only
+  - uploaded files aren't read
+  - summaries only exist for the demo clinic's documents
 
 ### Phase 5: Explore and professional presence
 
