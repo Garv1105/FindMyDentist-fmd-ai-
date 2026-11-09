@@ -1,6 +1,7 @@
-import View from "./View";
+import { PatientList } from "@/components/clinic/patients/List";
 
-/** Client view rendered inside the clinic shell; opted out of instant-navigation validation like its layout. */
 export const instant = false;
 
-export default View;
+export default function PatientsPage() {
+  return <PatientList />;
+}

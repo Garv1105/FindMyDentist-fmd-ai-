@@ -6,7 +6,7 @@ import Navbar from "@/components/nav/Navbar";
 import AiFeatures from "@/components/sections/AiFeatures";
 import ComingSoon from "@/components/sections/ComingSoon";
 import Concierge from "@/components/sections/Concierge";
-import Dentists from "@/components/sections/Dentists";
+// import Dentists from "@/components/sections/Dentists"; // hidden for now, uncomment with <Dentists /> below
 import Ecosystem from "@/components/sections/Ecosystem";
 import Explore from "@/components/sections/Explore";
 import Footer from "@/components/sections/Footer";
@@ -41,7 +41,7 @@ export default function Home() {
           <Journey /> {/* 06 */}
           <Records /> {/* 07 Private Vault */}
           <Concierge /> {/* 08 FMD Edge */}
-          <Dentists /> {/* 09 */}
+          {/* <Dentists /> */} {/* 09 hidden for now */}
           <Trust /> {/* 10 */}
           <Products /> {/* 11 */}
           <Ecosystem /> {/* 11b */}

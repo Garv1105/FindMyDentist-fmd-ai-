@@ -23,7 +23,7 @@ const LINKS = [
   { label: "Safety", href: "/#safety" },
   { label: "Records", href: "/#records" },
   { label: "FMD Edge", href: "/#concierge" },
-  { label: "Dentists", href: "/#dentists" },
+  // { label: "Dentists", href: "/#dentists" }, // hidden with the Dentists section
   { label: "Trust", href: "/#trust" },
   { label: "Products", href: "/#products" },
 ];
