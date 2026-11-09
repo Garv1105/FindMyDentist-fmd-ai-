@@ -207,7 +207,8 @@ export function BookPage() {
           {p.specialty} · {p.clinicDetails.name}, {p.clinicDetails.area}
         </p>
       </div>
-      <div className="flex flex-wrap gap-1.5">
+      {/* own line on phones, so the name and clinic keep the width */}
+      <div className="flex basis-full flex-wrap gap-1.5 sm:basis-auto">
         <Verification v={p.verification} />
         <Tag tone="muted">Demo</Tag>
       </div>
