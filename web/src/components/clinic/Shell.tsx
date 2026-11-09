@@ -246,7 +246,14 @@ export function ChooseDemo({ next }: { next: string }) {
     <Centered
       title="Choose a demo account to open FMD Clinic"
       text="FMD is in preview. Pick the clinic owner or the front desk; no password needed."
-      action={<ButtonLink href={`/demo?next=${encodeURIComponent(next)}`}>Choose a demo account</ButtonLink>}
+      action={
+        <div className="flex flex-wrap justify-center gap-2">
+          <ButtonLink href={`/signin?next=${encodeURIComponent(next)}`}>Sign in</ButtonLink>
+          <ButtonLink variant="secondary" href={`/demo?next=${encodeURIComponent(next)}`}>
+            Choose a demo account
+          </ButtonLink>
+        </div>
+      }
     />
   );
 }
