@@ -5,19 +5,19 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, Empty, Panel, Tag, type Tone } from "@/components/app/kit";
 import { Field, fieldCls, Sheet } from "@/components/app/Sheet";
-import { getBillingSummary, listBills, MODES, recordPayment, refundBill, voidBill, type Bill, type Mode } from "@/sample/billing";
+import { DISCOUNT_REASONS, getBillingSummary, listBills, MODES, recordPayment, voidBill, type Bill, type Mode } from "@/sample/billing";
 import { listPatients, type PatientSummary } from "@/sample/patients";
 import { useClinic } from "../Shell";
 
 const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
-const STATUS: Record<Bill["status"], [Tone, string]> = { paid: ["ok", "Paid"], refunded: ["warn", "Refunded"], void: ["muted", "Void"] };
+const STATUS: Record<Bill["status"], [Tone, string]> = { paid: ["ok", "Paid"], void: ["muted", "Void"] };
 const when = (b: Bill, today: string) =>
   `${b.date === today ? "Today" : new Date(`${b.date}T12:00:00+05:30`).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" })} ${b.time.replace(/^0/, "")}`;
 type Summary = Awaited<ReturnType<typeof getBillingSummary>>;
 
 /* ---------------- one bill ---------------- */
 
-function BillDetail({ bill, today, isOwner, onChange, onSay }: { bill: Bill; today: string; isOwner: boolean; onChange: (kind: "refund" | "void") => void; onSay: (t: string) => void }) {
+function BillDetail({ bill, today, isOwner, onVoid, onSay }: { bill: Bill; today: string; isOwner: boolean; onVoid: () => void; onSay: (t: string) => void }) {
   const [tone, label] = STATUS[bill.status];
   return (
     <div>
@@ -42,9 +42,22 @@ function BillDetail({ bill, today, isOwner, onChange, onSay }: { bill: Bill; tod
       </dl>
       <ul className="mt-3">
         {bill.items.map((i) => (
-          <li key={i.what} className="flex justify-between gap-3 border-t border-line py-2.5 text-[15px] text-ink-2">
-            {i.what}
-            <span className="text-ink">{inr(i.amountInr)}</span>
+          <li key={i.what} className="border-t border-line py-2.5 text-[15px]">
+            <span className="flex justify-between gap-3 text-ink-2">
+              {i.what}
+              <span className="text-ink">{inr(i.listFeeInr)}</span>
+            </span>
+            {i.discountInr > 0 && (
+              <span className="mt-1 flex justify-between gap-3 text-[14px] text-ink-3">
+                Discount{bill.discount ? ` · ${bill.discount.reason} · approved by ${bill.discount.approvedBy}` : ""}
+                <span>−{inr(i.discountInr)}</span>
+              </span>
+            )}
+            {i.gstRate > 0 && (
+              <span className="mt-1 flex justify-between gap-3 text-[14px] text-ink-3">
+                GST {i.gstRate}%<span>{inr(i.gstInr)}</span>
+              </span>
+            )}
           </li>
         ))}
         <li className="flex items-center justify-between gap-3 border-t border-line py-2.5 text-[15px] font-semibold text-ink">
@@ -56,7 +69,7 @@ function BillDetail({ bill, today, isOwner, onChange, onSay }: { bill: Bill; tod
       </ul>
       {bill.change && (
         <p className="mt-2 rounded-2xl border border-line p-3 text-[14px] text-ink-2">
-          {bill.change.kind === "refund" ? "Refunded" : "Voided"} by {bill.change.by} · reason: {bill.change.reason}
+          Voided by {bill.change.by} · reason: {bill.change.reason}
         </p>
       )}
       {bill.status === "paid" && (
@@ -67,23 +80,19 @@ function BillDetail({ bill, today, isOwner, onChange, onSay }: { bill: Bill; tod
           <Button size="sm" variant="secondary" onClick={() => onSay(`Receipt sent to ${bill.phone} (demo, nothing was sent).`)}>
             Send to patient
           </Button>
-          <Button size="sm" variant="secondary" disabled={!isOwner} onClick={() => onChange("refund")}>
-            Refund
-          </Button>
-          <Button size="sm" variant="secondary" disabled={!isOwner} onClick={() => onChange("void")}>
+          <Button size="sm" variant="secondary" disabled={!isOwner} onClick={onVoid}>
             Void
           </Button>
         </div>
       )}
       <p className="mt-3 text-[13px] text-ink-3">
-        {isOwner ? "Refund and Void need a reason, which is kept on record." : "Only the clinic owner can refund or void a bill."} FMD doesn&apos;t move money: refunds go back through your own bank or
-        payment app. Clinic revenue is kept separate from FMD&apos;s own fees.
+        {isOwner ? "Void is for a bill raised by mistake, such as an entry made twice; the reason is kept on record." : "Only the clinic owner can void a bill."} Clinic revenue is kept separate from FMD&apos;s own fees.
       </p>
     </div>
   );
 }
 
-function ReasonSheet({ kind, bill, onClose, onDone }: { kind: "refund" | "void"; bill: Bill; onClose: () => void; onDone: (reason: string) => Promise<void> }) {
+function ReasonSheet({ bill, onClose, onDone }: { bill: Bill; onClose: () => void; onDone: (reason: string) => Promise<void> }) {
   const [reason, setReason] = useState("");
   const [error, setError] = useState("");
   const submit = async (e: FormEvent) => {
@@ -95,22 +104,21 @@ function ReasonSheet({ kind, bill, onClose, onDone }: { kind: "refund" | "void";
     }
   };
   return (
-    <Sheet title={`${kind === "refund" ? "Refund" : "Void"} ${bill.id}`} onClose={onClose}>
+    <Sheet title={`Void ${bill.id}`} onClose={onClose}>
       <form onSubmit={submit} className="flex flex-col gap-3.5">
         <p className="text-[15px] text-ink-2">
           {bill.patientName} · {inr(bill.amountInr)} · {bill.mode}
         </p>
         <Field label="Reason (kept on record)">
-          <input className={fieldCls} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={kind === "refund" ? "e.g. Treatment not needed" : "e.g. Entered twice"} />
+          <input className={fieldCls} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Entered twice" />
         </Field>
-        {kind === "refund" && <p className="text-[13.5px] text-ink-3">Return the money through your own bank or payment app; this records that you did.</p>}
         {error && (
           <p role="alert" className="text-[14px] text-[var(--tone-bad)]">
             {error}
           </p>
         )}
         <div className="flex gap-2">
-          <Button type="submit">{kind === "refund" ? "Record refund" : "Void bill"}</Button>
+          <Button type="submit">Void bill</Button>
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
@@ -122,13 +130,16 @@ function ReasonSheet({ kind, bill, onClose, onDone }: { kind: "refund" | "void";
 
 /* ---------------- record a payment ---------------- */
 
-function RecordPayment({ clinicId, onClose, onSave }: { clinicId: string; onClose: () => void; onSave: (f: { name: string; phone: string; patientId: string; amountInr: number; mode: Mode }) => Promise<void> }) {
+function RecordPayment({ clinicId, onClose, onSave }: { clinicId: string; onClose: () => void; onSave: (f: { name: string; phone: string; patientId: string; amountInr: number; mode: Mode; discountInr?: number; discountReason?: string }) => Promise<void> }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [patientId, setPatientId] = useState("");
   const [filled, setFilled] = useState(false);
   const [amount, setAmount] = useState("");
   const [mode, setMode] = useState<Mode>("UPI");
+  const [discount, setDiscount] = useState("");
+  const [reason, setReason] = useState("");
+  const [note, setNote] = useState("");
   const [matches, setMatches] = useState<PatientSummary[]>([]);
   const [error, setError] = useState("");
   const typed = useRef("");
@@ -154,7 +165,8 @@ function RecordPayment({ clinicId, onClose, onSave }: { clinicId: string; onClos
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      await onSave({ name, phone, patientId, amountInr: Number(amount), mode });
+      const off = Number(discount) || 0;
+      await onSave({ name, phone, patientId, amountInr: Number(amount), mode, ...(off ? { discountInr: off, discountReason: reason === "Other" ? (note.trim() ? `Other: ${note.trim()}` : "") : reason } : {}) });
     } catch (err) {
       setError((err as Error).message);
     }
@@ -205,9 +217,36 @@ function RecordPayment({ clinicId, onClose, onSave }: { clinicId: string; onClos
             <input className={`${fieldCls} ${autoCls}`} value={patientId} onChange={(e) => (setPatientId(e.target.value), setFilled(false))} placeholder="FMD-00000" />
           </Field>
         </div>
-        <Field label="Amount (₹)">
-          <input className={fieldCls} type="number" inputMode="numeric" min={1} step={1} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
-        </Field>
+        <div className="grid gap-3.5 sm:grid-cols-2">
+          <Field label="Amount (₹)">
+            <input className={fieldCls} type="number" inputMode="numeric" min={1} step={1} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
+          </Field>
+          <Field label="Discount (₹, optional)">
+            <input className={fieldCls} type="number" inputMode="numeric" min={0} step={1} value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="0" />
+          </Field>
+        </div>
+        {Number(discount) > 0 && (
+          <div className="grid gap-3.5 sm:grid-cols-2">
+            <Field label="Reason for the discount">
+              <select className={fieldCls} value={reason} onChange={(e) => setReason(e.target.value)}>
+                <option value="">Choose a reason</option>
+                {DISCOUNT_REASONS.map((r) => (
+                  <option key={r}>{r}</option>
+                ))}
+              </select>
+            </Field>
+            {reason === "Other" && (
+              <Field label="Note">
+                <input className={fieldCls} value={note} onChange={(e) => setNote(e.target.value)} />
+              </Field>
+            )}
+          </div>
+        )}
+        {Number(amount) > 0 && (
+          <p className="text-[15px] text-ink">
+            To pay: <b className="font-semibold">₹{Math.max(0, Number(amount) - (Number(discount) || 0)).toLocaleString("en-IN")}</b>
+          </p>
+        )}
         <fieldset>
           <legend className="mb-1.5 text-[13.5px] text-ink-3">Mode of payment</legend>
           <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Mode of payment">
@@ -245,7 +284,7 @@ function RecordPayment({ clinicId, onClose, onSave }: { clinicId: string; onClos
 
 /* ---------------- page ---------------- */
 
-/** FMD Clinic Billing: every bill paid in full, today's takings by mode, and owner-only refunds and voids. */
+/** FMD Clinic Billing: every bill paid in full, today's takings by mode, and owner-only voids for bills raised by mistake. */
 export function Billing() {
   const { clinic, branchId, user } = useClinic();
   const params = useSearchParams();
@@ -266,7 +305,7 @@ export function Billing() {
   const [bills, setBills] = useState<Bill[] | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const [sheet, setSheet] = useState<"pay" | { kind: "refund" | "void"; bill: Bill } | { view: Bill } | null>(null);
+  const [sheet, setSheet] = useState<"pay" | { voiding: Bill } | { view: Bill } | null>(null);
   const [toast, setToast] = useState("");
   const [version, setVersion] = useState(0);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -293,7 +332,7 @@ export function Billing() {
     setSelected(b.id);
     if (!window.matchMedia("(min-width: 1024px)").matches) setSheet({ view: b });
   };
-  const change = (kind: "refund" | "void", bill: Bill) => setSheet({ kind, bill });
+  const askVoid = (bill: Bill) => setSheet({ voiding: bill });
 
   return (
     <div className="flex flex-col gap-4">
@@ -304,7 +343,7 @@ export function Billing() {
               ["Collected today", inr(summary.today.totalInr), `${summary.today.count} bills · ${Object.values(summary.today.byMode).filter((m) => m.count).length} modes`],
               ["Collected this month", inr(summary.month.totalInr), `${summary.month.count} bills`],
               ["Average bill", inr(summary.month.averageInr), "this month"],
-              ["Refunds this month", inr(summary.refunds.totalInr), `${summary.refunds.count} refund${summary.refunds.count === 1 ? "" : "s"} · ${summary.refunds.voids} void`],
+              ["Discounts this month", inr(summary.month.discountsInr), `${summary.month.voids} void${summary.month.voids === 1 ? "" : "s"} this month`],
             ] as const
           ).map(([label, v, sub]) => (
             <Panel key={label} className="p-4 sm:p-5">
@@ -408,7 +447,7 @@ export function Billing() {
             )}
           </Panel>
           <Panel as="section" className="hidden self-start p-5 lg:sticky lg:top-5 lg:block">
-            {current ? <BillDetail bill={current} today={today} isOwner={isOwner} onChange={(k) => change(k, current)} onSay={say} /> : <Empty title="No bill selected" />}
+            {current ? <BillDetail bill={current} today={today} isOwner={isOwner} onVoid={() => askVoid(current)} onSay={say} /> : <Empty title="No bill selected" />}
           </Panel>
         </div>
       ) : (
@@ -465,25 +504,24 @@ export function Billing() {
             setSelected(b.id);
             setQ("");
             setVersion((v) => v + 1);
-            say(`Saved ${b.id}: ${inr(b.amountInr)} from ${b.patientName} by ${b.mode}, paid in full (demo).`);
+            say(`Saved ${b.id}: ${inr(b.amountInr)} from ${b.patientName} by ${b.mode}${b.discount ? `, after a ${inr(b.discount.amountInr)} discount` : ""}, paid in full (demo).`);
           }}
         />
       )}
       {sheet && typeof sheet === "object" && "view" in sheet && (
         <Sheet title="Bill" onClose={() => setSheet(null)}>
-          <BillDetail bill={bills?.find((b) => b.id === sheet.view.id) ?? sheet.view} today={today} isOwner={isOwner} onChange={(k) => change(k, sheet.view)} onSay={say} />
+          <BillDetail bill={bills?.find((b) => b.id === sheet.view.id) ?? sheet.view} today={today} isOwner={isOwner} onVoid={() => askVoid(sheet.view)} onSay={say} />
         </Sheet>
       )}
-      {sheet && typeof sheet === "object" && "kind" in sheet && (
+      {sheet && typeof sheet === "object" && "voiding" in sheet && (
         <ReasonSheet
-          kind={sheet.kind}
-          bill={sheet.bill}
+          bill={sheet.voiding}
           onClose={() => setSheet(null)}
           onDone={async (reason) => {
-            const done = await (sheet.kind === "refund" ? refundBill : voidBill)(clinic.id, sheet.bill.id, { reason, by: user.name, role: user.role });
+            const done = await voidBill(clinic.id, sheet.voiding.id, { reason, by: user.name, role: user.role });
             setSheet(null);
             setVersion((v) => v + 1);
-            say(`${done.id} ${sheet.kind === "refund" ? "refunded" : "voided"} (demo). The reason is kept on record.`);
+            say(`${done.id} voided (demo). The reason is kept on record.`);
           }}
         />
       )}

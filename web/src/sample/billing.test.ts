@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
-import { dayBills, getBill, getBillingSummary, listBills, MODES, recordPayment, refundBill, voidBill } from "./billing.ts";
+import { dayBills, getBill, getBillingSummary, GST_RATES, listBills, MODES, recordPayment, voidBill } from "./billing.ts";
 import { resetSample } from "./clinic.ts";
 
 beforeEach(resetSample);
@@ -64,18 +64,23 @@ test("recording a payment needs a name, a 10-digit phone, a whole positive amoun
   assert.match(fresh.patientId, /^FMD-\d{5}$/);
 });
 
-test("refund and void: owner only, need a reason, only for paid bills", async () => {
+test("void: owner only, needs a reason, only for paid bills, never twice", async () => {
   const [b] = await listBills(C, { branchId: "main", now });
-  await assert.rejects(refundBill(C, b.id, { reason: "x", ...desk }, now));
-  await assert.rejects(refundBill(C, b.id, { reason: "  ", ...owner }, now));
-  const r = await refundBill(C, b.id, { reason: "Treatment not needed", ...owner }, now);
-  assert.equal(r.status, "refunded");
-  assert.equal(r.change?.reason, "Treatment not needed");
-  await assert.rejects(voidBill(C, b.id, { reason: "x", ...owner }, now)); // already refunded
+  await assert.rejects(voidBill(C, b.id, { reason: "x", ...desk }, now));
+  await assert.rejects(voidBill(C, b.id, { reason: "  ", ...owner }, now));
+  const v = await voidBill(C, b.id, { reason: "Entered twice", ...owner }, now);
+  assert.equal(v.status, "void");
+  assert.equal(v.change?.reason, "Entered twice");
+  await assert.rejects(voidBill(C, b.id, { reason: "x", ...owner }, now)); // already void
+  await assert.rejects(voidBill(C, "nope", { reason: "x", ...owner }, now));
+});
+
+test("no refunds in FMD: no refund action and no refund figures", async () => {
+  const mod = await import("./billing.ts");
+  assert.ok(!("refundBill" in mod));
   const s = await getBillingSummary(C, { branchId: "main", now });
-  assert.equal(s.refunds.count, 1);
-  assert.equal(s.refunds.totalInr, b.amountInr);
-  await assert.rejects(refundBill(C, "nope", { reason: "x", ...owner }, now));
+  assert.ok(!("refunds" in s) && !("refunds" in s.today));
+  assert.ok((await listBills(C, { branchId: "main", now })).every((b) => b.status === "paid" || b.status === "void"));
 });
 
 test("voided bills leave today's total", async () => {
@@ -84,7 +89,7 @@ test("voided bills leave today's total", async () => {
   await voidBill(C, b.id, { reason: "Entered twice", ...owner }, now);
   const after = await getBillingSummary(C, { branchId: "main", now });
   assert.equal(after.today.totalInr, before.today.totalInr - b.amountInr);
-  assert.equal(after.refunds.voids, 1);
+  assert.equal(after.month.voids, 1);
 });
 
 test("bills for any day, including an earlier month (Home uses this)", async () => {
@@ -98,4 +103,43 @@ test("bills for any day, including an earlier month (Home uses this)", async () 
 test("a payment without an ID reuses the patient found by phone", async () => {
   const b = await recordPayment(C, { branchId: "main", name: "Neha K", phone: "+91 99001 22334", patientId: "", amountInr: 500, mode: "Cash", by: "Kavya" }, now);
   assert.equal(b.patientId, "FMD-00820");
+});
+
+test("payment modes follow the reports spec", () => {
+  assert.deepEqual([...MODES], ["UPI", "Cash", "Card", "Bank transfer", "Insurance", "EMI partner"]);
+});
+
+test("bill lines: list fee − discount + GST = amount paid; GST rate comes from the clinic's settings", async () => {
+  const bills = await listBills(C, { branchId: "main", now });
+  for (const b of bills) {
+    for (const l of b.items) assert.equal(l.amountInr, l.listFeeInr - l.discountInr + l.gstInr, b.id);
+    assert.equal(b.amountInr, b.items.reduce((n, l) => n + l.amountInr, 0), b.id);
+  }
+  const whitening = bills.flatMap((b) => b.items).find((l) => l.what.startsWith("Whitening"));
+  assert.equal(whitening?.gstRate, GST_RATES.Whitening);
+  assert.ok(whitening && whitening.gstInr > 0);
+  const discounted = bills.filter((b) => b.discount);
+  assert.ok(discounted.length > 0 && discounted.every((b) => b.discount!.reason && b.discount!.approvedBy));
+});
+
+test("recording a payment with a discount needs a reason, and the discount can't exceed the fee", async () => {
+  const base = { branchId: "main", name: "Neha Kulkarni", phone: "9900122334", patientId: "FMD-00820", amountInr: 2000, mode: "UPI" as const, by: "Kavya" };
+  await assert.rejects(recordPayment(C, { ...base, discountInr: 200 }, now));
+  await assert.rejects(recordPayment(C, { ...base, discountInr: 2500, discountReason: "Staff" }, now));
+  const b = await recordPayment(C, { ...base, discountInr: 200, discountReason: "Returning patient" }, now);
+  assert.equal(b.amountInr, 1800);
+  assert.equal(b.items[0].listFeeInr, 2000);
+  assert.equal(b.discount?.reason, "Returning patient");
+});
+
+test("today's discounts are listed with reason and approver (collection sheet)", async () => {
+  const s = await getBillingSummary(C, { branchId: "main", now });
+  assert.ok(s.today.discounts.every((d) => d.reason && d.approvedBy && d.amountInr > 0));
+});
+
+test("discounts this month add up from the paid bills", async () => {
+  const s = await getBillingSummary(C, { branchId: "main", now });
+  const paid = (await listBills(C, { branchId: "main", now })).filter((b) => b.status === "paid");
+  assert.equal(s.month.discountsInr, paid.reduce((n, b) => n + (b.discount?.amountInr ?? 0), 0));
+  assert.ok(s.month.discountsInr > 0);
 });
