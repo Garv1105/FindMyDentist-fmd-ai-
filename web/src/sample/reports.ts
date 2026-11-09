@@ -1,16 +1,27 @@
 /**
- * FMD Clinic reports, stage 1 (from fmd-clinic-reports-prompt.md). Every number comes from one definition in METRICS,
- * computed here and nowhere else, so tiles, drill-downs, comparisons and the metric dictionary always agree.
+ * FMD Clinic reports, stages 1 and 2 (from fmd-clinic-reports-prompt.md). Every number comes from one definition in
+ * METRICS, computed here and nowhere else, so tiles, drill-downs, comparisons and the metric dictionary always agree.
  * No waiting-time or overrun figures, no refunds, no inventory (owner decisions). Sample data: the analytics pipeline
  * comes with the backend.
  */
 import { dayBills, MODES, type Bill, type Mode } from "./billing.ts";
-import { CHAIRS, dayAppointments, getClinicHome, HOURS, istDate, onReset, requireClinic, weekday, type Appointment } from "./clinic.ts";
+import { freeGaps } from "./calendar.ts";
+import { CHAIRS, dayAppointments, FEES, getClinicHome, isFirstVisit, istDate, onReset, openWindows, requireClinic, type Appointment } from "./clinic.ts";
 import { listPatients } from "./patients.ts";
+import { hash as mix, roster, type Person } from "./people.ts";
+import { recallsBetween } from "./recall.ts";
 
 /* ---------------- definitions ---------------- */
 
-export type MetricDef = { label: string; formula: string; numerator: string; denominator?: string; exclusions?: string; unit: "inr" | "pct" | "count" | "rating"; estimate?: boolean };
+export type MetricDef = {
+  label: string;
+  formula: string;
+  numerator: string;
+  denominator?: string;
+  exclusions?: string;
+  unit: "inr" | "pct" | "count" | "rating" | "hours" | "days";
+  estimate?: boolean;
+};
 
 export const METRICS: Record<string, MetricDef> = {
   netRevenue: {
@@ -29,18 +40,68 @@ export const METRICS: Record<string, MetricDef> = {
   },
   chairUtilisation: {
     label: "Chair utilisation",
-    formula: "Attended booked chair-minutes ÷ available chair-minutes × 100. Available = opening hours − lunch, for each chair, Monday to Saturday",
+    formula: "Attended booked chair-minutes ÷ available chair-minutes × 100. Available = opening hours − lunch, for each chair (Saturdays 9–1, Sundays closed)",
     numerator: "minutes of completed appointments",
     denominator: "open chair-minutes",
     unit: "pct",
   },
   noShowRate: {
     label: "No-show rate",
-    formula: "No-shows ÷ (attended + no-shows) × 100",
+    formula: "No-shows ÷ (attended + no-shows + late cancels) × 100. Late cancel = the patient cancelled with less than 24 hours' notice",
     numerator: "no-shows",
-    denominator: "attended + no-shows",
-    exclusions: "Cancelled appointments",
+    denominator: "attended + no-shows + late cancels",
+    exclusions: "Visits the clinic cancelled; patient cancels with 24+ hours' notice",
     unit: "pct",
+  },
+  lateCancelRate: {
+    label: "Late cancels (<24 h)",
+    formula: "Patient cancellations with less than 24 hours' notice ÷ scheduled appointments × 100",
+    numerator: "patient cancels with < 24 h notice",
+    denominator: "all appointments booked for the period, cancelled ones included",
+    unit: "pct",
+  },
+  lostChairHours: {
+    label: "Lost chair-hours",
+    formula: "Booked minutes of no-shows + late cancels ÷ 60",
+    numerator: "minutes of no-shows and late cancels",
+    unit: "hours",
+  },
+  lostRevenue: {
+    label: "Lost revenue",
+    formula: "List fees of the treatments booked in no-shows + late cancels",
+    numerator: "list fees of missed visits",
+    exclusions: "Discounts and GST (not known for a visit that didn't happen)",
+    unit: "inr",
+    estimate: true,
+  },
+  rebookRate: {
+    label: "Rebooked within 14 days",
+    formula: "No-shows + late cancels that booked again within 14 days ÷ no-shows + late cancels × 100",
+    numerator: "missed visits rebooked within 14 days",
+    denominator: "no-shows + late cancels",
+    unit: "pct",
+  },
+  dentistUtilisation: {
+    label: "Dentist utilisation",
+    formula: "Attended minutes in dentists' chairs ÷ the dentists' open chair-minutes × 100",
+    numerator: "minutes of completed appointments with a dentist",
+    denominator: "dentists' open chair-minutes",
+    exclusions: "The hygienist's chair",
+    unit: "pct",
+  },
+  emptyChairHours: {
+    label: "Empty chair-hours",
+    formula: "(Open chair-minutes − minutes booked, cancelled visits excluded) ÷ 60",
+    numerator: "open chair-minutes not booked",
+    exclusions: "Lunch, Saturday afternoons, Sundays",
+    unit: "hours",
+  },
+  nextFreeSlot: {
+    label: "Next free 30-min slot",
+    formula: "Days from today to each dentist's first free slot of 30 minutes or more, averaged across dentists. As of now, not for the period",
+    numerator: "days to the first free slot, summed",
+    denominator: "dentists",
+    unit: "days",
   },
   newPatients: {
     label: "New patients",
@@ -58,9 +119,94 @@ export const METRICS: Record<string, MetricDef> = {
   },
   recallOverdue: {
     label: "Recall overdue",
-    formula: "Patients past their recall due date with nothing booked",
+    formula: "Recalls past their due date (in the 12 months to the period end) with nothing booked, contacted or not",
     numerator: "overdue recalls",
+    exclusions: "Patients who opted out",
     unit: "count",
+  },
+  recallCompletion: {
+    label: "Recall completion",
+    formula: "Recalls due in the period that were attended by the due date + 30 days ÷ recalls due × 100",
+    numerator: "recalls attended within 30 days of due",
+    denominator: "recalls due (whose 30 days have passed)",
+    exclusions: "Patients who opted out",
+    unit: "pct",
+  },
+  recallConversion: {
+    label: "Recall → booking",
+    formula: "Recalls contacted that led to a visit ÷ recalls contacted × 100",
+    numerator: "contacted recalls that came in",
+    denominator: "recalls contacted",
+    unit: "pct",
+  },
+  pendingValue: {
+    label: "Pending treatment",
+    formula: "₹ estimate of accepted plan items not completed and not scheduled (including unfinished multi-visit courses)",
+    numerator: "estimates of accepted, unscheduled items",
+    unit: "inr",
+    estimate: true,
+  },
+  daysToAccept: {
+    label: "Days to accept",
+    formula: "Median days between presenting a plan item and the patient accepting it",
+    numerator: "days to accept (median)",
+    unit: "days",
+  },
+  grossRevenue: {
+    label: "Gross revenue",
+    formula: "Sum of list fees on paid bills, by bill date",
+    numerator: "list fees on paid bills",
+    exclusions: "Void bills; GST",
+    unit: "inr",
+  },
+  discountTotal: {
+    label: "Discounts",
+    formula: "Sum of discounts on paid bills",
+    numerator: "discounts",
+    exclusions: "Void bills",
+    unit: "inr",
+  },
+  realisationRate: {
+    label: "Realised fee",
+    formula: "Net revenue ÷ gross revenue × 100: how much of the list fee is actually charged",
+    numerator: "net revenue",
+    denominator: "gross revenue",
+    unit: "pct",
+  },
+  revenuePerVisit: {
+    label: "Revenue per visit",
+    formula: "Net revenue ÷ attended visits",
+    numerator: "net revenue",
+    denominator: "attended visits",
+    unit: "inr",
+  },
+  revenuePerNewPatient: {
+    label: "Revenue per new patient",
+    formula: "Net revenue ÷ new patients in the period",
+    numerator: "net revenue",
+    denominator: "new patients",
+    unit: "inr",
+  },
+  revenuePerActivePatient: {
+    label: "Revenue per active patient",
+    formula: "Net revenue ÷ active patients at the period end",
+    numerator: "net revenue",
+    denominator: "active patients",
+    unit: "inr",
+  },
+  gstCollected: {
+    label: "GST collected",
+    formula: "Sum of GST on paid bills (rate per service as set by the clinic and confirmed by its CA)",
+    numerator: "GST on paid bills",
+    exclusions: "Void bills",
+    unit: "inr",
+  },
+  exemptValue: {
+    label: "Exempt value",
+    formula: "List fee − discount on bill lines with a 0% GST rate",
+    numerator: "taxable value of exempt lines",
+    exclusions: "Void bills",
+    unit: "inr",
   },
   averageRating: {
     label: "Average rating",
@@ -68,6 +214,30 @@ export const METRICS: Record<string, MetricDef> = {
     numerator: "sum of ratings",
     denominator: "number of ratings",
     unit: "rating",
+  },
+  activePatients: {
+    label: "Active patients",
+    formula: "Patients with at least one attended visit in the 18 months up to the end of the period",
+    numerator: "patients seen in the last 18 months",
+    unit: "count",
+  },
+  returningPatients: {
+    label: "Returning",
+    formula: "Patients seen in the period who had visited within the 18 months before (not new, not reactivated)",
+    numerator: "returning patients seen",
+    unit: "count",
+  },
+  reactivatedPatients: {
+    label: "Reactivated",
+    formula: "Patients seen in the period whose previous visit was more than 18 months earlier",
+    numerator: "reactivated patients seen",
+    unit: "count",
+  },
+  lapsedPatients: {
+    label: "Lapsed",
+    formula: "Patients whose 18 months since their last visit ran out in the period, with nothing booked",
+    numerator: "patients who lapsed",
+    unit: "count",
   },
 };
 
@@ -80,6 +250,8 @@ const GROUPS: [RegExp, string][] = [
   [/^Extraction/, "Surgical"],
   [/^Braces/, "Orthodontic"],
   [/^Whitening/, "Cosmetic"],
+  [/^Deep cleaning/, "Periodontal"],
+  [/Implant/i, "Implant"],
   [/^Consultation/, "Diagnostic"],
 ];
 export const CATEGORY = (treatment: string) => GROUPS.find(([re]) => re.test(treatment))?.[1] ?? "Other";
@@ -103,7 +275,7 @@ const branchIds = (b: string) => (b === "all" ? Object.keys(CHAIRS) : [b]);
 const hash = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 const pct = (n: number, d: number) => (d ? Math.round((n / d) * 1000) / 10 : null);
 
-function apptsIn(f: Filters, now: Date): Appointment[] {
+export function apptsIn(f: Filters, now: Date): Appointment[] {
   return days(f).flatMap((d) =>
     branchIds(f.branchId)
       .flatMap((b) => dayAppointments(b, d, now))
@@ -111,7 +283,7 @@ function apptsIn(f: Filters, now: Date): Appointment[] {
   );
 }
 
-async function billsIn(clinicId: string, f: Filters, now: Date): Promise<Bill[]> {
+export async function billsIn(clinicId: string, f: Filters, now: Date): Promise<Bill[]> {
   const all = await Promise.all(days(f).map((date) => dayBills(clinicId, { branchId: f.branchId, date, now })));
   return all
     .flat()
@@ -119,14 +291,92 @@ async function billsIn(clinicId: string, f: Filters, now: Date): Promise<Bill[]>
     .filter((b) => (!f.dentist || b.items.some((l) => l.what.includes(f.dentist!))) && (!f.category || b.items.some((l) => CATEGORY(l.what) === f.category)));
 }
 
-/* sample-only signals, stable per appointment: first visits, plan items presented, ratings */
-const isFirstVisit = (a: Appointment) => a.status === "completed" && hash(`${a.id}-new`) % 6 === 0;
-const ESTIMATES = [3500, 6500, 9000, 15000, 25000];
-const planItem = (a: Appointment) =>
-  a.status === "completed" && /^(Consultation|Check-up|Kids' check-up)/.test(a.type)
-    ? { appt: a, estimateInr: ESTIMATES[hash(`${a.id}-est`) % ESTIMATES.length], accepted: hash(`${a.id}-acc`) % 3 !== 0 }
-    : null;
+/* sample-only signals, stable per appointment: plan items presented, ratings, reactivated patients */
+/** What a consultation or check-up can propose: procedure, FMD category, estimate (₹). */
+const PLANS: [string, string, number][] = [
+  ["Filling", "Restorative", 3500],
+  ["Deep cleaning", "Periodontal", 4500],
+  ["Root canal + crown", "Endodontic", 15000],
+  ["Zirconia crown", "Prosthodontic", 9000],
+  ["Clear aligners", "Orthodontic", 85000],
+  ["Implant", "Implant", 45000],
+  ["Whitening", "Cosmetic", 8000],
+  ["Wisdom tooth removal", "Surgical", 6500],
+  ["Full-mouth implants", "Implant", 180000],
+];
+export const DECLINE_REASONS = ["Cost", "Wants a second opinion", "Not urgent for them", "Fear or anxiety", "Time off work", "Other"];
+export type PlanItem = {
+  appt: Appointment;
+  procedure: string;
+  category: string;
+  estimateInr: number;
+  accepted: boolean;
+  status: "accepted" | "declined" | "deferred" | "undecided";
+  declineReason?: string;
+  /** accepted only: days between presenting and accepting */
+  daysToAccept?: number;
+  /** accepted only: where the treatment is now */
+  progress?: "completed" | "scheduled" | "not scheduled" | "course incomplete";
+};
+// ponytail: plan items are stable hash-derived samples on completed consultations; the backend stores real ones
+export const planItem = (a: Appointment): PlanItem | null => {
+  if (a.status !== "completed" || !/^(Consultation|Check-up|Kids' check-up)/.test(a.type)) return null;
+  const h = (t: string) => mix(`${a.id}-${t}`);
+  const [procedure, category, estimateInr] = PLANS[h("est") % PLANS.length];
+  const accepted = h("acc") % 3 !== 0;
+  if (!accepted) {
+    const status = (["declined", "deferred", "undecided"] as const)[h("dec") % 3];
+    return { appt: a, procedure, category, estimateInr, accepted, status, ...(status === "declined" ? { declineReason: DECLINE_REASONS[h("why") % DECLINE_REASONS.length] } : {}) };
+  }
+  const multiVisit = /\+|aligners|Full-mouth/.test(procedure);
+  const p = h("prog") % 10;
+  const progress = p < 5 ? "completed" : p < 7 ? "scheduled" : multiVisit ? "course incomplete" : "not scheduled";
+  return { appt: a, procedure, category, estimateInr, accepted, status: "accepted", daysToAccept: [0, 0, 1, 2, 4, 7, 12, 21][h("days") % 8], progress };
+};
+/** Accepted but not done and not booked: what "pending treatment" counts. */
+export const isPending = (x: PlanItem) => x.progress === "not scheduled" || x.progress === "course incomplete";
+/** Plan items presented in the period (respects branch, dentist and category filters). */
+export const planItemsIn = (f: Filters, now: Date) =>
+  apptsIn({ ...f, category: undefined }, now)
+    .map(planItem)
+    .filter((x): x is PlanItem => x !== null && (!f.category || x.category === f.category));
 const rating = (a: Appointment) => (a.status === "completed" && hash(`${a.id}-r`) % 4 === 0 ? 4 + (hash(`${a.id}-s`) % 2) : null);
+// ponytail: a stable 1-in-50 flag, not a look-back at the patient's history; the analytics marts compute it for real
+const isReactivated = (a: Appointment) => a.status === "completed" && !a.newPatient && hash(`${a.id}-react`) % 50 === 0;
+const isReturning = (a: Appointment) => a.status === "completed" && !a.newPatient && !isReactivated(a);
+
+/** A patient cancel with less than 24 hours' notice. */
+export const isLateCancel = (a: Appointment) => a.status === "cancelled" && a.missed?.cancel?.by === "patient" && a.missed.cancel.noticeHours < 24;
+/** A visit the patient missed: a no-show or a late cancel. */
+export const isMissed = (a: Appointment) => a.status === "no_show" || isLateCancel(a);
+export const isHygienist = (person: string) => /hygienist/i.test(person);
+const names = (list: Appointment[]) => new Set(list.map((a) => a.patientName)).size;
+
+/** Calendar months, kept inside the month: 31 Oct − 18 months = 30 Apr. */
+export function addMonths(date: string, n: number) {
+  const [y, m, d] = date.split("-").map(Number);
+  const t = new Date(Date.UTC(y, m - 1 + n, 1));
+  const last = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate();
+  return `${t.toISOString().slice(0, 8)}${String(Math.min(d, last)).padStart(2, "0")}`;
+}
+
+const toMin = (hm: string) => Number(hm.slice(0, 2)) * 60 + Number(hm.slice(3, 5));
+/** Open chair-minutes in the period for the chairs that pass `keep` (and the dentist filter). */
+function openMinutes(f: Filters, keep: (c: { chair: string; dentist: string }) => boolean = () => true) {
+  const perChair = days(f).reduce((n, d) => n + openWindows(d).reduce((m, [a, b]) => m + toMin(b) - toMin(a), 0), 0);
+  const chairs = branchIds(f.branchId).reduce((n, b) => n + CHAIRS[b].filter((c) => (!f.dentist || c.dentist === f.dentist) && keep(c)).length, 0);
+  return perChair * chairs;
+}
+
+/** Whole days from today to a chair's first free slot of 30+ minutes (0 = later today), looking 60 days ahead. */
+export function nextFreeDays(branchId: string, chair: string, now: Date): number | null {
+  const today = istDate(now);
+  for (let i = 0; i <= 60; i++) {
+    const d = addDays(today, i);
+    if (freeGaps(branchId, d, now, dayAppointments(branchId, d, now)).some((g) => g.chair === chair)) return i;
+  }
+  return null;
+}
 
 /* ---------------- one metric ---------------- */
 
@@ -136,17 +386,20 @@ export async function metric(clinicId: string, id: string, f: Filters): Promise<
   requireClinic(clinicId);
   const now = f.now ?? new Date();
   const appts = () => apptsIn(f, now);
+  const count = (n: number) => ({ id, value: n, numerator: n });
   switch (id) {
     case "netRevenue": {
       const bills = await billsIn(clinicId, f, now);
       const v = bills.flatMap((b) => b.items).reduce((n, l) => n + l.listFeeInr - l.discountInr, 0);
       return { id, value: v, numerator: v };
     }
-    case "chairUtilisation": {
-      const attended = appts().filter((a) => a.status === "completed").reduce((n, a) => n + a.minutes, 0);
-      const perDay = (toMin(HOURS.close) - toMin(HOURS.open) - (toMin(HOURS.lunch[1]) - toMin(HOURS.lunch[0])));
-      const chairs = branchIds(f.branchId).reduce((n, b) => n + (f.dentist ? CHAIRS[b].filter((c) => c.dentist === f.dentist).length : CHAIRS[b].length), 0);
-      const available = days(f).filter((d) => weekday(d) !== 0).length * chairs * perDay;
+    case "chairUtilisation":
+    case "dentistUtilisation": {
+      const dentistsOnly = id === "dentistUtilisation";
+      const attended = appts()
+        .filter((a) => a.status === "completed" && !(dentistsOnly && isHygienist(a.dentist)))
+        .reduce((n, a) => n + a.minutes, 0);
+      const available = openMinutes(f, (c) => !(dentistsOnly && isHygienist(c.dentist)));
       return { id, value: pct(attended, available), numerator: attended, denominator: available };
     }
     case "revenuePerChairHour": {
@@ -154,25 +407,109 @@ export async function metric(clinicId: string, id: string, f: Filters): Promise<
       const hours = (util.numerator ?? 0) / 60;
       return { id, value: hours ? Math.round((net.value ?? 0) / hours) : null, numerator: net.value ?? 0, denominator: Math.round(hours * 10) / 10 };
     }
+    case "emptyChairHours": {
+      const available = openMinutes(f);
+      const booked = appts()
+        .filter((a) => a.status !== "cancelled")
+        .reduce((n, a) => n + a.minutes, 0);
+      const v = available ? Math.round(Math.max(0, available - booked) / 60) : null;
+      return { id, value: v, numerator: v ?? 0 };
+    }
+    case "nextFreeSlot": {
+      const ds = branchIds(f.branchId).flatMap((b) =>
+        CHAIRS[b].filter((c) => !isHygienist(c.dentist) && (!f.dentist || c.dentist === f.dentist)).map((c) => nextFreeDays(b, c.chair, now)),
+      );
+      const known = ds.filter((d) => d !== null);
+      const sum = known.reduce((n, d) => n + d, 0);
+      return { id, value: known.length ? Math.round((sum / known.length) * 10) / 10 : null, numerator: sum, denominator: known.length };
+    }
     case "noShowRate": {
       const list = appts();
       const ns = list.filter((a) => a.status === "no_show").length;
       const att = list.filter((a) => a.status === "completed").length;
-      return { id, value: pct(ns, att + ns), numerator: ns, denominator: att + ns };
+      const late = list.filter(isLateCancel).length;
+      return { id, value: pct(ns, att + ns + late), numerator: ns, denominator: att + ns + late };
     }
-    case "newPatients": {
-      const n = appts().filter(isFirstVisit).length;
-      return { id, value: n, numerator: n };
+    case "lateCancelRate": {
+      const list = appts();
+      const late = list.filter(isLateCancel).length;
+      return { id, value: pct(late, list.length), numerator: late, denominator: list.length };
     }
+    case "lostChairHours": {
+      const mins = appts().filter(isMissed).reduce((n, a) => n + a.minutes, 0);
+      return { id, value: Math.round((mins / 60) * 10) / 10, numerator: mins };
+    }
+    case "lostRevenue":
+      return count(appts().filter(isMissed).reduce((n, a) => n + (FEES[a.type] ?? 0), 0));
+    case "rebookRate": {
+      const missed = appts().filter(isMissed);
+      const back = missed.filter((a) => a.missed?.rebooked).length;
+      return { id, value: pct(back, missed.length), numerator: back, denominator: missed.length };
+    }
+    case "newPatients":
+      return count(appts().filter(isFirstVisit).length);
+    case "returningPatients":
+      return count(names(appts().filter(isReturning)));
+    case "reactivatedPatients":
+      return count(names(appts().filter(isReactivated)));
+    case "activePatients":
+      return count(branchIds(f.branchId).flatMap((b) => roster(b, istDate(now))).filter((p) => isActiveAt(p, f.to)).length);
+    case "lapsedPatients":
+      return count(lapsedIn(f, now).length);
     case "caseAcceptance": {
-      const items = appts().map(planItem).filter((x) => x !== null);
+      const items = planItemsIn(f, now);
       const acc = items.filter((x) => x.accepted);
       const val = (l: typeof items) => l.reduce((n, x) => n + x.estimateInr, 0);
       return { id, value: pct(acc.length, items.length), numerator: acc.length, denominator: items.length, byValue: pct(val(acc), val(items)) };
     }
+    case "pendingValue":
+      return count(planItemsIn(f, now).filter(isPending).reduce((n, x) => n + x.estimateInr, 0));
+    case "daysToAccept": {
+      const d = planItemsIn(f, now).flatMap((x) => (x.daysToAccept === undefined ? [] : [x.daysToAccept])).sort((a, b) => a - b);
+      return { id, value: d.length ? d[Math.floor((d.length - 1) / 2)] : null, numerator: d.length };
+    }
     case "recallOverdue": {
-      const n = (await listPatients(clinicId, { filter: "recall" })).length;
-      return { id, value: n, numerator: n };
+      const end = [f.to, istDate(now)].sort()[0];
+      const open = recallsBetween(f.branchId, addMonths(end, -12), end, istDate(now)).filter((r) => r.status === "overdue" || r.status === "contacted");
+      return count(open.length);
+    }
+    case "recallCompletion": {
+      const today = istDate(now);
+      const due = recallsBetween(f.branchId, f.from, f.to, today).filter((r) => r.status !== "opted_out" && addDays(r.due, 30) <= today);
+      const done = due.filter((r) => r.status === "completed").length;
+      return { id, value: pct(done, due.length), numerator: done, denominator: due.length };
+    }
+    case "recallConversion": {
+      const list = recallsBetween(f.branchId, f.from, f.to, istDate(now)).filter((r) => r.channel);
+      const booked = list.filter((r) => r.status === "completed").length;
+      return { id, value: pct(booked, list.length), numerator: booked, denominator: list.length };
+    }
+    case "grossRevenue":
+    case "discountTotal":
+    case "gstCollected":
+    case "exemptValue": {
+      const lines = (await billsIn(clinicId, f, now)).flatMap((b) => b.items);
+      const pick = {
+        grossRevenue: (l: Bill["items"][number]) => l.listFeeInr,
+        discountTotal: (l: Bill["items"][number]) => l.discountInr,
+        gstCollected: (l: Bill["items"][number]) => l.gstInr,
+        exemptValue: (l: Bill["items"][number]) => (l.gstRate === 0 ? l.listFeeInr - l.discountInr : 0),
+      }[id];
+      return count(lines.reduce((n, l) => n + pick(l), 0));
+    }
+    case "realisationRate": {
+      const [net, gross] = await Promise.all([metric(clinicId, "netRevenue", f), metric(clinicId, "grossRevenue", f)]);
+      return { id, value: pct(net.value ?? 0, gross.value ?? 0), numerator: net.value ?? 0, denominator: gross.value ?? 0 };
+    }
+    case "revenuePerVisit":
+    case "revenuePerNewPatient":
+    case "revenuePerActivePatient": {
+      const net = (await metric(clinicId, "netRevenue", f)).value ?? 0;
+      const d =
+        id === "revenuePerVisit"
+          ? appts().filter((a) => a.status === "completed").length
+          : ((await metric(clinicId, id === "revenuePerNewPatient" ? "newPatients" : "activePatients", f)).value ?? 0);
+      return { id, value: d ? Math.round(net / d) : null, numerator: net, denominator: d };
     }
     case "averageRating": {
       const r = appts().map(rating).filter((x) => x !== null);
@@ -183,10 +520,34 @@ export async function metric(clinicId: string, id: string, f: Filters): Promise<
   }
 }
 
-function toMin(hm: string) {
-  const [h, m] = hm.split(":").map(Number);
-  return h * 60 + m;
+/** Seen in the 18 months up to `end`; regulars who are still coming always are, once they've started. */
+export const isActiveAt = (p: Person, end: string) => p.first <= end && (p.last === null || p.last > addMonths(end, -18));
+
+/** Roster patients whose 18 months since the last visit ran out in the period (roster patients have nothing booked). */
+export function lapsedIn(f: Filters, now: Date) {
+  const [from, to] = [addMonths(f.from, -18), addMonths(f.to, -18)];
+  return branchIds(f.branchId)
+    .flatMap((b) => roster(b, istDate(now)))
+    .filter((p): p is Person & { last: string } => p.last !== null && p.last >= from && p.last <= to)
+    .sort((a, b) => a.last.localeCompare(b.last));
 }
+
+/* ---------------- tiles ---------------- */
+
+/** A tile: the value, the previous period, the same dates last year and a 12-week series (weeks of 7 days). */
+export async function tile(clinicId: string, id: string, f: Filters) {
+  // "as of now" figures have no history to compare with
+  if (id === "nextFreeSlot") return { ...(await metric(clinicId, id, f)), def: METRICS[id], previous: null, lastYear: null, series: [] as (number | null)[] };
+  const [cur, prev, ly] = await Promise.all([metric(clinicId, id, f), metric(clinicId, id, { ...f, ...previousPeriod(f) }), metric(clinicId, id, { ...f, ...lastYear(f) })]);
+  const series = await Promise.all(
+    Array.from({ length: 12 }, (_, i) => {
+      const to = addDays(f.to, -7 * (11 - i));
+      return metric(clinicId, id, { ...f, from: addDays(to, -6), to }).then((m) => m.value);
+    }),
+  );
+  return { ...cur, def: METRICS[id], previous: prev.value, lastYear: ly.value, series };
+}
+export type Tile = Awaited<ReturnType<typeof tile>>;
 
 /* ---------------- Clinic Pulse ---------------- */
 
@@ -194,21 +555,13 @@ const PULSE = ["netRevenue", "revenuePerChairHour", "chairUtilisation", "noShowR
 
 export async function pulse(clinicId: string, f: Filters) {
   const now = f.now ?? new Date();
-  const tiles = await Promise.all(
-    PULSE.map(async (id) => {
-      const [cur, prev, ly] = await Promise.all([metric(clinicId, id, f), metric(clinicId, id, { ...f, ...previousPeriod(f) }), metric(clinicId, id, { ...f, ...lastYear(f) })]);
-      const series = await Promise.all(
-        Array.from({ length: 12 }, (_, i) => {
-          const to = addDays(f.to, -7 * (11 - i));
-          return metric(clinicId, id, { ...f, from: addDays(to, -6), to }).then((m) => m.value);
-        }),
-      );
-      return { ...cur, def: METRICS[id], previous: prev.value, lastYear: ly.value, series };
-    }),
-  );
+  const tiles = await Promise.all(PULSE.map((id) => tile(clinicId, id, f)));
   const asOf = new Date(now.getTime() + 5.5 * 3600_000).toISOString().slice(11, 16);
   return { tiles, asOf, period: { from: f.from, to: f.to }, compareTo: previousPeriod(f) };
 }
+
+/** The metrics whose number opens a list of appointments. */
+export const DRILLABLE = ["pendingValue", "noShowRate", "newPatients", "chairUtilisation", "dentistUtilisation", "caseAcceptance", "lateCancelRate", "lostChairHours", "lostRevenue", "rebookRate", "returningPatients", "reactivatedPatients"];
 
 /** The rows behind a number. */
 export async function drillDown(clinicId: string, id: string, f: Filters) {
@@ -218,7 +571,13 @@ export async function drillDown(clinicId: string, id: string, f: Filters) {
   if (id === "noShowRate") return list.filter((a) => a.status === "no_show");
   if (id === "newPatients") return list.filter(isFirstVisit);
   if (id === "chairUtilisation") return list.filter((a) => a.status === "completed");
-  if (id === "caseAcceptance") return list.filter((a) => planItem(a) !== null);
+  if (id === "dentistUtilisation") return list.filter((a) => a.status === "completed" && !isHygienist(a.dentist));
+  if (id === "caseAcceptance") return planItemsIn(f, now).map((x) => x.appt);
+  if (id === "pendingValue") return planItemsIn(f, now).filter(isPending).map((x) => x.appt);
+  if (id === "lateCancelRate") return list.filter(isLateCancel);
+  if (id === "lostChairHours" || id === "lostRevenue" || id === "rebookRate") return list.filter(isMissed);
+  if (id === "returningPatients") return list.filter(isReturning);
+  if (id === "reactivatedPatients") return list.filter(isReactivated);
   return [];
 }
 
@@ -240,7 +599,7 @@ export async function dailyOps(clinicId: string, opts: { date: string; branchId:
     noShow: count("no_show"),
     cancelled: count("cancelled"),
     open: list.filter((a) => !["completed", "no_show", "cancelled"].includes(a.status)).length,
-    walkIns: 0,
+    walkIns: list.filter((a) => a.source === "Walk-in").length,
     viaFmd: list.filter((a) => a.viaFmd).length,
     unconfirmedTomorrow: tomorrow.filter((a) => a.status === "unconfirmed").map((a) => a.patientName),
     notBilled: list.filter((a) => a.status === "completed" && !billed.has(a.patientName)).map((a) => `${a.patientName} · ${a.type}`),

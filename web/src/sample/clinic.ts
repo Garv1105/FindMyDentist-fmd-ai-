@@ -3,6 +3,7 @@
  * the real backend by changing this module only. Appointments are generated for whatever date is asked, so the demo
  * never looks stale; approvals and ticks live in memory and reset on reload.
  */
+import { FMD_SOURCES, hash, pick, visitorsFor, type Source } from "./people.ts";
 
 export type ApptStatus = "booked" | "unconfirmed" | "confirmed" | "checked_in" | "completed" | "no_show" | "cancelled";
 
@@ -18,6 +19,18 @@ export type Appointment = {
   chair: string;
   status: ApptStatus;
   viaFmd: boolean;
+  /* captured at source (reports spec); optional until every booking path records them */
+  /** how the patient first came to the clinic */
+  source?: Source;
+  referredBy?: string;
+  /** days between booking and the visit */
+  bookedDaysAhead?: number;
+  /** the reminder reached the patient (same-day bookings count as delivered) */
+  reminderDelivered?: boolean;
+  /** the patient's first visit (or, for a no-show, their first booking) */
+  newPatient?: boolean;
+  /** why a no-show or cancelled visit was missed, picked from a list at the desk */
+  missed?: { reason: string; rebooked: boolean; cancel?: { by: "patient" | "clinic"; noticeHours: number } };
 };
 
 export type AiTask = {
@@ -126,8 +139,56 @@ export const CHAIRS: Record<string, { chair: string; dentist: string }[]> = {
   kora: [{ chair: "Chair 1", dentist: "Dr. Menon" }],
 };
 
-/** Opening hours, the same every working day; Sundays are closed. */
-export const HOURS = { open: "09:00", close: "19:00", lunch: ["13:00", "14:00"] as const };
+/** Opening hours: 9–7 with a lunch break, Saturdays 9–1, Sundays closed. */
+export const HOURS = { open: "09:00", close: "19:00", lunch: ["13:00", "14:00"] as const, saturdayClose: "13:00" };
+
+/** The bookable stretches of a day as [from, to] times; none on Sundays. */
+export function openWindows(date: string): [string, string][] {
+  const wd = weekday(date);
+  if (wd === 0) return [];
+  if (wd === 6) return [[HOURS.open, HOURS.saturdayClose]];
+  return [
+    [HOURS.open, HOURS.lunch[0]],
+    [HOURS.lunch[1], HOURS.close],
+  ];
+}
+
+/**
+ * Past days are fuller than the plan: these extra visits fill the dentists' gaps and the hygienist's chair. A few drop
+ * out each day, and Tuesday–Thursday early afternoons stay quiet, as they do in most clinics.
+ */
+const EXTRA: Record<string, [time: string, minutes: number, type: string, dentist: string, chair: string][]> = {
+  main: [
+    ["09:00", 30, "Check-up", "Dr. Iyer", "Chair 1"],
+    ["11:00", 45, "Filling", "Dr. Iyer", "Chair 1"],
+    ["12:15", 45, "Filling", "Dr. Iyer", "Chair 1"],
+    ["14:30", 60, "Root canal, visit 2", "Dr. Iyer", "Chair 1"],
+    ["16:30", 30, "Consultation", "Dr. Iyer", "Chair 1"],
+    ["18:00", 45, "Filling", "Dr. Iyer", "Chair 1"],
+    ["09:00", 45, "Consultation", "Dr. Rao", "Chair 2"],
+    ["14:00", 45, "Filling", "Dr. Rao", "Chair 2"],
+    ["15:30", 60, "Crown preparation", "Dr. Rao", "Chair 2"],
+    ["17:00", 45, "Filling", "Dr. Rao", "Chair 2"],
+    ["18:20", 30, "Check-up", "Dr. Rao", "Chair 2"],
+    ["09:00", 45, "Scaling & polishing", "Meera (hygienist)", "Chair 3"],
+    ["10:00", 45, "Scaling & polishing", "Meera (hygienist)", "Chair 3"],
+    ["11:00", 30, "Scaling & polishing", "Meera (hygienist)", "Chair 3"],
+    ["12:00", 45, "Scaling & polishing", "Meera (hygienist)", "Chair 3"],
+    ["14:00", 30, "Scaling & polishing", "Meera (hygienist)", "Chair 3"],
+    ["15:00", 45, "Scaling & polishing", "Meera (hygienist)", "Chair 3"],
+    ["16:15", 45, "Scaling & polishing", "Meera (hygienist)", "Chair 3"],
+    ["17:30", 45, "Scaling & polishing", "Meera (hygienist)", "Chair 3"],
+  ],
+  kora: [
+    ["09:00", 45, "Filling", "Dr. Menon", "Chair 1"],
+    ["10:30", 30, "Consultation", "Dr. Menon", "Chair 1"],
+    ["14:00", 45, "Root canal, visit 2", "Dr. Menon", "Chair 1"],
+    ["15:30", 30, "Kids' check-up", "Dr. Menon", "Chair 1"],
+    ["17:30", 60, "Crown preparation", "Dr. Menon", "Chair 1"],
+  ],
+};
+const MISS_REASONS = ["Forgot", "Unwell", "Work or travel", "Cost concern", "Transport", "Other", "No reason recorded"];
+const CLINIC_REASONS = ["Dentist unavailable", "Equipment down", "Other"];
 
 /** Days differ: some afternoon slots are empty midweek, and Saturdays are mornings only. */
 const SKIP: Record<number, (time: string) => boolean> = {
@@ -266,23 +327,100 @@ export function cleanDate(raw: string | null, fallback: string) {
 export const cleanBranch = (raw: string | null, clinic: Clinic) =>
   raw === "all" || clinic.branches.some((b) => b.id === raw) ? (raw as string) : clinic.branches[0].id;
 
-/** One branch's appointments for a date: the day plan, statuses from the clock, then Calendar changes and bookings. */
+/** A new patient's visit on a planned (today or future) day; past days know it from the roster. */
+const plannedNew = (id: string) => hash(`${id}-new`) % 6 === 0;
+/** An attended first visit: what "new patients" counts everywhere. */
+export const isFirstVisit = (a: Appointment) => a.status === "completed" && Boolean(a.newPatient);
+
+const pastCache = new Map<string, Appointment[]>();
+
+/**
+ * A finished day: the plan's slots plus the extras, filled with roster patients. Who misses a visit follows a simple
+ * model: more often when the reminder didn't arrive, on Saturdays and evenings, when booked 14+ days ahead, for new
+ * patients, and for a few patients who often miss. Stable for a date, so every report sees the same day.
+ */
+function pastDay(branchId: string, date: string, today: string): Appointment[] {
+  const key = `${today}|${branchId}|${date}`;
+  const hit = pastCache.get(key);
+  if (hit) return hit;
+  const wd = weekday(date);
+  const skip = SKIP[wd] ?? (() => false);
+  const slots = [
+    ...(PLAN[branchId] ?? []).map(([time, minutes, , type, dentist, chair]) => ({ id: `${branchId}-${date}-${time}`, time, minutes, type, dentist, chair })),
+    ...(EXTRA[branchId] ?? [])
+      .map(([time, minutes, type, dentist, chair]) => ({ id: `${branchId}-${date}-${time}-c${chair.slice(-1)}`, time, minutes, type, dentist, chair }))
+      .filter((s) => !(wd >= 2 && wd <= 4 && s.time >= "14:00" && s.time < "16:00") && hash(`${s.id}-x`) % 7 !== 0),
+  ]
+    .filter((s) => !skip(s.time))
+    .sort((a, b) => a.time.localeCompare(b.time) || a.chair.localeCompare(b.chair));
+  const visitors = visitorsFor(branchId, date, slots.map((s) => s.id), today);
+  const out = slots.map((s, k): Appointment => {
+    const v = visitors[k];
+    const h = (tag: string) => hash(`${s.id}-${tag}`);
+    const person = "person" in v ? v.person : null;
+    const neverCame = "noShow" in v && v.noShow;
+    const isNew = person ? person.first === date : neverCame;
+    const source: Source = person?.source ?? (neverCame ? pick(["FMD Main search", "Google", "Phone", "Social"] as const, [4, 3, 2, 1], h("src")) : "Phone");
+    const bookedDaysAhead = source === "Walk-in" ? 0 : pick([0, 1, 2, 4, 7, 10, 16, 21, 30], [8, 14, 12, 12, 12, 8, 14, 10, 10], h("lead"));
+    const reminderDelivered = bookedDaysAhead === 0 || h("rem") % 100 >= 12;
+    const base = {
+      id: s.id,
+      branchId,
+      patientName: person ? person.name : (v as { name: string }).name,
+      start: `${date}T${s.time}:00+05:30`,
+      minutes: s.minutes,
+      type: s.type,
+      dentist: s.dentist,
+      chair: s.chair,
+      viaFmd: FMD_SOURCES.includes(source),
+      source,
+      bookedDaysAhead,
+      reminderDelivered,
+      newPatient: isNew,
+      ...(person?.referredBy ? { referredBy: person.referredBy } : {}),
+    };
+    const missed = (cancel?: { by: "patient" | "clinic"; noticeHours: number }) => ({
+      reason: cancel?.by === "clinic" ? CLINIC_REASONS[h("why") % CLINIC_REASONS.length] : pick(MISS_REASONS, [35, 18, 17, 8, 6, 4, 12], h("why")),
+      // ponytail: a stable coin flip, not a look-ahead at the patient's next booking; the backend sets it from real data
+      rebooked: h("rb") % 100 < 57,
+      ...(cancel ? { cancel } : {}),
+    });
+    // a patient's first and last visits happened, by definition
+    if (person && (person.first === date || person.last === date)) return { ...base, status: "completed" };
+    if (neverCame) return { ...base, status: "no_show", missed: missed() };
+    const flaky = person?.flaky ? 120 : 0;
+    const r = h("st") % 1000;
+    if (r < 15) return { ...base, status: "cancelled", missed: missed({ by: "clinic", noticeHours: 2 + (h("nh") % 48) }) };
+    if (r < 45 + flaky) return { ...base, status: "cancelled", missed: missed({ by: "patient", noticeHours: 1 + (h("nh") % 23) }) };
+    if (r < 85 + flaky) return { ...base, status: "cancelled", missed: missed({ by: "patient", noticeHours: 24 + (h("nh") % 72) }) };
+    const p = 3 + (reminderDelivered ? 0 : 9) + (wd === 6 || s.time >= "17:00" ? 3 : 0) + (bookedDaysAhead >= 14 ? 3 : 0) + (person?.flaky ? 35 : 0);
+    return h("ns") % 100 < p ? { ...base, status: "no_show", missed: missed() } : { ...base, status: "completed" };
+  });
+  pastCache.set(key, out);
+  return out;
+}
+
+/** One branch's appointments for a date: finished days from the roster; today and later from the day plan and the clock. */
 export function dayAppointments(branchId: string, date: string, now: Date): Appointment[] {
   if (weekday(date) === 0) return []; // closed on Sundays
   const today = istDate(now);
   const skip = SKIP[weekday(date)] ?? (() => false);
-  const planned = (PLAN[branchId] ?? []).filter(([time]) => !skip(time)).map(([time, minutes, patientName, type, dentist, chair, flags = {}]) => {
-    const start = `${date}T${time}:00+05:30`;
-    const startMs = Date.parse(start);
-    const endMs = startMs + minutes * 60_000;
-    let status: ApptStatus;
-    if (date < today) status = flags.noShow ? "no_show" : "completed";
-    else if (date > today) status = FUTURE_UNCONFIRMED.has(`${branchId}-${time}`) ? "unconfirmed" : "confirmed";
-    else if (endMs <= now.getTime()) status = flags.noShow ? "no_show" : "completed";
-    else if (startMs <= now.getTime()) status = flags.noShow ? "no_show" : "checked_in";
-    else status = flags.unconfirmed ? "unconfirmed" : flags.viaFmd ? "booked" : "confirmed";
-    return { id: `${branchId}-${date}-${time}`, branchId, patientName, start, minutes, type, dentist, chair, status, viaFmd: Boolean(flags.viaFmd) };
-  });
+  const planned =
+    date < today
+      ? pastDay(branchId, date, today)
+      : (PLAN[branchId] ?? []).filter(([time]) => !skip(time)).map(([time, minutes, patientName, type, dentist, chair, flags = {}]): Appointment => {
+          const id = `${branchId}-${date}-${time}`;
+          const start = `${date}T${time}:00+05:30`;
+          const startMs = Date.parse(start);
+          const endMs = startMs + minutes * 60_000;
+          let status: ApptStatus;
+          if (date > today) status = FUTURE_UNCONFIRMED.has(`${branchId}-${time}`) ? "unconfirmed" : "confirmed";
+          else if (endMs <= now.getTime()) status = flags.noShow ? "no_show" : "completed";
+          else if (startMs <= now.getTime()) status = flags.noShow ? "no_show" : "checked_in";
+          else status = flags.unconfirmed ? "unconfirmed" : flags.viaFmd ? "booked" : "confirmed";
+          const source: Source = flags.viaFmd ? "FMD Main search" : "Phone";
+          return { id, branchId, patientName, start, minutes, type, dentist, chair, status, viaFmd: Boolean(flags.viaFmd), source, bookedDaysAhead: hash(id) % 15, reminderDelivered: true, newPatient: plannedNew(id) };
+        });
   return [...planned, ...(added.get(date) ?? []).filter((a) => a.branchId === branchId)]
     .map((a) => ({ ...a, status: statusOverride.get(a.id) ?? a.status }))
     .sort((a, b) => a.start.localeCompare(b.start));

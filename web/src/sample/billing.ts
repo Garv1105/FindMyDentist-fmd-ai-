@@ -96,7 +96,7 @@ function visitBills(branchId: string, date: string, now: Date): Bill[] {
         ...whoIs(a.patientName),
         items: [l],
         amountInr: l.amountInr,
-        ...(off ? { discount: { amountInr: off, reason: "Returning patient", approvedBy: "Dr. Ananya Rao" } } : {}),
+        ...(off ? { discount: { amountInr: off, reason: DISCOUNT_REASONS[hash(`${a.id}-dr`) % 5], approvedBy: hash(`${a.id}-da`) % 3 ? "Dr. Ananya Rao" : "Kavya Menon" } } : {}),
         mode: MODES[(hash(a.id) + i) % MODES.length],
         by: branchId === "main" ? "Kavya Menon" : "Front desk",
         status: "paid" as const,
