@@ -138,3 +138,10 @@ test("alerts: cash variance shows; AI safety reports 0 unapproved actions", asyn
   assert.ok(a.some((x) => x.id === "cashVariance"));
   assert.equal(a.find((x) => x.id === "aiSafety")?.count, 0);
 });
+
+test("pulse tiles keep numbers and definitions apart", async () => {
+  const p = await pulse(C, { ...nov, branchId: "main", now });
+  const ns = p.tiles.find((t) => t.id === "noShowRate")!;
+  assert.equal(typeof ns.numerator, "number");
+  assert.equal(ns.def.label, "No-show rate");
+});
