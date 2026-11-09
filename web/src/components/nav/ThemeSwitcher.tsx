@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { Check, MonitorSmartphone } from "lucide-react";
+import { Check, MonitorSmartphone, Moon, Sun } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { DEFAULT_THEME, STORAGE_KEY, SYSTEM, THEMES, resolveTheme, type Theme, type ThemeId } from "@/lib/themes";
 
@@ -200,5 +200,33 @@ export default function ThemeSwitcher() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+/** The light look paired with the default dark one: white with FMD's royal blue. */
+export const LIGHT_THEME: ThemeId = "white-royal";
+
+/** One-tap Dark / Light switch (the full picker above keeps the other looks). Remembered on this device. */
+export function ThemeToggle({ className = "" }: { className?: string }) {
+  const active = useSyncExternalStore(subscribe, readActive, serverDefault);
+  const dark = THEMES.find((t) => t.id === active)?.dark ?? true;
+  const flip = () => {
+    const next = dark ? LIGHT_THEME : DEFAULT_THEME;
+    try {
+      localStorage.setItem(STORAGE_KEY, next);
+    } catch {}
+    window.dispatchEvent(new Event(CHANGE));
+    applyTheme(next);
+  };
+  return (
+    <button
+      type="button"
+      onClick={flip}
+      aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
+      title={dark ? "Light theme" : "Dark theme"}
+      className={`grid size-10 shrink-0 place-items-center rounded-full border border-line bg-[var(--surface-glass)] text-ink-2 transition-colors hover:text-ink ${className}`}
+    >
+      {dark ? <Sun className="size-[18px]" strokeWidth={1.75} /> : <Moon className="size-[18px]" strokeWidth={1.75} />}
+    </button>
   );
 }

@@ -14,6 +14,7 @@ import { useDemoUser } from "@/lib/useDemoUser";
 import { cleanBranch, cleanDate, getClinic, getClinicHome, type Clinic } from "@/sample/clinic";
 import { useDismiss } from "./dismiss";
 import { Notifications } from "./Notifications";
+import { ThemeToggle } from "@/components/nav/ThemeSwitcher";
 
 /* ---------------- dates (IST) ---------------- */
 
@@ -63,6 +64,9 @@ const NAV: [slug: string, label: string, Icon: LucideIcon, count?: NavKey][] = [
   ["settings", "Settings", Settings],
 ];
 export const SECTION_TITLES = Object.fromEntries(NAV.map(([slug, label]) => [slug, label]));
+/** An associate dentist works from their own schedule, patients and tasks, and keeps their profile in Settings. */
+const DENTIST_SECTIONS = new Set(["", "calendar", "patients", "tasks", "settings"]);
+const navFor = (role: string) => (role === "dentist" ? NAV.filter(([slug]) => DENTIST_SECTIONS.has(slug)) : NAV);
 
 function SideNav({ ctx, section, counts, onPick }: { ctx: ClinicCtx; section: string; counts: Partial<Record<NavKey, number>>; onPick?: () => void }) {
   const { clinic, user, base, branchId, date } = ctx;
@@ -85,7 +89,7 @@ function SideNav({ ctx, section, counts, onPick }: { ctx: ClinicCtx; section: st
         <p className="text-[13px] text-ink-3">{branch ? `${branch.area} · ${branch.name}` : "All branches"}</p>
       </div>
       <nav aria-label="Clinic sections" className="flex flex-col gap-0.5">
-        {NAV.map(([slug, label, Icon, key]) => {
+        {navFor(user.role).map(([slug, label, Icon, key]) => {
           const on = section === slug;
           const n = key ? counts[key] : undefined;
           return (
@@ -222,6 +226,7 @@ function TopBar({ ctx, section, onMenu, menuBtn }: { ctx: ClinicCtx; section: st
           select: () => setBranchId(b.key),
         }))}
       />
+      <ThemeToggle />
       <Notifications clinicId={clinic.id} base={base} />
     </header>
   );

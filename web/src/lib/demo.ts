@@ -38,7 +38,8 @@ const isClinicRole = (r: DemoRole) => r === "clinic_owner" || r === "clinic_fron
 
 export const DEMO_USERS: DemoUser[] = [
   { id: "demo-patient", name: "Priya Sharma", initials: "PS", role: "patient", title: "Patient", phone: "+91 99860 44120", clinicId: null },
-  { id: "demo-dentist", name: "Dr. Karthik Iyer", initials: "KI", role: "dentist", title: "Dentist", phone: "+91 98450 20202", clinicId: null },
+  // an associate dentist at the demo clinic (Chair 1, "Dr. Iyer" in its sample day), so FMD Clinic shows a dentist's view too
+  { id: "demo-dentist", name: "Dr. Karthik Iyer", initials: "KI", role: "dentist", title: "Dentist", phone: "+91 98450 20202", clinicId: DEMO_CLINIC },
   { id: "demo-owner", name: "Dr. Ananya Rao", initials: "AR", role: "clinic_owner", title: "Owner", phone: "+91 98450 10101", clinicId: DEMO_CLINIC },
   { id: "demo-desk", name: "Kavya Menon", initials: "KM", role: "clinic_front_desk", title: "Front desk", phone: "+91 98450 30303", clinicId: DEMO_CLINIC },
   { id: "demo-student", name: "Rhea Kapoor", initials: "RK", role: "student", title: "Student", phone: "+91 98450 40404", clinicId: null },
@@ -117,16 +118,20 @@ export function areasFor(user: DemoUser): MenuGroup[] {
   const groups: MenuGroup[] = [];
   if (user.clinicId) {
     const base = `/clinic/${user.clinicId}`;
-    groups.push({
-      title: "FMD Clinic",
-      items: [
-        { label: "Home", href: base, note: "today's briefing" },
-        { label: "Calendar", href: `${base}/calendar` },
-        { label: "Patients", href: `${base}/patients` },
-        { label: "Billing", href: `${base}/billing` },
-        { label: "Tasks · Reports · AI manager", note: "coming next" },
-      ],
-    });
+    const all: MenuItem[] = [
+      { label: "Home", href: base, note: "today's briefing" },
+      { label: "Calendar", href: `${base}/calendar` },
+      { label: "Patients", href: `${base}/patients` },
+      { label: "Billing", href: `${base}/billing` },
+      { label: "Tasks", href: `${base}/tasks` },
+      { label: "Reports", href: `${base}/reports` },
+      { label: "AI manager", href: `${base}/ai` },
+      { label: "Team", href: `${base}/team` },
+      { label: "Settings", href: `${base}/settings`, note: user.role === "dentist" ? "your profile" : undefined },
+    ];
+    // an associate dentist sees their own schedule, patients, tasks and profile (as in the clinic sidebar)
+    const dentist = new Set(["Home", "Calendar", "Patients", "Tasks", "Settings"]);
+    groups.push({ title: "FMD Clinic", items: user.role === "dentist" ? all.filter((i) => dentist.has(i.label)) : all });
   }
   const main: Record<DemoRole, string> = {
     patient: "Assistant, dentists, appointments, records",
@@ -136,7 +141,7 @@ export function areasFor(user: DemoUser): MenuGroup[] {
     student: "Feed, jobs and your membership",
     company: "Jobs and your company page",
   };
-  groups.push({ title: "FMD Main", items: [{ label: `FMD Main · ${main[user.role]}`, note: "coming soon" }] });
+  groups.push({ title: "FMD Main", items: [{ label: `FMD Main · ${main[user.role]}`, note: "coming soon" }, { label: "Jobs", href: "/jobs" }] });
   if (user.role === "student") groups.push({ title: "FMD Scholar", items: [{ label: "FMD Scholar workspace", note: "coming soon" }] });
   return groups;
 }
