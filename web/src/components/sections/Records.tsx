@@ -343,9 +343,9 @@ export default function Records() {
                 </Reveal>
               ))}
             </ul>
-            <Link href="/records" className="btn-primary mt-9 h-11 px-6 text-[13.5px]">
+            {/* <Link href="/records" className="btn-primary mt-9 h-11 px-6 text-[13.5px]">
               Open your records
-            </Link>
+            </Link> */}
           </div>
         </div>
       </Container>
