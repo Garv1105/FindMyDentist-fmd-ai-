@@ -65,14 +65,17 @@ const NAV: [slug: string, label: string, Icon: LucideIcon, count?: NavKey][] = [
 export const SECTION_TITLES = Object.fromEntries(NAV.map(([slug, label]) => [slug, label]));
 
 function SideNav({ ctx, section, counts, onPick }: { ctx: ClinicCtx; section: string; counts: Partial<Record<NavKey, number>>; onPick?: () => void }) {
-  const { clinic, user, base, branchId } = ctx;
+  const { clinic, user, base, branchId, date } = ctx;
+  // keep the chosen day and branch when moving between sections
+  const keep = new URLSearchParams({ ...(date !== todayIst() && { date }), ...(branchId !== "main" && { branch: branchId }) }).toString();
+  const to = (slug: string) => `${slug ? `${base}/${slug}` : base}${keep ? `?${keep}` : ""}`;
   const { signOut } = useDemoUser();
   const router = useRouter();
   const branch = clinic.branches.find((b) => b.id === branchId);
   return (
     <div className="flex h-full flex-col gap-1">
       <div className="flex items-center gap-2.5 px-2 pb-3">
-        <Link href={base} onClick={onPick} aria-label="FMD Clinic home">
+        <Link href={to("")} onClick={onPick} aria-label="FMD Clinic home">
           <Image src="/img/logo-fmd.webp" alt="FindMyDentist" width={337} height={180} className="h-9 w-auto" />
         </Link>
         <span className="rounded-full border border-line px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-ink-3">Clinic</span>
@@ -88,7 +91,7 @@ function SideNav({ ctx, section, counts, onPick }: { ctx: ClinicCtx; section: st
           return (
             <Link
               key={slug}
-              href={slug ? `${base}/${slug}` : base}
+              href={to(slug)}
               onClick={onPick}
               aria-current={on ? "page" : undefined}
               className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14.5px] transition-colors ${
