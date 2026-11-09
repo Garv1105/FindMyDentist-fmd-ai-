@@ -203,7 +203,7 @@ export async function pulse(clinicId: string, f: Filters) {
           return metric(clinicId, id, { ...f, from: addDays(to, -6), to }).then((m) => m.value);
         }),
       );
-      return { ...cur, ...METRICS[id], previous: prev.value, lastYear: ly.value, series };
+      return { ...cur, def: METRICS[id], previous: prev.value, lastYear: ly.value, series };
     }),
   );
   const asOf = new Date(now.getTime() + 5.5 * 3600_000).toISOString().slice(11, 16);
