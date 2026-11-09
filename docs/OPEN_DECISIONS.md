@@ -40,3 +40,14 @@ Annex L requires a decision log with owner, date and impact. The PRD (§21, Anne
 | 12 Oct 2026 | Clinic AI uses a labelled rule-based planner with fixed playbooks; approval policy is hard-coded (read/internal automatic; patient messages and publishing need approval; money, clinical records and appointment changes not available to the AI) | No model vendor chosen (OD-14); OD-06 matrix not yet approved | OD-06 approved; model vendor contracted |
 | 12 Oct 2026 | Scheduled AI tasks run on request ("run due now" / page load) rather than a background worker | No queue infrastructure in dev (OD-20) | Production hosting with a job queue |
 | 12 Oct 2026 | Clinic roles: owner, dentist, front desk, finance, assistant with a fixed permission matrix (finance never sees clinical data) | PRD §3 least privilege | Clinic feedback on custom roles |
+| 9 Nov 2026 | **Frontend first:** build every screen on typed sample data (`web/src/sample/`) before the backend; phases C1–C6, M1–M5, then Scholar | Founders, team and investors need to see and agree on the whole product first | UI agreed; backend phase starts |
+| 9 Nov 2026 | **Inventory removed** from FMD Clinic (PRD §6.6) | Owner decision | Clinics ask for stock tracking |
+| 9 Nov 2026 | **Full payment only:** no part payments, dues or outstanding balances; payments record name, phone, patient ID, amount, mode | Owner decision: FMD clinics don't offer part payments | Payment model changes |
+| 9 Nov 2026 | **Auto-billing later:** FMD Manager raises the bill after an appointment with patient details pre-filled; staff pick the mode | Owner, future scope | FMD Manager AI is ready |
+| 9 Nov 2026 | **FMD Main assistant can act with a tap to confirm** (drafts messages and bookings; patient taps Send/Confirm). Changes PRD §4.10 | Owner decision | Clinical/legal review (OD-22) |
+| 9 Nov 2026 | **Instagram-style FMD Main** (profiles, feed + stories, explore grid), FMD's own design | Client request | - |
+| 9 Nov 2026 | Dark `obsidian-royal` theme everywhere, incl. FMD Clinic; glass on laptops, solid on phones | Match the live landing page; phone performance | - |
+| 9 Nov 2026 | Demo sign-in with roles + homepage profile menu, so live-site visitors can explore every part | No real auth until the backend | Real auth (FastAPI) is wired in |
+| 9 Nov 2026 | Free stock photos/videos (Pexels, Unsplash) for the preview | Investor-ready look now; client media later | Client media supplied |
+
+All product-level changes to the PRD are summarised in [`PRD_CHANGES.md`](PRD_CHANGES.md).

@@ -1,48 +1,73 @@
 # FMD - Implementation Roadmap
 
-This roadmap sets **sequence**, not scope. Every requirement in `PRD_TRACEABILITY.md` stays in scope. Per PRD §20, any reduction must be agreed explicitly by FMD.
+**Last updated:** 9 Nov 2026 · **Repo:** `findmydentist/fmd-website` (primary; the live site deploys from `main`)
 
-## Where things stand (11 Oct 2026, end of M2)
+This roadmap sets the **order** of work. The PRD (`FMD_Master_PDR_Expanded_Revised.pdf`) stays the product definition. Every place where we deliberately differ from it is listed in [`PRD_CHANGES.md`](PRD_CHANGES.md), and decisions are logged in [`OPEN_DECISIONS.md`](OPEN_DECISIONS.md).
 
-| Milestone | Status | Evidence |
+## The approach: frontend first, in phases
+
+The whole website's UI/UX is being built **before** the real backend. This lets founders, the team and investors see and use every screen, and agree on them, before the backend is built.
+
+- **Sample data, not a backend.** Each product's screens read from typed sample modules in `web/src/sample/` (`clinic.ts`, `calendar.ts`, `patients.ts`, `billing.ts`). Their functions are async and shaped like the future API (`getClinicHome`, `bookAppointment`, `recordPayment`…). When the backend exists, **only these modules change**; the screens don't. Changes made in the demo (bookings, approvals, notes, payments) live in memory and reset on reload.
+- **Demo sign-in.** `/demo` (and, from C3, a phone-plus-code sign-in that accepts any number, plus a profile menu on the homepage) lets anyone sign in as a role: clinic owner, front desk, patient, dentist, student or company. No real authentication yet.
+- **Nothing real is sent, booked, ordered or charged.** Every action that would leave the clinic says "(demo, nothing was sent)" or similar.
+- **Mockup first, then build.** Each phase starts with mockups that the owner approves, then the build, then a PR.
+- **Look:** the landing page's dark "obsidian-royal" theme. Laptops get frosted-glass panels; phones get solid panels (blur is costly on phone GPUs). Text is sized for readability: 15px body, nothing meaningful below 12.5px. Every screen works at 390px phone width.
+- **FMD Main feels like Instagram** (layout and interaction patterns only, in FMD's own design): dentist profiles, feed with stories, an explore grid.
+
+## Phases and status
+
+| Phase | Screens | Status |
 |---|---|---|
-| M0 Audit and traceability | **Done** | `PRD_TRACEABILITY.md`, `OPEN_DECISIONS.md`, reconciliation table R1–R8 |
-| M1 Cinematic hero | **Done** (asset upgrade pending OD-H1) | HERO-01…13; `npm test`, build, lint, screenshots |
-| M2 FMD Main | **Done** (external dependencies listed below) | Slices 2.1–2.8 in `PRD_TRACEABILITY.md` §13; 51 automated tests; production build |
-| M3 Clinic OS + Clinic AI | **Done** (dependencies in OPEN_DECISIONS) | Slices 3.1–3.7 in `PRD_TRACEABILITY.md` §13; 66 automated tests; production build |
-| M4 Scholar | Planned | - |
-| M5 Admin + Accountant | Planned | - |
-| M6 Annex completeness | Planned | - |
-| M7 E2E QA and handover | Planned | - |
+| Set-up | Sample-data layer, shared components (`components/app/kit.tsx`, `Sheet.tsx`), demo sign-in | **Done**, in [PR #3](https://github.com/findmydentist/fmd-website/pull/3) |
+| **C1** | Clinic shell (sidebar, date and branch pickers, notifications, phone menu) + **Home** (AI briefing with approval cards, summary numbers, next appointments, follow-ups) | **Done**, in [PR #3](https://github.com/findmydentist/fmd-website/pull/3) |
+| **C2** | **Calendar**: agenda list by Morning/Afternoon/Evening with free-time chips, "By dentist" view, appointment details and status steps, booking with clash checks, waitlist. **Patients**: search, filters, duplicate warning, patient record with timeline, FDI chart, signed notes and amendments, treatment plans, files, bills | **Done**, in [PR #4](https://github.com/findmydentist/fmd-website/pull/4) (stacked on #3) |
+| **C3** | **Billing**: bills paid in full, today's collection by mode, record a payment (name, phone, patient ID, amount, mode), owner-only refund/void with a reason. **Inventory removed** from FMD Clinic. **Homepage profile menu**: sign in / create account, role-based navigation, switch role | Billing done; profile menu in progress |
+| C4 | Tasks (handover, checklists), Reports | Next |
+| C5 | AI manager page: chat, task cards, approval queue, history, scheduled tasks, content drafts | Planned |
+| C6 | Team, Settings (incl. AI permissions), clinic sign-up and verification | Planned |
+| M1 | FMD Main shell (slim side rail) + full-screen AI Assistant with draft-then-tap action cards | Planned |
+| M2 | Find a dentist, Instagram-style dentist profile, Messages | Planned |
+| M3 | Feed and Explore, post/reel viewer, dentist post creation | Planned |
+| M4 | Appointments and booking flow, Records | Planned |
+| M5 | FMD Edge (Concierge), Jobs, Account and membership, sign-up and onboarding, dentist registration, help | Planned |
+| Scholar | FMD Scholar | After M5, with its own design round |
+| Backend | Real data, auth, AI, messaging, payments | After the UI; see "Later" below |
 
-## Architecture (applies from M2)
+## Where the code is
 
-- **One Next.js app, several products.** Route groups: `/` (Main), `/account`, `/records`, `/appointments`, `/clinic/*` (Clinic OS), `/scholar/*`, `/admin/*`, `/accounts/*` (Accountant). Each product gets its own layout and navigation; nothing administrative is squeezed into the homepage.
-- **Server-only domain modules** in `web/src/server/<domain>/`, each with a typed service. Route handlers in `app/api/**` are thin. Authorization runs in the service layer on every call: role, org and record scope, not the UI.
-- **Data:** `node:sqlite` in development (OD-20), with migrations as ordered SQL files and portable SQL. Health data lives in separate tables from profile, marketing and analytics data.
-- **Adapters** (`server/adapters/*`): OTP delivery, storage, AI, speech, payments, maps, messaging, accounting. Each has a clearly labelled dev implementation and an `isConfigured()` flag the UI can show. A dev adapter never reports external success.
-- **Audit:** an append-only `audit_events` table written by services for privileged, sensitive, finance and AI actions.
-- **Tests:** `node --test` with type stripping. No new framework. Each slice ships its service-level allowed/denied and failure tests.
+| Path | What |
+|---|---|
+| `web/src/app/clinic/[clinicId]/` | FMD Clinic routes: Home (`page.tsx`), `calendar/`, `patients/`, `patients/[patientId]/`, `billing/` |
+| `web/src/components/clinic/` | Clinic screens: `Shell.tsx` (sidebar, pickers, `useClinic()`), `home/`, `calendar/`, `patients/`, `billing/` |
+| `web/src/components/app/` | Shared UI: `kit.tsx` (Panel, Tag, Button, Empty, IconButton), `Sheet.tsx` (dialogs drawn on `<body>`, focus-safe) |
+| `web/src/sample/` | Sample data + its tests (`*.test.ts`) |
+| `web/src/lib/demo.ts`, `useDemoUser.ts`, `app/demo/` | Demo people and sign-in |
+| `web/src/app/globals.css` | Theme tokens; app styles at the end (`.app-panel`, `.app-solid`, `.app-glow`) |
 
-## M2 - FMD Main, in vertical slices
+## Picking up the next phase
 
-Each slice ends with: migrations, a service with authorization, API, UI states (loading, empty, error, success, recovery), tests, and traceability updated with evidence.
+1. Branch from the latest `main` (or the previous phase's branch while its PR is open).
+2. Read the PRD section for the phase, plus [`PRD_CHANGES.md`](PRD_CHANGES.md).
+3. Make mockups and get them approved.
+4. Add or extend a sample module in `web/src/sample/` **with tests first** (`npm test`).
+5. Build the screens with `useClinic()`, `kit.tsx` and `Sheet.tsx`. Match the existing pages.
+6. Check: `npm test`, `npx tsc --noEmit` (run `npx next typegen` first), `npx eslint` on your files, `npx next build`, then try it on laptop and phone widths.
+7. Open a PR to `main`.
 
-| Slice | Contents | Key requirement IDs |
-|---|---|---|
-| 2.1 Platform foundation | DB and migrations, sessions, email/phone OTP via dev console adapter, account types, consents, audit log, role checks, sign-in UI | MAIN-01…06, PLT-01…03, SEC-02…04, ROL-* |
-| 2.2 FMD Edge end to end | Server enquiry with reference, consent record, coordinator queue with full state machine (incl. Cancelled), notes, contact attempts, overdue flag, reassignment, theme-aware premium section | CON-01…14 |
-| 2.3 Discovery and profiles | Providers, clinics and services in the DB (seeded demo, labelled); search and filters server-side; pagination; verified vs sponsored; claim-profile request | MAIN-21…26, PLT-04…06 |
-| 2.4 Booking | Slots, booking requests with explicit confirmation, idempotency key, conflict and duplicate handling, status history, cancel/reschedule, "needs clinic confirmation" | MAIN-27…32 |
-| 2.5 Records | Private storage adapter, validated uploads, signed expiring links, organisation, sharing grants and revocation, access log, export, deletion request | MAIN-33…37, PLT-07, PLT-09 |
-| 2.6 Assistant | Server conversation history, provider-agnostic AI adapter (dev: rule-based, reviewed copy), escalation templates, no write tools, retention controls | MAIN-07…20 |
-| 2.7 Membership | Plan catalog (§14 prices), entitlement service, membership screen, usage meter; purchase disabled until OD-04/gateway | MAIN-05, COM-*, PLT-11 |
-| 2.8 Content, jobs, support | Posts and polls, reactions, follows, saves, reports, moderation hooks, consent gate for case posts; jobs CRUD and expiry; help and ticket intake | MAIN-38…50, PLT-13…16 |
+Note: `next dev` rewrites `web/AGENTS.md` (it swaps the hyphens for dashes). Leave that change out of commits.
 
-## M3–M7
+## Later: the backend
 
-Each is broken into slices in the same way when its milestone starts. The traceability IDs are already assigned (CLN, CAI, SCH, ADM, ACC, ANX, QA).
+When the UI is agreed, the backend replaces the sample modules behind the same function signatures. Planned pieces (from the PRD and earlier work):
 
-## External dependencies
+- FastAPI service for identity, accounts, dentist profiles and clinics/staff, in `findmydentist/main-websie`.
+- Postgres for app data.
+- A provider-agnostic AI adapter.
+- Messaging (SMS/WhatsApp), object storage and payments, once the vendors are chosen (`OPEN_DECISIONS.md` OD-14).
 
-These need FMD action before "Implemented and tested" is possible: OD-14 vendor accounts (SMS/WhatsApp, LLM, speech, payments, maps, storage), hosting (OD-20), legal/clinical reviews (OD-22, SAF-01), and the accounting platform (OD-13).
+**FMD Manager billing** (future): after an appointment, the treatment is noted by FMD Manager or staff, and a bill is raised automatically with the patient's name, ID and phone pre-filled. Staff only choose the payment mode. Clinics also get a "Raise bill" action for completed appointments and treatments.
+
+## History
+
+An earlier October 2026 prototype (milestones "M2 FMD Main" and "M3 Clinic OS + Clinic AI", with a Next.js API and SQLite) was built in a separate fork and was **not merged into this repo**. `PRD_TRACEABILITY.md` sections 12–13 describe that work. The current phased plan above replaces its milestone table. Its screens were the starting point for the restyled ones here.
