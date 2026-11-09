@@ -20,10 +20,10 @@ Each part has one of two backend states:
 | 1.4 | Dentist profile | LIVE (partial) | **Done** |
 | 1.5 | Account type and onboarding | DEMO | **Done** |
 | 1.6 | Privacy and data: consents, communication preferences, export, deletion | DEMO | **Done** |
-| 2.1 | Find a dentist (search) | DEMO | Not started |
-| 2.2 | Dentist and clinic profiles, claim a profile | DEMO | Not started |
-| 2.3 | Booking flow | DEMO | Not started |
-| 2.4 | My appointments | DEMO | Not started |
+| 2.1 | Find a dentist (search) | DEMO | **Done** |
+| 2.2 | Dentist and clinic profiles, claim a profile | DEMO | **Done** |
+| 2.3 | Booking flow | DEMO | **Done** |
+| 2.4 | My appointments | DEMO | **Done** |
 | 3.1 | Digital records vault | DEMO | Not started |
 | 3.2 | Sharing and access history | DEMO | Not started |
 | 3.3 | Treatment journey (Annex B) | DEMO | Not started |
@@ -292,7 +292,24 @@ Built in `src/components/auth/AuthForms.tsx`, against `/auth/*`: OTP sign-up, OT
   - Sponsored results are labelled and kept apart from organic ranking.
   - Matching is informational: "Suggestions are based on what you told us; they're not a diagnosis."
   - Filters live in the URL, so results are shareable and the back button works.
-- **Proposed API:** `GET /providers?q&city&lat&lng&specialty&service&language&available=today|week&fee_max&sort&page` returns `{items: ProviderCard[], total, page, sponsored: ProviderCard[]}`.
+- **Proposed API:** `GET /providers?q&loc&lat&lng&within&specialty&service&language&available=today|week&fee_max&gender&sort=relevance|distance|soonest&page` returns `{items, sponsored, total, page, pages, suggestions}`. The full contract is in `sample/providers.ts`.
+- **Built:**
+  - `components/main/dentists/Search.tsx` at `/dentists`; "Find a dentist" and "Find" in the app shell are now live
+  - Demo directory and search in `sample/providers.ts`: 19 fictitious dentists in 14 clinics across 6 cities, every one labelled Demo
+  - Plain-language concerns ("bleeding gums", "crooked teeth") map to the right specialists
+  - Ranking: verified dentists first, then the strength of the match. A sponsored dentist is shown at most once per page, apart from the ordinary results and never repeated in them; it must match the filters too.
+  - Availability shows only for clinics with a connected schedule; the rest say "Clinic will confirm a time"
+  - "Use my location" asks only when tapped; the position in the URL is rounded to about 100 m
+  - The rules are covered by 8 tests
+- **Tested in a browser:**
+  - the default list and "Show more"
+  - a plain-language search
+  - city plus specialty, and removing a filter chip
+  - near me with a distance filter
+  - available today
+  - the no-results help
+  - the phone filters sheet
+
 
 #### 2.2 Dentist and clinic profiles, claim a profile: DEMO
 - **PDR:** §4.4, §4.8.

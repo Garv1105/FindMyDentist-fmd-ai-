@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, UserRound } from "lucide-react";
+import { CalendarDays, LogOut, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
@@ -63,6 +63,9 @@ export function AccountMenu({ loginClassName = "" }: { loginClassName?: string }
             <p className="text-[13px] text-ink-3">{fmtPhone(me.phone)}</p>
           </div>
           <div className="pt-1.5">
+            <Link href="/appointments" onClick={close} className={itemCls}>
+              <CalendarDays className="size-4" strokeWidth={1.5} /> My appointments
+            </Link>
             <Link href="/account" onClick={close} className={itemCls}>
               <UserRound className="size-4" strokeWidth={1.5} /> Account
             </Link>

@@ -16,15 +16,15 @@ type Item = { href: string; label: string; Icon: LucideIcon; ready: boolean };
 
 const TOP: Item[] = [
   { href: "/#assistant", label: "Ask FMD AI", Icon: Sparkles, ready: true }, // → /assistant with part 4.1
-  { href: "/dentists", label: "Find a dentist", Icon: Search, ready: false },
+  { href: "/dentists", label: "Find a dentist", Icon: Search, ready: true },
   { href: "/explore", label: "Explore", Icon: Compass, ready: false },
   { href: "/records", label: "Records", Icon: FolderLock, ready: false },
-  { href: "/appointments", label: "Appointments", Icon: CalendarDays, ready: false },
+  { href: "/appointments", label: "Appointments", Icon: CalendarDays, ready: true },
 ];
 
 const TABS: Item[] = [
   { href: "/", label: "Home", Icon: House, ready: true },
-  { href: "/dentists", label: "Find", Icon: Search, ready: false },
+  { href: "/dentists", label: "Find", Icon: Search, ready: true },
   { href: "/explore", label: "Explore", Icon: Compass, ready: false },
   { href: "/records", label: "Records", Icon: FolderLock, ready: false },
   { href: "/account", label: "Me", Icon: UserRound, ready: true },
