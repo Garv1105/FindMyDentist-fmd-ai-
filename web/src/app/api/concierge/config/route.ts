@@ -1,5 +1,6 @@
-import { conciergeConfig, CONTACT_METHODS, NEEDS, TIMINGS } from "@/server/concierge";
+import { NextResponse } from "next/server";
+import { CONCIERGE } from "@/lib/concierge";
 
-export async function GET() {
-  return Response.json({ ...conciergeConfig(), needs: NEEDS, timings: TIMINGS, contactMethods: CONTACT_METHODS });
+export function GET() {
+  return NextResponse.json(CONCIERGE);
 }
