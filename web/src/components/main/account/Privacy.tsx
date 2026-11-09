@@ -113,6 +113,13 @@ function Consents({ me, consents, onChange }: { me: Me; consents: Consent[]; onC
           );
         })}
       </ul>
+      <p className="text-[13px] text-ink-3">
+        What each one means is set out in the{" "}
+        <Link href="/privacy" className="font-medium text-ink underline underline-offset-4">
+          Privacy Notice
+        </Link>
+        .
+      </p>
     </Section>
   );
 }

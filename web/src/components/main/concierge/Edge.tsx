@@ -29,6 +29,7 @@ import {
   type Method,
   type Status,
 } from "@/sample/concierge";
+import { track } from "@/lib/analytics";
 
 const TONE: Record<Status, Tone> = {
   new: "accent",
@@ -127,7 +128,9 @@ function RequestForm({ userId, phone, email, onDone }: { userId: string; phone: 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      onDone(await createEnquiry(userId, f));
+      const e = await createEnquiry(userId, f);
+      track("edge_request_sent", { contact: f.method });
+      onDone(e);
     } catch (x) {
       setErr((x as Error).message);
     }
@@ -168,7 +171,7 @@ function RequestForm({ userId, phone, email, onDone }: { userId: string; phone: 
           <legend className="mb-1 text-[13.5px] text-ink-3">How should we contact you?</legend>
           <div className="flex flex-wrap gap-2">
             {(Object.keys(METHODS) as Method[]).map((m) => (
-              <label key={m} className={`cursor-pointer rounded-full border px-4 py-2 text-[14px] has-[input:focus-visible]:border-[var(--accent)] ${f.method === m ? "border-[var(--accent)] bg-[var(--accent-soft)] text-ink" : "border-line text-ink-2"}`}>
+              <label key={m} className={`cursor-pointer rounded-full border px-4 py-2 text-[14px] has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-[var(--accent)] ${f.method === m ? "border-[var(--accent)] bg-[var(--accent-soft)] text-ink" : "border-line text-ink-2"}`}>
                 <input type="radio" name="method" className="sr-only" checked={f.method === m} onChange={() => pickMethod(m)} />
                 {METHODS[m]}
               </label>

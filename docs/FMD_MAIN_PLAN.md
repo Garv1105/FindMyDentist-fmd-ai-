@@ -43,7 +43,7 @@ Each part has one of two backend states:
 | 10.1 | Feedback and reviews (Annex G) | DEMO | **Done** |
 | 10.2 | Personalisation controls (Annex D) | DEMO | **Done** |
 | 10.3 | Referrals (Annex I), switched off by default | DEMO | **Done** |
-| 11 | Cross-cutting: legal pages, accessibility, localisation, analytics events, journey QA | – | Not started |
+| 11 | Cross-cutting: legal pages, accessibility, localisation, analytics events, journey QA | – | **Done** (translations and legal text pending) |
 
 We work top to bottom, one part at a time. A part is ticked only once it meets §2 "Done for every part".
 
@@ -719,6 +719,13 @@ Built in `src/components/auth/AuthForms.tsx`, against `/auth/*`: OTP sign-up, OT
 - **Localisation (§17, K):** move all text into message files; English first, then Hindi, Telugu, Kannada and Tamil. Translations are reviewed, never published straight from machine translation.
 - **Analytics events (§16):** a short event dictionary covering sign-up conversion by type, search to profile to booking, AI usage and feedback, content engagement, and Concierge volume. Events never carry health data.
 - **Going live checklist:** `SHOW_ACCOUNT` on, `FMD_API_URL` set, our domain in the backend's `ALLOWED_ORIGINS`, each DEMO module switched to `fmd()` as its endpoints ship.
+- **Built (all of Phase 11):**
+  - **Legal:** `/terms` and `/privacy` (`components/main/legal/Legal.tsx`) are drafts that list what the real text must cover, each marked "Draft for legal review" with the notice version. They're linked from the sign-up agreement (opens in a new tab so the form isn't lost), from Privacy and data, and from a new app footer. The binding text waits on D6.
+  - **Accessibility:** a scripted audit of 27 pages at desktop, 640px (the same as 200% zoom) and 390px phone widths found no unnamed controls, no images without alt text, one `h1` per page, no sideways scrolling, and `lang` set. Fixed: form fields and radio cards showed focus only as a faint border change; they now show the site focus ring. A keyboard-only run (Tab, Enter, Space and the arrow keys, no clicks) completes journey 1 (search to confirmed booking) and journey 2 (FMD Edge request, including recovering from a form error). Native time inputs show focus on the focused hour or minute segment. Still to do: a manual screen-reader pass (NVDA or VoiceOver), and a contrast check of the final theme by the designer.
+  - **Localisation:** `lib/i18n.ts` has message keys with `useT()` and `setLang()`. The app shell (top nav, tabs, account menu) uses it. English is the source. Hindi is an unreviewed developer draft, offered only in development (footer language switch) and never on the live site; it goes live only after a native speaker reviews it. Other screens move onto keys one at a time; Telugu, Kannada and Tamil wait on D7.
+  - **Analytics:** `lib/analytics.ts` holds the event dictionary, ten events, each with its allowed properties. `track()` drops any property that isn't allowed or has the wrong kind of value, so search words, symptoms, notes and file names can't be sent (with a test). The events are wired into sign-up, onboarding, search, profile view, booking, FMD AI message and rating, post like, FMD Edge request, and membership paid. Delivery is a stub (kept in memory, logged in development) until an analytics vendor is chosen.
+  - **Going live:** set `SHOW_ACCOUNT` to true in `toggle.ts`, set `FMD_API_URL`, add the site's domain to the backend's `ALLOWED_ORIGINS`, keep `REFERRALS` off, swap each `src/sample/*` module's functions for `fmd()` calls as their endpoints ship (each file's header has the proposed API), remove the "Demo" tags as each part goes live, and replace the legal drafts.
+  - **Journey QA (§5):** journeys 1, 2, 3, 5, 6 and 7 were each checked end to end in the browser when their phase was built, and journeys 1 and 2 again by keyboard only. Journey 4 is the exception: the certificate and its verify page work, but the QR code needs the `uqr` package, which isn't installed yet.
 
 ---
 

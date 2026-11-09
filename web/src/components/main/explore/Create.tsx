@@ -116,7 +116,7 @@ export function NewPostPage() {
           {KINDS.map(([k, label]) => (
             <label
               key={k}
-              className={`cursor-pointer rounded-full border px-4 py-2 text-[14px] has-[input:focus-visible]:border-[var(--accent)] ${d.kind === k ? "border-[var(--accent)] bg-[var(--accent-soft)] text-ink" : "border-line text-ink-2"}`}
+              className={`cursor-pointer rounded-full border px-4 py-2 text-[14px] has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-[var(--accent)] ${d.kind === k ? "border-[var(--accent)] bg-[var(--accent-soft)] text-ink" : "border-line text-ink-2"}`}
             >
               <input type="radio" name="kind" className="sr-only" checked={d.kind === k} onChange={() => edit({ kind: k })} />
               {label}
@@ -127,7 +127,7 @@ export function NewPostPage() {
 
       {(d.kind === "image" || d.kind === "video") && (
         <Section title="2. The image or video">
-          <label className="w-fit cursor-pointer rounded-full border border-line px-4 py-2 text-[13.5px] font-semibold text-ink hover:border-line-strong has-[input:focus-visible]:border-[var(--accent)]">
+          <label className="w-fit cursor-pointer rounded-full border border-line px-4 py-2 text-[13.5px] font-semibold text-ink hover:border-line-strong has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-[var(--accent)]">
             {d.media ? `Replace ${d.media.name}` : `Upload ${d.kind === "image" ? "an image" : "a video"}`}
             <input
               type="file"

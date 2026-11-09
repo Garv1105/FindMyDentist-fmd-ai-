@@ -29,6 +29,7 @@ import {
   type Tab,
 } from "@/sample/content";
 import { toggleSaved } from "@/sample/saved";
+import { track } from "@/lib/analytics";
 
 const TABS: [Tab, string][] = [
   ["for_you", "For you"],
@@ -232,7 +233,7 @@ export function PostCard({ p, userId, onChange, full = false }: { p: FeedItem; u
       )}
 
       <footer className="flex flex-wrap items-center gap-1 border-t border-line pt-3 text-[13.5px] text-ink-2">
-        <button type="button" aria-pressed={p.liked} onClick={() => act(() => toggleLike(userId, p.id))} className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 hover:bg-[var(--surface-glass)]">
+        <button type="button" aria-pressed={p.liked} onClick={() => (p.liked || track("post_liked", { kind: p.kind }), act(() => toggleLike(userId, p.id)))} className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 hover:bg-[var(--surface-glass)]">
           <Heart className={`size-4 ${p.liked ? "fill-current text-[var(--tone-bad)]" : ""}`} strokeWidth={1.75} /> {p.likes}
           <span className="sr-only">{p.liked ? "Unlike" : "Like"}</span>
         </button>

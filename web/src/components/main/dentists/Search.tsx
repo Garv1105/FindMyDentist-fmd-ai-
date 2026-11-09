@@ -13,6 +13,7 @@ import { feeRange, when } from "@/lib/format";
 import { noteSearch } from "@/sample/content";
 import { useMe } from "@/lib/me";
 import { PLACES, searchProviders, type Filters, type ProviderCard, type SearchResult } from "@/sample/providers";
+import { track } from "@/lib/analytics";
 
 
 /* ---------------- URL ⇄ filters (every filter lives in the URL, so results can be shared and Back works) ---------------- */
@@ -76,8 +77,15 @@ export function DentistSearch() {
 
   useEffect(() => {
     let live = true;
-    searchProviders({ ...parse(new URLSearchParams(key)), page: 1 }).then(
-      (r) => live && (setRes({ key, r, items: r.items }), setErr(null)),
+    const q = new URLSearchParams(key);
+    searchProviders({ ...parse(q), page: 1 }).then(
+      (r) => {
+        if (!live) return;
+        setRes({ key, r, items: r.items });
+        setErr(null);
+        // counts only: never the search words or the concern
+        track("dentist_search", { filters: [...q.keys()].filter((k) => k !== "lat" && k !== "lng").length, near_me: q.has("lat"), results: r.total });
+      },
       () => live && setErr("Search isn't working right now. Please try again."),
     );
     return () => {

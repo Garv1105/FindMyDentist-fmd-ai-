@@ -358,7 +358,7 @@ function UploadSheet({ me, used, journeys, onClose, onDone }: { me: Me; used: nu
     <Sheet title="Upload records" onClose={onClose} wide>
       <div className="grid gap-4">
         <p className="text-[14px] text-ink-2">PDF, JPG, PNG or WebP, up to 20 MB each. Files stay private to you.</p>
-        <label className="grid cursor-pointer place-items-center gap-1 rounded-2xl border border-dashed border-line-strong px-4 py-6 text-center hover:border-[var(--accent)] has-[input:focus-visible]:border-[var(--accent)]">
+        <label className="grid cursor-pointer place-items-center gap-1 rounded-2xl border border-dashed border-line-strong px-4 py-6 text-center hover:border-[var(--accent)] has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-[var(--accent)]">
           <Upload className="size-6 text-ink-3" strokeWidth={1.5} />
           <span className="text-[14.5px] font-medium text-ink">Choose files</span>
           <span className="text-[13px] text-ink-3">or take a photo on your phone</span>

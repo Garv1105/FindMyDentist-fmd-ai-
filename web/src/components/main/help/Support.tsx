@@ -271,7 +271,7 @@ export function ContactPage() {
             <textarea className={`${fieldCls} h-32 resize-y py-2.5`} value={f.body} onChange={(e) => setF({ ...f, body: e.target.value })} maxLength={2000} />
           </Field>
           <div className="grid gap-1.5">
-            <label className="w-fit cursor-pointer rounded-full border border-line px-4 py-2 text-[13.5px] font-semibold text-ink hover:border-line-strong has-[input:focus-visible]:border-[var(--accent)]">
+            <label className="w-fit cursor-pointer rounded-full border border-line px-4 py-2 text-[13.5px] font-semibold text-ink hover:border-line-strong has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-[var(--accent)]">
               {file ? `Screenshot: ${file.name}` : "Add a screenshot (optional)"}
               <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
             </label>

@@ -11,6 +11,7 @@ import { Notice } from "@/components/Page";
 import { safeNext } from "@/lib/demo";
 import { auth, passwordRules } from "@/lib/fmd";
 import { authChanged } from "@/lib/me";
+import { track } from "@/lib/analytics";
 
 /* ---------------- shared parts ---------------- */
 
@@ -379,7 +380,15 @@ export function RegisterForm() {
                 I am 18 or older.
               </Check2>
               <Check2 checked={f.terms} onChange={(v) => set("terms", v)}>
-                I agree to FMD&apos;s Terms of Use and Privacy Notice.
+                I agree to FMD&apos;s{" "}
+                <Link href="/terms" target="_blank" className="font-medium text-ink underline underline-offset-4">
+                  Terms of Use
+                </Link>{" "}
+                and{" "}
+                <Link href="/privacy" target="_blank" className="font-medium text-ink underline underline-offset-4">
+                  Privacy Notice
+                </Link>
+                .
               </Check2>
               <Check2 checked={f.offers} onChange={(v) => set("offers", v)}>
                 Send me offers and dental tips (optional).
@@ -399,6 +408,7 @@ export function RegisterForm() {
             onCode={(otp) =>
               run(async () => {
                 await auth.register({ full_name: f.name.trim(), phone: f.phone.trim(), password: f.password, otp, marketing_opt_in: f.offers });
+                track("sign_up_completed");
                 finish("/onboarding");
               })
             }

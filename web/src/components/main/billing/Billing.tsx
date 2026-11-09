@@ -27,6 +27,7 @@ import {
   type PlanId,
 } from "@/sample/billing";
 import { getAccountType } from "@/sample/onboarding";
+import { track } from "@/lib/analytics";
 
 const day = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 const planName = (id: PlanId) => PLANS.find((p) => p.id === id)!.name;
@@ -119,6 +120,9 @@ export function CheckoutPage() {
     getPayment(me.id, payId).then((x) => x && setP(x));
     return () => clearInterval(t);
   }, [me, payId]);
+  useEffect(() => {
+    if (p?.status === "paid") track("membership_paid", { plan: p.plan });
+  }, [p?.status, p?.plan]);
   if (!me) return <div className="app-panel h-48 animate-pulse" aria-busy />;
   if (!plan)
     return (

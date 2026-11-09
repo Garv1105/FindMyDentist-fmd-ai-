@@ -16,6 +16,7 @@ import { getAvailability, getClinicPage, getClaims, getProvider, submitClaim, ty
 import { getSaved, toggleSaved } from "@/sample/saved";
 import { ReviewsSection } from "../trust/Trust";
 import { DentistCard } from "./Search";
+import { track } from "@/lib/analytics";
 
 function Back() {
   return (
@@ -59,6 +60,7 @@ export function ProviderPage() {
   const [claiming, setClaiming] = useState(false);
   useEffect(() => {
     getProvider(id).then(setP);
+    track("profile_viewed", { dentist_id: id });
     getAvailability(id).then(setAvail);
   }, [id]);
   const userId = me?.id;

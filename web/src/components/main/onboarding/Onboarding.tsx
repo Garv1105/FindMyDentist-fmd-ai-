@@ -28,6 +28,7 @@ import {
   type CompanyProfile,
   type StudentProfile,
 } from "@/sample/onboarding";
+import { track } from "@/lib/analytics";
 
 const ICONS: Record<AccountType, LucideIcon> = { patient: UserRound, dentist: Stethoscope, student: GraduationCap, company: Building2 };
 const isType = (v: string | null): v is AccountType => !!v && v in ACCOUNT_TYPES;
@@ -58,12 +59,14 @@ export function Onboarding() {
     if (!type) return;
     if (type === "dentist") {
       await setAccountType(me.id, "dentist");
+      track("onboarding_completed", { account_type: "dentist" });
       router.push("/account/dentist"); // the registration form there is the dentist's next step
     } else setStep("details");
   };
   /** after the details (or skipping them): patients go straight on, paid types see what their membership means */
   const finish = async () => {
     await setAccountType(me.id, type!);
+    track("onboarding_completed", { account_type: type });
     if (type === "patient") router.push(next);
     else setStep("done");
   };
@@ -81,7 +84,7 @@ export function Onboarding() {
                 return (
                   <label
                     key={t}
-                    className={`flex cursor-pointer flex-col gap-1.5 rounded-2xl border p-4 transition-colors has-[input:focus-visible]:border-[var(--accent)] ${
+                    className={`flex cursor-pointer flex-col gap-1.5 rounded-2xl border p-4 transition-colors has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-[var(--accent)] ${
                       on ? "border-[color-mix(in_srgb,var(--accent)_55%,transparent)] bg-[var(--accent-soft)]" : "border-line hover:border-line-strong"
                     }`}
                   >

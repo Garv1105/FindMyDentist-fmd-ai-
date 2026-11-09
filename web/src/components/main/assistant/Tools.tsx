@@ -204,7 +204,7 @@ function InsuranceTool({ me }: { me: Me }) {
     <Frame title="Insurance explainer" intro="Understand the words in a dental policy, and get your claim papers together." label="We can't confirm cover or approval. Your insurer decides.">
       <Panel className="grid gap-3 p-5">
         <h2 className="text-[16px] font-medium text-ink">Your policy or claim document</h2>
-        <label className="w-fit cursor-pointer rounded-full border border-line px-4 py-2 text-[13.5px] font-semibold text-ink hover:border-line-strong has-[input:focus-visible]:border-[var(--accent)]">
+        <label className="w-fit cursor-pointer rounded-full border border-line px-4 py-2 text-[13.5px] font-semibold text-ink hover:border-line-strong has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-[var(--accent)]">
           {file ? "Choose another file" : "Choose a file"}
           <input type="file" accept="application/pdf,image/jpeg,image/png" className="sr-only" onChange={(e) => setFile(e.target.files?.[0]?.name ?? null)} />
         </label>

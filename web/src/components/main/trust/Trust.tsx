@@ -24,7 +24,7 @@ function Rate({ aspect, value, onChange }: { aspect: Aspect; value: number; onCh
       <legend className="text-[14px] text-ink">{ASPECTS[aspect]}</legend>
       <div className="flex flex-wrap gap-1.5">
         {[1, 2, 3, 4, 5].map((n) => (
-          <label key={n} className={`grid size-10 cursor-pointer place-items-center rounded-full border text-[14px] has-[input:focus-visible]:border-[var(--accent)] ${value === n ? "border-[var(--accent)] bg-[var(--accent-soft)] text-ink" : "border-line text-ink-2"}`}>
+          <label key={n} className={`grid size-10 cursor-pointer place-items-center rounded-full border text-[14px] has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-[var(--accent)] ${value === n ? "border-[var(--accent)] bg-[var(--accent-soft)] text-ink" : "border-line text-ink-2"}`}>
             <input type="radio" name={aspect} className="sr-only" checked={value === n} onChange={() => onChange(n)} aria-label={`${n} out of 5`} />
             {n}
           </label>
@@ -103,7 +103,7 @@ export function FeedbackCard({ me, bookingId, onDone }: { me: Me; bookingId?: st
                 ["public", "Everyone, as a public review", "On the dentist's profile with your first name, marked as a verified visit."],
               ] as const
             ).map(([v, label, text]) => (
-              <label key={v} className={`flex cursor-pointer items-start gap-2.5 rounded-2xl border p-3 has-[input:focus-visible]:border-[var(--accent)] ${visibility === v ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-line"}`}>
+              <label key={v} className={`flex cursor-pointer items-start gap-2.5 rounded-2xl border p-3 has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-[var(--accent)] ${visibility === v ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-line"}`}>
                 <input type="radio" name="visibility" checked={visibility === v} onChange={() => setVisibility(v)} className="mt-1 size-4 accent-[var(--accent)]" />
                 <span>
                   <span className="block text-[14.5px] text-ink">{label}</span>

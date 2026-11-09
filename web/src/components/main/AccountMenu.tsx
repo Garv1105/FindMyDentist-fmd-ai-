@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 import { useDismiss } from "@/components/clinic/dismiss";
 import { fmtPhone, initials } from "@/lib/fmd";
+import { useT } from "@/lib/i18n";
 import { logout, useMe } from "@/lib/me";
 
 const itemCls = "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[14px] text-ink-2 hover:bg-[var(--surface-glass)] hover:text-ink";
@@ -13,6 +14,7 @@ const itemCls = "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left
 /** "Log in" when signed out, else an avatar that opens the account menu. Used by the homepage navbar and the app shell. */
 export function AccountMenu({ loginClassName = "" }: { loginClassName?: string }) {
   const me = useMe();
+  const { t } = useT();
   const path = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -29,7 +31,7 @@ export function AccountMenu({ loginClassName = "" }: { loginClassName?: string }
         href={path === "/" ? "/login" : `/login?next=${encodeURIComponent(path)}`}
         className={`h-10 items-center rounded-full border border-line bg-[var(--surface-glass)] px-4 text-[13.5px] font-medium text-ink hover:border-line-strong ${loginClassName || "inline-flex"}`}
       >
-        Log in
+        {t("menu.login")}
       </Link>
     );
 
@@ -64,22 +66,22 @@ export function AccountMenu({ loginClassName = "" }: { loginClassName?: string }
           </div>
           <div className="pt-1.5">
             <Link href="/appointments" onClick={close} className={itemCls}>
-              <CalendarDays className="size-4" strokeWidth={1.5} /> My appointments
+              <CalendarDays className="size-4" strokeWidth={1.5} /> {t("menu.appointments")}
             </Link>
             <Link href="/concierge/enquiries" onClick={close} className={itemCls}>
-              <Sparkles className="size-4" strokeWidth={1.5} /> FMD Edge requests
+              <Sparkles className="size-4" strokeWidth={1.5} /> {t("menu.edge")}
             </Link>
             <Link href="/saved" onClick={close} className={itemCls}>
-              <Bookmark className="size-4" strokeWidth={1.5} /> Saved
+              <Bookmark className="size-4" strokeWidth={1.5} /> {t("menu.saved")}
             </Link>
             <Link href="/account" onClick={close} className={itemCls}>
-              <UserRound className="size-4" strokeWidth={1.5} /> Account
+              <UserRound className="size-4" strokeWidth={1.5} /> {t("menu.account")}
             </Link>
             <Link href="/help" onClick={close} className={itemCls}>
-              <CircleHelp className="size-4" strokeWidth={1.5} /> Help
+              <CircleHelp className="size-4" strokeWidth={1.5} /> {t("menu.help")}
             </Link>
             <button type="button" onClick={signOut} className={itemCls}>
-              <LogOut className="size-4" strokeWidth={1.5} /> Log out
+              <LogOut className="size-4" strokeWidth={1.5} /> {t("menu.logout")}
             </button>
           </div>
           {err && (

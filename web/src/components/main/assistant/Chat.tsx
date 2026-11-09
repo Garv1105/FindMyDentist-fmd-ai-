@@ -22,6 +22,7 @@ import {
   type Message,
 } from "@/sample/assistant";
 import { getConsents } from "@/sample/privacy";
+import { track } from "@/lib/analytics";
 
 const SUGGESTIONS = ["My tooth hurts when I drink something cold", "Braces or clear aligners: what's the difference?", "How do I prepare for my first dental visit?", "How much might a root canal cost?"];
 
@@ -81,6 +82,7 @@ export function AssistantPage() {
     try {
       const atts: Attachment[] = files.map((f) => ({ name: f.name, type: f.type, size: f.size }));
       const r = await send(userId, conv, q, lang, atts);
+      track("ai_message_sent", { language: lang, has_attachment: atts.length > 0 });
       setConv(r.conversation);
       setText("");
       setFiles([]);
@@ -122,7 +124,11 @@ export function AssistantPage() {
     if (conv?.id === id) setConv(null);
     loadList();
   };
-  const feedback = async (m: Message, helpful: boolean) => conv && setConv(await rate(userId, conv, m.id, helpful));
+  const feedback = async (m: Message, helpful: boolean) => {
+    if (!conv) return;
+    track("ai_feedback", { helpful });
+    setConv(await rate(userId, conv, m.id, helpful));
+  };
 
   const side = (
     <div className="grid content-start gap-4">
@@ -259,7 +265,7 @@ export function AssistantPage() {
             </ul>
           )}
           <div className="flex items-end gap-2">
-            <label className="grid size-10 shrink-0 cursor-pointer place-items-center rounded-full border border-line text-ink-2 hover:text-ink has-[input:focus-visible]:border-[var(--accent)]">
+            <label className="grid size-10 shrink-0 cursor-pointer place-items-center rounded-full border border-line text-ink-2 hover:text-ink has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-[var(--accent)]">
               <Paperclip className="size-4" strokeWidth={1.75} />
               <span className="sr-only">Attach a photo or document</span>
               <input type="file" multiple accept="application/pdf,image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => (attach(e.target.files), (e.target.value = ""))} />
@@ -277,7 +283,7 @@ export function AssistantPage() {
               maxLength={2000}
               placeholder="Describe what you're noticing…"
               aria-label="Your question"
-              className="max-h-40 min-h-10 flex-1 resize-none rounded-2xl border border-line-strong bg-[var(--surface-glass)] px-3.5 py-2.5 text-[15px] text-ink outline-none placeholder:text-ink-3 focus:border-[var(--accent)]"
+              className="max-h-40 min-h-10 flex-1 resize-none rounded-2xl border border-line-strong bg-[var(--surface-glass)] px-3.5 py-2.5 text-[15px] text-ink placeholder:text-ink-3 focus:border-[var(--accent)]"
             />
             <IconButton label={listening ? "Stop listening" : "Speak your question"} aria-pressed={listening} className={listening ? "!border-[var(--tone-bad)] !text-[var(--tone-bad)]" : ""} onClick={voice}>
               {listening ? <MicOff className="size-4" strokeWidth={1.75} /> : <Mic className="size-4" strokeWidth={1.75} />}

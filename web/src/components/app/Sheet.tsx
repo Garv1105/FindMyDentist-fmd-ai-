@@ -73,4 +73,4 @@ export function Field({ label, children, hint }: { label: string; children: Reac
 }
 
 export const fieldCls =
-  "h-11 w-full rounded-2xl border border-line-strong bg-[var(--surface-glass)] px-3.5 text-[15px] text-ink outline-none transition-colors placeholder:text-ink-3 focus:border-[var(--accent)] [color-scheme:dark]";
+  "h-11 w-full rounded-2xl border border-line-strong bg-[var(--surface-glass)] px-3.5 text-[15px] text-ink transition-colors placeholder:text-ink-3 focus:border-[var(--accent)] [color-scheme:dark]";

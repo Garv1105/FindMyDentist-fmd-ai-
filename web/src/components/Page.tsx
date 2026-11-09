@@ -27,4 +27,4 @@ export function Notice({ kind, children }: { kind: "error" | "info" | "success";
 }
 
 export const inputCls =
-  "h-12 w-full rounded-2xl border border-line bg-[var(--surface-glass)] px-4 text-[15px] text-ink outline-none transition-colors placeholder:text-ink-4 focus:border-line-strong";
+  "h-12 w-full rounded-2xl border border-line bg-[var(--surface-glass)] px-4 text-[15px] text-ink transition-colors placeholder:text-ink-4 focus:border-line-strong";

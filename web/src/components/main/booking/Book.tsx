@@ -12,6 +12,7 @@ import { dayLabel, feeRange, istDate, longDay, noonOf, timeLabel, when } from "@
 import { useMe } from "@/lib/me";
 import { bookedTimes, BookingError, createBooking, ics, TYPES, type Booking, type TypeKey } from "@/sample/bookings";
 import { CANCEL_TERMS, getAvailability, getProvider, PARTS, type Availability, type Part, type ProviderProfile, type Window } from "@/sample/providers";
+import { track } from "@/lib/analytics";
 
 export const windowLabel = (w: Window) => `${dayLabel(noonOf(w.date))} · ${PARTS[w.part].label}`;
 
@@ -181,6 +182,7 @@ export function BookPage() {
       } catch {
         // nothing to clear
       }
+      track("booking_confirmed", { mode: f.start ? "live" : "request", for_someone_else: f.other });
       setDone(b);
       setStep("done");
       scrollTo({ top: 0 });
@@ -310,7 +312,7 @@ export function BookPage() {
           {(Object.keys(TYPES) as TypeKey[]).map((t) => (
             <label
               key={t}
-              className={`flex cursor-pointer flex-col rounded-2xl border p-3.5 has-[input:focus-visible]:border-[var(--accent)] ${
+              className={`flex cursor-pointer flex-col rounded-2xl border p-3.5 has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-[var(--accent)] ${
                 f.type === t ? "border-[color-mix(in_srgb,var(--accent)_55%,transparent)] bg-[var(--accent-soft)]" : "border-line hover:border-line-strong"
               }`}
             >
@@ -343,7 +345,7 @@ export function BookPage() {
       <Section n={3} title="Who is it for?">
         <div role="radiogroup" aria-label="Who is it for?" className="flex flex-wrap gap-2">
           {[false, true].map((other) => (
-            <label key={String(other)} className={`${chip(f.other === other)} cursor-pointer has-[input:focus-visible]:border-[var(--accent)]`}>
+            <label key={String(other)} className={`${chip(f.other === other)} cursor-pointer has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-[var(--accent)]`}>
               <input type="radio" name="for" className="sr-only" checked={f.other === other} onChange={() => set({ other })} />
               {other ? "Someone else" : "Me"}
             </label>
