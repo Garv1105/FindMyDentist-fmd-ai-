@@ -116,9 +116,9 @@ function Tile({
       style={
         still
           ? undefined
-          : phone
-            ? { x, y, rotateX, rotateY, rotate, scale, opacity }
-            : { x, y, rotateX, rotateY, rotate, scale, opacity, filter }
+          : // "none", not left out: the first render (before the phone is known) has already set a blur, and a
+            // style key that disappears is simply no longer updated, so it would stay blurred
+            { x, y, rotateX, rotateY, rotate, scale, opacity, filter: phone ? "none" : filter }
       }
     >
       <div
@@ -431,7 +431,7 @@ function Word({
     <span className="inline-block overflow-hidden pb-[0.12em] align-bottom">
       <motion.span
         className="inline-block origin-bottom-left"
-        style={still ? undefined : phone ? { y, rotate } : { y, rotate, filter }}
+        style={still ? undefined : { y, rotate, filter: phone ? "none" : filter }}
       >
         {children}
       </motion.span>
