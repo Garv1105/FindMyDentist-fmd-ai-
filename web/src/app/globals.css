@@ -1286,6 +1286,50 @@ html.theme-anim *::after {
 }
 
 
+/* the phone hero's frames (HeroTurn) bob gently, as the live model does */
+@keyframes hero-turn-float {
+  0%, 100% { translate: 0 0.87%; }
+  50% { translate: 0 -0.87%; }
+}
+.hero-turn-float { animation: hero-turn-float 5.24s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .hero-turn-float { animation: none; }
+}
+
+/* phones: no frosted glass. A backdrop blur re-blurs whatever moves behind it on every scroll frame, which is where
+   mid-range phones drop frames. The panes get the same opaque backgrounds as browsers without backdrop-filter (above),
+   so text reads just as well; the nearly clear cards over plain gradients look the same without it. */
+@media (hover: none) and (pointer: coarse) {
+  *,
+  *::before,
+  *::after {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  .fmd-glass {
+    background: linear-gradient(180deg, rgba(20, 38, 62, 0.94), rgba(10, 18, 30, 0.96));
+  }
+  .fmd-glass-pane {
+    background: linear-gradient(180deg, rgb(24 40 64 / 0.96), rgb(13 22 36 / 0.97));
+  }
+  .glass {
+    background-color: color-mix(in srgb, var(--surface) 92%, transparent);
+  }
+  .chat-pane {
+    background:
+      linear-gradient(160deg, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%),
+      color-mix(in srgb, var(--surface) 90%, transparent);
+  }
+  /* the browser skips layout and paint for these sections while they're far off screen (most of a 22-screen page),
+     so loading and scrolling only pay for what's near the viewport. Only sections with nothing pinned or measured
+     against the scroll; `auto` remembers each one's real height once it has been seen. Phones only: on desktop the
+     mascots draw a first frame while off screen, which a skipped section would never paint. */
+  :is(#assistant, #treatments, #explore, #safety, #records, #trust, #ecosystem) {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 1000px;
+  }
+}
+
 /* off-screen sections (PauseOffscreen in components/ui.tsx): their endless CSS animations hold still */
 [data-offscreen],
 [data-offscreen] *,

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { isPhone, usePhone } from "@/lib/phone";
 import { rigPath } from "@/lib/device";
+import { stillImg } from "@/lib/stills";
 import { model } from "@/lib/models";
 import Contain from "./Contain";
 
@@ -218,7 +219,7 @@ export default function MascotArt({ src, model, sizes, className = "object-conta
         <img src={still} alt="" className={`absolute inset-0 size-full ${shown ? "opacity-0" : "opacity-100"}`} />
       ) : url ? (
         // eslint-disable-next-line @next/next/no-img-element -- already sized, optimised WebP; versioned by a query
-        <img src={stillOf(url)} alt="" loading="lazy" decoding="async" className={`absolute inset-0 size-full object-contain transition-opacity duration-500 ${shown || looping ? "opacity-0" : "opacity-100"} ${sway ? "phone-sway" : ""}`} />
+        <img {...stillImg(stillOf(url))} alt="" loading="lazy" decoding="async" className={`absolute inset-0 size-full object-contain transition-opacity duration-500 ${shown || looping ? "opacity-0" : "opacity-100"} ${sway ? "phone-sway" : ""}`} />
       ) : (
         <Image
           src={src}

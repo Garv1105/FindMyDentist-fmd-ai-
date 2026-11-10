@@ -32,6 +32,7 @@ import {
   type ReactNode,
 } from "react";
 import { Container, SectionHeader } from "../ui";
+import { usePhone } from "@/lib/phone";
 import { Atmosphere } from "./LowerWorld";
 import { ClinicWindow, Phone } from "./Products";
 
@@ -102,6 +103,8 @@ function Tile({
   const filter = useTransform(k, (v) =>
     v > 0.98 ? "none" : `blur(${(1 - v) * 6}px)`,
   ); // none once in: blur is costly
+  // phones: no scroll-driven blur at all; a changing blur is repainted on the CPU every scroll frame
+  const phone = usePhone();
   const ref = useRef<HTMLDivElement>(null);
   const set = (vars: Record<string, string>) =>
     Object.entries(vars).forEach(([key, val]) =>
@@ -113,7 +116,9 @@ function Tile({
       style={
         still
           ? undefined
-          : { x, y, rotateX, rotateY, rotate, scale, opacity, filter }
+          : phone
+            ? { x, y, rotateX, rotateY, rotate, scale, opacity }
+            : { x, y, rotateX, rotateY, rotate, scale, opacity, filter }
       }
     >
       <div
@@ -420,12 +425,13 @@ function Word({
   const filter = useTransform(k, (v) =>
     v > 0.98 ? "none" : `blur(${(1 - v) * 4}px)`,
   );
+  const phone = usePhone(); // phones: rise and turn only, no scroll-driven blur
   return (
     // the mask: a line box with a little room for descenders
     <span className="inline-block overflow-hidden pb-[0.12em] align-bottom">
       <motion.span
         className="inline-block origin-bottom-left"
-        style={still ? undefined : { y, rotate, filter }}
+        style={still ? undefined : phone ? { y, rotate } : { y, rotate, filter }}
       >
         {children}
       </motion.span>

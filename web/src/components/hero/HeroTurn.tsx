@@ -1,0 +1,151 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import { useMotionValueEvent, type MotionValue } from "motion/react";
+
+/**
+ * Phones: the hero's rising mascot as one full turn of pre-rendered frames, drawn into a plain 2D canvas and picked by
+ * the same scroll-driven angle that turns the live model on desktop (Mascot3D's rotY). No WebGL and no three.js, so the
+ * first scroll doesn't stall while a 3D engine boots. 30 frames, one every 12° (the turn is fast enough to read as
+ * smooth), 640px wide (the mascot's size on a 3x phone screen), ~17 KB each: about 0.5 MB in all, fetched after the
+ * page has painted. Rendered from the full model in Mascot3D's own framing (fmd-website's render_hero_turn.cjs; every
+ * 4th of its 120 frames, resized). Bump V when the frames change.
+ */
+const STEPS = 30;
+const V = 1;
+// where the cropped frames sit in the 1.7 : 1 canvas, and the canvas width that draws them 1:1 (640 / crop width)
+const CROP = { l: 408 / 1836, t: 26 / 1080, w: 1021 / 1836, h: 1054 / 1080 };
+const MAX_W = Math.round(640 / CROP.w);
+const url = (i: number) => `/models/hero-turn/${String(i).padStart(2, "0")}.webp?v=${V}`;
+const frameOf = (deg: number) => Math.round((((deg % 360) + 360) % 360) / (360 / STEPS)) % STEPS;
+const gap = (a: number, b: number) => Math.min(Math.abs(a - b), STEPS - Math.abs(a - b));
+
+// Frame 0 first (the pose it starts and ends in), then coarse to fine, so any angle soon has one near it
+const ORDER = [...new Set([15, 5, 1].flatMap((step) => Array.from({ length: STEPS / step }, (_, k) => k * step)))];
+const blobs: (Blob | undefined)[] = [];
+const arrived = new Set<() => void>();
+let loading: Promise<void> | null = null;
+function loadFrames() {
+  loading ??= (async () => {
+    const queue = [...ORDER];
+    const worker = async () => {
+      for (let i = queue.shift(); i !== undefined; i = queue.shift()) {
+        try {
+          const r = await fetch(url(i));
+          if (r.ok) blobs[i] = await r.blob();
+        } catch {} // a missing frame: its neighbours stand in
+        arrived.forEach((f) => f());
+      }
+    };
+    await Promise.all(Array.from({ length: 3 }, worker));
+  })();
+  return loading;
+}
+
+// Decoded frames (~1.7 MB each in memory): only the most recent few, so low-memory phones stay comfortable
+const KEEP = 8;
+const decoded = new Map<number, ImageBitmap>();
+const decoding = new Map<number, Promise<ImageBitmap | null>>();
+function decode(i: number): Promise<ImageBitmap | null> {
+  const hit = decoded.get(i);
+  if (hit) {
+    decoded.delete(i);
+    decoded.set(i, hit); // most recently used last
+    return Promise.resolve(hit);
+  }
+  let p = decoding.get(i);
+  if (!p) {
+    // createImageBitmap decodes off the main thread: scrolling never waits on it
+    p = createImageBitmap(blobs[i]!).then(
+      (b) => {
+        decoding.delete(i);
+        decoded.set(i, b);
+        for (const [k, old] of decoded) {
+          if (decoded.size <= KEEP) break;
+          decoded.delete(k);
+          old.close();
+        }
+        return b;
+      },
+      () => (decoding.delete(i), null),
+    );
+    decoding.set(i, p);
+  }
+  return p;
+}
+
+export default function HeroTurn({ rotY, onReady }: { rotY: MotionValue<number>; onReady: () => void }) {
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const want = useRef(-1); // the frame being decoded for the current angle
+  const shown = useRef(-1); // the frame on the canvas
+  const last = useRef(0); // the previous angle: which way it is turning
+
+  const paint = (i: number, b: ImageBitmap) => {
+    const c = canvas.current;
+    const ctx = c?.getContext("2d");
+    if (!c || !ctx) return;
+    ctx.clearRect(0, 0, c.width, c.height);
+    ctx.drawImage(b, CROP.l * c.width, CROP.t * c.height, CROP.w * c.width, CROP.h * c.height);
+    if (shown.current < 0) onReady();
+    shown.current = i;
+  };
+
+  // the frame for this angle, or the nearest one loaded; while it decodes, the nearest decoded one stays up
+  const show = (deg: number) => {
+    const dir = deg >= last.current ? 1 : -1;
+    last.current = deg;
+    const at = frameOf(deg);
+    let j = -1;
+    for (let d = 0; d <= STEPS / 2 && j < 0; d++) {
+      j = blobs[(at + d) % STEPS] ? (at + d) % STEPS : blobs[(at - d + STEPS) % STEPS] ? (at - d + STEPS) % STEPS : -1;
+    }
+    if (j < 0 || j === shown.current) return;
+    want.current = j;
+    const hit = decoded.get(j);
+    if (hit) paint(j, hit);
+    else {
+      let near: number | null = null;
+      for (const k of decoded.keys()) if (near === null || gap(k, j) < gap(near, j)) near = k;
+      if (near !== null && near !== shown.current && (shown.current < 0 || gap(near, j) < gap(shown.current, j))) {
+        paint(near, decoded.get(near)!);
+      }
+      void decode(j).then((b) => b && want.current === j && paint(j, b));
+    }
+    // the next few frames in the direction it is turning, decoded ahead so the spin never waits on one
+    for (let k = 1; k <= 2; k++) {
+      const n = (j + dir * k + STEPS) % STEPS;
+      if (blobs[n] && !decoded.has(n)) void decode(n);
+    }
+  };
+
+  useMotionValueEvent(rotY, "change", show);
+
+  useEffect(() => {
+    const c = canvas.current!;
+    // drawn at the screen's resolution (capped at the frames' own)
+    const ro = new ResizeObserver(() => {
+      const w = Math.min(Math.round(c.offsetWidth * devicePixelRatio), MAX_W);
+      const h = Math.round((w * c.offsetHeight) / Math.max(c.offsetWidth, 1));
+      if (w === c.width && h === c.height) return;
+      c.width = w;
+      c.height = h; // resizing clears it: repaint
+      const i = shown.current;
+      if (i >= 0) void decode(i).then((b) => b && shown.current === i && paint(i, b));
+    });
+    ro.observe(c);
+    const onArrive = () => show(rotY.get());
+    arrived.add(onArrive);
+    // after the page has painted and settled: the still stands in until then
+    const idle = window.requestIdleCallback ?? ((f: () => void) => window.setTimeout(f, 300));
+    const cancel = window.cancelIdleCallback ?? window.clearTimeout;
+    const id = idle(() => void loadFrames().then(onArrive), { timeout: 2000 });
+    return () => {
+      ro.disconnect();
+      arrived.delete(onArrive);
+      cancel(id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- paint/show only read refs and module state
+  }, [rotY]);
+
+  return <canvas ref={canvas} aria-hidden className="hero-turn-float absolute inset-0 size-full" />;
+}

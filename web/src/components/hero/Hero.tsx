@@ -21,7 +21,8 @@ import { ChatThread, useAssistant } from "./Assistant";
 import type { Mood } from "./AssistantMascot";
 import { MASCOT_KEYS, MASCOT_OPACITY, PHASES } from "./phases";
 import { RIM, RIM_APEX, RIM_H, RIM_W, rimPath, rimYAt } from "./rim";
-import { useAwake } from "@/lib/phone";
+import { useAwake, usePhone } from "@/lib/phone";
+import { stillImg } from "@/lib/stills";
 
 /**
  * Cinematic hero: one scroll timeline (0 → 1) drives every layer, so the sequence
@@ -60,6 +61,8 @@ const stageVars = (height: string) =>
 // WebGL can't render on the server; the sprite stays visible until the model has loaded
 const Mascot3D = dynamic(() => import("./Mascot3D"), { ssr: false });
 const AssistantMascot = dynamic(() => import("./AssistantMascot"), { ssr: false });
+// phones: the rising mascot as pre-rendered frames instead of a live model (no WebGL, no three.js download)
+const HeroTurn = dynamic(() => import("./HeroTurn"), { ssr: false });
 
 const noop = () => () => {};
 function useReducedMotionSafe() {
@@ -85,6 +88,7 @@ export default function Hero() {
 function CinematicHero() {
   const ref = useRef<HTMLElement>(null);
   const awake = useAwake(); // phones: no 3D until the first scroll or touch (the still stands in)
+  const phone = usePhone();
   const { scrollYProgress: p } = useScroll({ target: ref, offset: ["start start", "end end"] });
 
   const [a0, a1] = PHASES.ai;
@@ -167,7 +171,7 @@ function CinematicHero() {
               {/* the fallback: a still of the GLB, framed like its canvas (170% wide, 1.7:1) */}
               {/* eslint-disable-next-line @next/next/no-img-element -- already sized, optimised WebP */}
               <img
-                src="/models/stills/hero-sitting.webp?v=1"
+                {...stillImg("/models/stills/hero-sitting.webp?v=1")}
                 alt=""
                 decoding="async"
                 className={`absolute inset-y-0 left-1/2 h-full w-[170%] max-w-none -translate-x-1/2 transition-opacity duration-500 ${mascotReady ? "opacity-0" : ""}`}
@@ -176,7 +180,11 @@ function CinematicHero() {
               <div className="absolute inset-y-0 left-1/2 w-[170%] -translate-x-1/2">
                 {/* a model that can't load leaves the sprite (it never reports ready) */}
                 <Contain>
-                  {awake && <Mascot3D active={mascotOn} base={settled ? "Meditate" : "Fly"} rotY={rotY} onReady={onMascotReady} />}
+                  {phone ? (
+                    <HeroTurn rotY={rotY} onReady={onMascotReady} />
+                  ) : (
+                    awake && <Mascot3D active={mascotOn} base={settled ? "Meditate" : "Fly"} rotY={rotY} onReady={onMascotReady} />
+                  )}
                 </Contain>
               </div>
               <SpeechBubble show={speaking} text="Let me take over…" />
@@ -249,7 +257,10 @@ function RotatingHeadline({ className, glow, still }: { className: string; glow?
       </span>
     </>
   );
-  const hidden = still ? { opacity: 0 } : { opacity: 0, filter: "blur(10px)" };
+  // phones: fade and drift only. Blurring a headline this size is repainted on the CPU every frame of the change
+  const phone = usePhone();
+  const blur = !still && !phone;
+  const hidden = blur ? { opacity: 0, filter: "blur(10px)" } : { opacity: 0 };
 
   return (
     <h1 className={`grid text-balance ${className}`}>
@@ -265,7 +276,7 @@ function RotatingHeadline({ className, glow, still }: { className: string; glow?
           aria-hidden
           className="[grid-area:1/1] self-center"
           initial={{ ...hidden, y: still ? 0 : 18 }}
-          animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
+          animate={blur ? { opacity: 1, filter: "blur(0px)", y: 0 } : { opacity: 1, y: 0 }}
           exit={{ ...hidden, y: still ? 0 : -18 }}
           transition={{ duration: 0.46, ease: HEADLINE_EASE }}
         >
@@ -436,6 +447,10 @@ function getSpeech(): SpeechCtor | null {
 /** `active`: on screen (the cinematic hero shows it only once its scroll story reaches the assistant) */
 function HeroAssistantStage({ active }: { active: boolean }) {
   const awake = useAwake();
+  const phone = usePhone();
+  // phones play the guide's loop (the same character, pre-rendered) once the stage first comes up: never a 3D model
+  const [reached, setReached] = useState(false);
+  if (active && !reached) setReached(true);
   const [text, setText] = useState("");
   const [listening, setListening] = useState(false);
   const rec = useRef<InstanceType<SpeechCtor> | null>(null);
@@ -709,14 +724,23 @@ function HeroAssistantStage({ active }: { active: boolean }) {
 
       {/* FMD AI's mascot, floated over its place (above); if its model can't load, the guide's picture stands in */}
       <motion.div style={{ x: fx, y: fy, width: fw, height: fh }} className="pointer-events-none absolute left-0 top-0 z-20">
-        {awake ? (
+        {phone ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element -- versioned still, cached forever */}
+            <img {...stillImg("/models/stills/guide.webp?v=3")} alt="" decoding="async" className="absolute inset-0 size-full object-contain object-bottom" />
+            {reached && (
+              // eslint-disable-next-line @next/next/no-img-element -- an animated WebP, already sized
+              <img src="/models/loops/guide.webp?v=1" alt="" decoding="async" className="absolute inset-0 size-full object-contain object-bottom" />
+            )}
+          </>
+        ) : awake ? (
           // eslint-disable-next-line @next/next/no-img-element -- the fallback is a versioned still, cached forever
-          <Contain fallback={<img src="/models/stills/guide.webp?v=3" alt="" decoding="async" className="size-full object-contain object-bottom" />}>
+          <Contain fallback={<img {...stillImg("/models/stills/guide.webp?v=3")} alt="" decoding="async" className="size-full object-contain object-bottom" />}>
             <AssistantMascot mood={mood} active={active} />
           </Contain>
         ) : (
           // eslint-disable-next-line @next/next/no-img-element -- the same still, until the phone has been touched
-          <img src="/models/stills/guide.webp?v=3" alt="" decoding="async" className="size-full object-contain object-bottom" />
+          <img {...stillImg("/models/stills/guide.webp?v=3")} alt="" decoding="async" className="size-full object-contain object-bottom" />
         )}
       </motion.div>
     </div>
@@ -737,7 +761,7 @@ function StaticHero() {
         <MascotStage>
           <div className="absolute inset-x-0 bottom-0 mx-auto [--mh:clamp(150px,26svh,260px)] h-[var(--mh)] w-[var(--mh)] -translate-y-[8%]">
             {/* eslint-disable-next-line @next/next/no-img-element -- already sized, optimised WebP */}
-            <img src="/models/stills/hero-sitting.webp?v=1" alt="" decoding="async" className="absolute inset-y-0 left-1/2 h-full w-[170%] max-w-none -translate-x-1/2" />
+            <img {...stillImg("/models/stills/hero-sitting.webp?v=1")} alt="" decoding="async" className="absolute inset-y-0 left-1/2 h-full w-[170%] max-w-none -translate-x-1/2" />
           </div>
         </MascotStage>
         <div aria-hidden className="hero-rimfront absolute left-1/2 -translate-x-1/2 translate-y-1/2" />
