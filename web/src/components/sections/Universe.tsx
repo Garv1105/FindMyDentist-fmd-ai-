@@ -73,6 +73,9 @@ const span = (v: number, [a, b]: [number, number]) =>
   smooth(Math.min(1, Math.max(0, (v - a) / (b - a))));
 
 /** One tile: flies in from `from` as `progress` passes its stretch; glass, sheen, pointer light and tilt. */
+// a tile at rest; its opacity and y are left to the one-off rise on phones
+const PHONE_REST = { x: 0, rotateX: 0, rotateY: 0, rotate: 0, scale: 1, filter: "none" };
+
 function Tile({
   i,
   from,
@@ -116,10 +119,20 @@ function Tile({
       style={
         still
           ? undefined
-          : // "none", not left out: the first render (before the phone is known) has already set a blur, and a
-            // style key that disappears is simply no longer updated, so it would stay blurred
-            { x, y, rotateX, rotateY, rotate, scale, opacity, filter: phone ? "none" : filter }
+          : phone
+            ? // explicit resting values, not left out: the first render (before the phone is known) has already set
+              // scattered ones, and a style key that disappears is simply no longer updated
+              PHONE_REST
+            : { x, y, rotateX, rotateY, rotate, scale, opacity, filter }
       }
+      // phones: no scroll-linked flight (eight tiles re-tilted in 3D every scroll frame); each rises in once instead
+      {...(phone && !still
+        ? {
+            whileInView: { opacity: 1, y: 0 },
+            viewport: { once: true, margin: "0px 0px -6% 0px" },
+            transition: { duration: 0.55, delay: (i % 2) * 0.08, ease: [0.22, 1, 0.36, 1] as const },
+          }
+        : {})}
     >
       <div
         ref={ref}

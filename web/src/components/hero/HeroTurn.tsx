@@ -22,24 +22,43 @@ const gap = (a: number, b: number) => Math.min(Math.abs(a - b), STEPS - Math.abs
 
 // Frame 0 first (the pose it starts and ends in), then coarse to fine, so any angle soon has one near it
 const ORDER = [...new Set([24, 12, 6, 3, 1].flatMap((step) => Array.from({ length: STEPS / step }, (_, k) => k * step)))];
+// Two stages: the first 20 (every 18°, ~0.35 MB) once the page is idle, the rest only once the visitor starts scrolling
+// the hero, so a visit that never scrolls pays almost nothing. Low fetch priority: never ahead of what the page needs.
+export const COARSE = 20;
 const blobs: (Blob | undefined)[] = [];
 const arrived = new Set<() => void>();
-let loading: Promise<void> | null = null;
-function loadFrames() {
-  loading ??= (async () => {
-    const queue = [...ORDER];
-    const worker = async () => {
-      for (let i = queue.shift(); i !== undefined; i = queue.shift()) {
-        try {
-          const r = await fetch(url(i));
-          if (r.ok) blobs[i] = await r.blob();
-        } catch {} // a missing frame: its neighbours stand in
-        arrived.forEach((f) => f());
-      }
-    };
-    await Promise.all(Array.from({ length: 4 }, worker));
-  })();
-  return loading;
+const queue = [...ORDER];
+let wanted = 0; // how many frames to have fetched
+let running = 0;
+let fetched = 0;
+let notifying = false;
+// arrivals are told at most once per frame, however many frames landed in it
+const announce = () => {
+  if (notifying) return;
+  notifying = true;
+  requestAnimationFrame(() => {
+    notifying = false;
+    arrived.forEach((f) => f());
+  });
+};
+export function loadFrames(count: number) {
+  wanted = Math.max(wanted, count);
+  while (running < 4 && queue.length && fetched + running < wanted) {
+    const i = queue.shift()!;
+    running++;
+    void fetch(url(i), { priority: "low" } as RequestInit)
+      .then((r) => (r.ok ? r.blob() : undefined))
+      .then(
+        (b) => void (blobs[i] = b),
+        () => {}, // a missing frame: its neighbours stand in
+      )
+      .finally(() => {
+        running--;
+        fetched++;
+        announce();
+        loadFrames(wanted);
+      });
+  }
 }
 
 // Decoded frames (~1.7 MB each in memory): only the most recent few, so low-memory phones stay comfortable
@@ -118,7 +137,10 @@ export default function HeroTurn({ rotY, onReady }: { rotY: MotionValue<number>;
     }
   };
 
-  useMotionValueEvent(rotY, "change", show);
+  useMotionValueEvent(rotY, "change", (deg) => {
+    loadFrames(STEPS); // the visitor is scrolling the hero: fetch the rest of the turn (a no-op once under way)
+    show(deg);
+  });
 
   useEffect(() => {
     const c = canvas.current!;
@@ -138,7 +160,8 @@ export default function HeroTurn({ rotY, onReady }: { rotY: MotionValue<number>;
     // after the page has painted and settled: the still stands in until then
     const idle = window.requestIdleCallback ?? ((f: () => void) => window.setTimeout(f, 300));
     const cancel = window.cancelIdleCallback ?? window.clearTimeout;
-    const id = idle(() => void loadFrames().then(onArrive), { timeout: 2000 });
+    const id = idle(() => loadFrames(COARSE), { timeout: 2000 });
+    onArrive(); // frames already fetched on an earlier mount
     return () => {
       ro.disconnect();
       arrived.delete(onArrive);

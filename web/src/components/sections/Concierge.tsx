@@ -7,6 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { api, useMe } from "@/lib/me";
+import { usePhone } from "@/lib/phone";
 import { Container, Reveal, rest, useLoop } from "../ui";
 import { Atmosphere } from "./LowerWorld";
 
@@ -102,7 +103,11 @@ function Plane({ mx, my, depth, children }: { mx: MotionValue<number>; my: Motio
 }
 
 function Ambience({ mx, my }: { mx: MotionValue<number>; my: MotionValue<number> }) {
-  const { ref, on } = useLoop();
+  const { ref, on: near } = useLoop();
+  // phones: the orbs and rings hold still. Fifteen blurred orbs drifting on the main thread and a 2400px ring turning
+  // (a texture over 6000px wide at phone density) were among the costliest things on the page while scrolling
+  const phone = usePhone();
+  const on = near && !phone;
   const orb = (p: (typeof BOKEH)[number], i: number) => (
     <motion.div
       key={i}
