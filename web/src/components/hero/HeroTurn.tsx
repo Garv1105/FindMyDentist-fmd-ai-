@@ -6,22 +6,22 @@ import { useMotionValueEvent, type MotionValue } from "motion/react";
 /**
  * Phones: the hero's rising mascot as one full turn of pre-rendered frames, drawn into a plain 2D canvas and picked by
  * the same scroll-driven angle that turns the live model on desktop (Mascot3D's rotY). No WebGL and no three.js, so the
- * first scroll doesn't stall while a 3D engine boots. 30 frames, one every 12° (the turn is fast enough to read as
- * smooth), 640px wide (the mascot's size on a 3x phone screen), ~17 KB each: about 0.5 MB in all, fetched after the
- * page has painted. Rendered from the full model in Mascot3D's own framing (fmd-website's render_hero_turn.cjs; every
- * 4th of its 120 frames, resized). Bump V when the frames change.
+ * first scroll doesn't stall while a 3D engine boots. fmd-website's full turn: 120 frames, one every 3°, rendered from
+ * the full model in Mascot3D's own framing (its render_hero_turn.cjs), resized from 1021px to 640px (the mascot's size
+ * on a 3x phone screen), ~17 KB each: about 2 MB in all. They load in the background after the page has painted, coarse
+ * angles first, so the turn works almost at once and gets finer as the rest arrive. Bump V when the frames change.
  */
-const STEPS = 30;
-const V = 1;
+const STEPS = 120;
+const V = 2;
 // where the cropped frames sit in the 1.7 : 1 canvas, and the canvas width that draws them 1:1 (640 / crop width)
 const CROP = { l: 408 / 1836, t: 26 / 1080, w: 1021 / 1836, h: 1054 / 1080 };
 const MAX_W = Math.round(640 / CROP.w);
-const url = (i: number) => `/models/hero-turn/${String(i).padStart(2, "0")}.webp?v=${V}`;
+const url = (i: number) => `/models/hero-turn/${String(i).padStart(3, "0")}.webp?v=${V}`;
 const frameOf = (deg: number) => Math.round((((deg % 360) + 360) % 360) / (360 / STEPS)) % STEPS;
 const gap = (a: number, b: number) => Math.min(Math.abs(a - b), STEPS - Math.abs(a - b));
 
 // Frame 0 first (the pose it starts and ends in), then coarse to fine, so any angle soon has one near it
-const ORDER = [...new Set([15, 5, 1].flatMap((step) => Array.from({ length: STEPS / step }, (_, k) => k * step)))];
+const ORDER = [...new Set([24, 12, 6, 3, 1].flatMap((step) => Array.from({ length: STEPS / step }, (_, k) => k * step)))];
 const blobs: (Blob | undefined)[] = [];
 const arrived = new Set<() => void>();
 let loading: Promise<void> | null = null;
@@ -37,13 +37,13 @@ function loadFrames() {
         arrived.forEach((f) => f());
       }
     };
-    await Promise.all(Array.from({ length: 3 }, worker));
+    await Promise.all(Array.from({ length: 4 }, worker));
   })();
   return loading;
 }
 
 // Decoded frames (~1.7 MB each in memory): only the most recent few, so low-memory phones stay comfortable
-const KEEP = 8;
+const KEEP = 12;
 const decoded = new Map<number, ImageBitmap>();
 const decoding = new Map<number, Promise<ImageBitmap | null>>();
 function decode(i: number): Promise<ImageBitmap | null> {
@@ -112,7 +112,7 @@ export default function HeroTurn({ rotY, onReady }: { rotY: MotionValue<number>;
       void decode(j).then((b) => b && want.current === j && paint(j, b));
     }
     // the next few frames in the direction it is turning, decoded ahead so the spin never waits on one
-    for (let k = 1; k <= 2; k++) {
+    for (let k = 1; k <= 3; k++) {
       const n = (j + dir * k + STEPS) % STEPS;
       if (blobs[n] && !decoded.has(n)) void decode(n);
     }
