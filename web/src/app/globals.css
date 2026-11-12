@@ -1535,29 +1535,65 @@ html.theme-anim *::after {
   --tone-warn: #a34e00;
   --tone-bad: #c0262d;
   color-scheme: light;
-  /* Lines in a light, warm gold: white cards on a white page need a visible edge, and a faint navy line vanished.
-     --border for dividers and card edges, --border-strong for selected and hover states, --edge-* for the
-     panels' drawn hairline on wide screens (.app-panel::before). */
-  --border: #dfcb98;
-  --border-strong: #c19f55;
-  --edge-hi: #d3b97c;
-  --edge-lo: #dfcd9d;
+  /* Navy frame, light content. A cool light page with white cards, cool grey lines and deep navy text; the top bars
+     are solid navy (the dark homepage's brand colour) so every page has a clear frame. Every text colour here is at
+     least 4.5:1 on both the page and white. --border: dividers and card edges · --border-strong: selected and hover */
+  --background: #f2f4f8;
+  --background-secondary: #e9edf3;
+  --surface: #ffffff;
+  --surface-elevated: #ffffff;
+  --surface-glass: rgba(255, 255, 255, 0.8);
+  --glass-tint: rgba(242, 244, 248, 0.6);
+  --border: #e1e5ec;
+  --border-strong: #c7cfdb;
+  --edge-hi: #dde2ea;
+  --edge-lo: #e6e9ef;
+  --inner-hi: rgba(255, 255, 255, 0.9);
+  --text-primary: #0e1a33;
+  --text-secondary: #39445a;
+  --text-muted: #5a6478;
+  --text-faint: #646e82;
+  --headline-from: #0e1a33;
+  --headline-to: #46526c;
+  --headline-accent: #1e4fd6;
+  --accent-soft: rgba(30, 79, 214, 0.08);
+  --shadow: rgba(14, 26, 51, 0.14);
+  --button-secondary: rgba(14, 26, 51, 0.04);
 }
-/* light themes: the top bars (FMD Main's header, the site navbar) get their own finish. The dark look's inner
-   shadows, noise and deep drop shadow turn into a grey smudge on white; here they are a near-white bar with one gold
-   hairline and a short, soft shadow, so the links read cleanly over the page's glow. */
+/* light themes: the top bars (FMD Main's header, the site navbar) are solid navy. They re-declare the dark tokens so
+   everything inside (links, icons, the theme switch, and the menus that open from them) reads light on navy. */
 :is([data-theme="pearl-light"], [data-theme="silver-light"], [data-theme="white-royal"]) :is(.top-bar, .nav-matte) {
-  background-color: rgb(255 255 255 / 0.94) !important;
+  color-scheme: dark;
+  --surface: #14223f;
+  --surface-elevated: #172747;
+  --surface-glass: rgba(255, 255, 255, 0.06);
+  --border: rgba(255, 255, 255, 0.14);
+  --border-strong: rgba(255, 255, 255, 0.24);
+  --text-primary: #ffffff;
+  --text-secondary: #c9d3e6;
+  --text-muted: #a3afc6;
+  --text-faint: #8e9ab2;
+  --accent-soft: rgba(255, 255, 255, 0.1);
+  --button-secondary: rgba(255, 255, 255, 0.08);
+  --button-primary: #ffffff;
+  --button-primary-fg: #0e1a33;
+  color: var(--text-primary);
+  background-color: #0e1a33 !important;
   background-image: none;
-  border: 1px solid var(--border);
+  backdrop-filter: none;
+  border: 1px solid #0e1a33;
   box-shadow:
-    0 1px 2px rgb(20 40 90 / 0.05),
-    0 6px 18px -10px rgb(20 40 90 / 0.14);
+    0 1px 2px rgb(14 26 51 / 0.08),
+    0 10px 24px -14px rgb(14 26 51 / 0.35);
 }
 :is([data-theme="pearl-light"], [data-theme="silver-light"], [data-theme="white-royal"]) .top-bar::before {
   content: none;
 }
-/* light themes: cards and panels get a slightly heavier edge, so sections read as separate on a white page */
+:is([data-theme="pearl-light"], [data-theme="silver-light"], [data-theme="white-royal"]) .top-bar [aria-current="page"] {
+  color: #ffffff;
+  font-weight: 600;
+}
+/* light themes: cards and panels get a slightly heavier edge, so sections read as separate on a light page */
 :is([data-theme="pearl-light"], [data-theme="silver-light"], [data-theme="white-royal"]) .app-panel {
   border-width: 1.5px;
 }
