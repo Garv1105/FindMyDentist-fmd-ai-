@@ -12,6 +12,7 @@ import { ButtonLink, IconButton, Panel } from "@/components/app/kit";
 import { canOpenClinic, type DemoUser } from "@/lib/demo";
 import { useDemoUser } from "@/lib/useDemoUser";
 import { cleanBranch, cleanDate, getClinic, getClinicHome, type Clinic } from "@/sample/clinic";
+import { ClinicAi } from "./ClinicAi";
 import { useDismiss } from "./dismiss";
 import { Notifications } from "./Notifications";
 import { ThemeToggle } from "@/components/nav/ThemeSwitcher";
@@ -339,6 +340,8 @@ export function ClinicShell({ children }: { children: ReactNode }) {
           </div>
         </div>
       </div>
+      {/* FMD AI, on every page of the clinic */}
+      <ClinicAi />
       {menu && (
         <div className="lg:hidden">
           <div className="fixed inset-0 z-40 bg-black/60" aria-hidden />

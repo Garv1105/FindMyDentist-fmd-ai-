@@ -22,17 +22,15 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, ButtonLink, IconButton, Tag } from "@/components/app/kit";
 import { Sheet } from "@/components/app/Sheet";
-import Contain from "@/components/Contain";
-import type { Mood } from "@/components/hero/AssistantMascot";
+import { AiMascot, GUIDE_STILL } from "@/components/mascot/AiMascot";
 import { Notice } from "@/components/Page";
 import { when } from "@/lib/format";
 import { useMe } from "@/lib/me";
-import { usePhone } from "@/lib/phone";
+import { feelingOf, moodFor, type Feeling, type Phase } from "@/lib/expression";
 import { stillImg } from "@/lib/stills";
 import {
   checkAttachment,
@@ -49,9 +47,6 @@ import {
 } from "@/sample/assistant";
 import { getConsents } from "@/sample/privacy";
 import { track } from "@/lib/analytics";
-
-// the homepage's FMD AI mascot (WebGL, so never on the server); phones play its pre-rendered loop instead
-const AssistantMascot = dynamic(() => import("@/components/hero/AssistantMascot"), { ssr: false });
 
 /** Starting points: what people most often come to ask, each opening a question in their own words. */
 const STARTERS: { Icon: LucideIcon; topic: string; question: string }[] = [
@@ -89,34 +84,6 @@ const speechApi = () => {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 };
 
-const GUIDE_STILL = "/models/stills/guide.webp?v=3";
-const GUIDE_LOOP = "/models/loops/guide.webp?v=1";
-
-/** FMD AI's mascot, reacting to the chat: listening while you type or speak, thinking while it answers, explaining as
- *  the answer lands. The homepage's 3D model on desktop; its pre-rendered loop on phones (no WebGL there). */
-function Mascot({ mood, className }: { mood: Mood; className: string }) {
-  const phone = usePhone();
-  const still = (
-    // eslint-disable-next-line @next/next/no-img-element -- versioned still, cached forever
-    <img {...stillImg(GUIDE_STILL)} alt="" decoding="async" className="absolute inset-0 size-full object-contain object-bottom" />
-  );
-  return (
-    <div aria-hidden className={`relative ${className}`}>
-      {phone ? (
-        // eslint-disable-next-line @next/next/no-img-element -- an animated WebP, already sized
-        <img src={GUIDE_LOOP} alt="" decoding="async" className="absolute inset-0 size-full object-contain object-bottom" />
-      ) : (
-        <>
-          {still}
-          <Contain fallback={still}>
-            <AssistantMascot mood={mood} active />
-          </Contain>
-        </>
-      )}
-    </div>
-  );
-}
-
 /** /assistant: FMD AI with history, files, voice and languages. Works signed out; keeps nothing unless allowed to. */
 export function AssistantPage() {
   const me = useMe();
@@ -151,7 +118,12 @@ export function AssistantPage() {
     return () => clearTimeout(t);
   }, [explaining]);
 
-  const mood: Mood = busy ? "thinking" : listening || text.trim() ? "listening" : explaining ? "explaining" : "idle";
+  // the mascot's expression (lib/expression): your draft while you type, else the latest answer
+  const lastReply = conv?.messages.filter((m) => m.role !== "user").at(-1);
+  const typing = listening || text.trim() !== "";
+  const phase: Phase = busy ? "waiting" : typing ? "typing" : explaining ? "answered" : "idle";
+  const feeling: Feeling = typing ? feelingOf(text) : lastReply ? feelingOf(lastReply.text, { urgent: lastReply.urgent }) : "calm";
+  const mood = moodFor(phase, feeling);
 
   const ask = async (q: string) => {
     setErr(null);
@@ -302,7 +274,7 @@ export function AssistantPage() {
         <div aria-hidden className="ai-horizon pointer-events-none absolute inset-x-[-15%] bottom-[-62%] -z-10 h-[78%] rounded-[50%]" />
 
         <header className="flex items-center gap-2 px-4 py-3 sm:px-5">
-          {conv && <Mascot mood={mood} className="size-11 shrink-0" />}
+          {conv && <AiMascot mood={mood} feeling={feeling} className="size-12 shrink-0" />}
           <p className="mr-auto flex items-center gap-2 text-[16px] font-medium text-ink">
             FMD AI <Tag tone="muted">Demo</Tag>
           </p>
@@ -324,7 +296,7 @@ export function AssistantPage() {
         <div ref={thread} className="flex-1 overflow-y-auto px-4 pb-4 sm:px-6" aria-live="polite">
           {!conv ? (
             <div className="mx-auto grid max-w-[860px] justify-items-center gap-5 pb-2 pt-2 text-center sm:pt-4">
-              <Mascot mood={mood} className="h-[150px] w-[150px] sm:h-[190px] sm:w-[190px]" />
+              <AiMascot mood={mood} feeling={feeling} className="h-[150px] w-[150px] sm:h-[190px] sm:w-[190px]" />
               <div className="grid gap-2">
                 <p className="eyebrow">FMD AI</p>
                 <h1 className="text-balance text-[clamp(28px,4.2vw,46px)] font-light leading-[1.08] tracking-[-0.035em]">
