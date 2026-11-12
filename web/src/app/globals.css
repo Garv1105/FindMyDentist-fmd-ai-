@@ -1455,10 +1455,17 @@ html.theme-anim *::after {
   /* Lines in a light, warm gold: white cards on a white page need a visible edge, and a faint navy line vanished.
      --border for dividers and card edges, --border-strong for selected and hover states, --edge-* for the
      panels' drawn hairline on wide screens (.app-panel::before). */
-  --border: #e9dec3;
-  --border-strong: #cdb174;
-  --edge-hi: #e0cf9f;
-  --edge-lo: #ece4cf;
+  --border: #dfcb98;
+  --border-strong: #c19f55;
+  --edge-hi: #d3b97c;
+  --edge-lo: #dfcd9d;
+}
+/* light themes: cards and panels get a slightly heavier edge, so sections read as separate on a white page */
+:is([data-theme="pearl-light"], [data-theme="silver-light"], [data-theme="white-royal"]) .app-panel {
+  border-width: 1.5px;
+}
+:is([data-theme="pearl-light"], [data-theme="silver-light"], [data-theme="white-royal"]) .app-panel::before {
+  padding: 1.5px;
 }
 :is([data-theme="pearl-light"], [data-theme="silver-light"], [data-theme="white-royal"]) :is(select, input, textarea) {
   color-scheme: light !important;

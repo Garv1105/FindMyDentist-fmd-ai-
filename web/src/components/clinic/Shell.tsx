@@ -88,7 +88,9 @@ function SideNav({ ctx, section, counts, onPick }: { ctx: ClinicCtx; section: st
         <p className="text-[14.5px] font-medium text-ink">{clinic.name}</p>
         <p className="text-[13px] text-ink-3">{branch ? `${branch.area} · ${branch.name}` : "All branches"}</p>
       </div>
-      <nav aria-label="Clinic sections" className="flex flex-col gap-0.5">
+      {/* on a short window the links scroll, so the person and sign-out below always stay inside the column */}
+      <nav aria-label="Clinic sections" className="-mx-1 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-1">
+
         {navFor(user.role).map(([slug, label, Icon, key]) => {
           const on = section === slug;
           const n = key ? counts[key] : undefined;
@@ -113,7 +115,7 @@ function SideNav({ ctx, section, counts, onPick }: { ctx: ClinicCtx; section: st
           );
         })}
       </nav>
-      <div className="mt-auto flex items-center gap-3 border-t border-line px-2 pt-3">
+      <div className="mt-auto flex shrink-0 items-center gap-3 border-t border-line px-2 pt-3">
         <span className="grid size-9 shrink-0 place-items-center rounded-full bg-[var(--surface-elevated)] text-[13px] font-semibold text-ink ring-[1.5px] ring-[color-mix(in_srgb,var(--accent)_45%,transparent)]">
           {user.initials}
         </span>
