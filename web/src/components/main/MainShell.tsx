@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { available, setLang, useT, type Lang, type MessageKey } from "@/lib/i18n";
 import { SHOW_ACCOUNT } from "@/toggle";
+import { ThemeToggle } from "@/components/nav/ThemeSwitcher";
 import { AccountMenu } from "./AccountMenu";
 import { NotificationsBell } from "./help/Support";
 
@@ -70,7 +71,7 @@ export function MainShell({ children }: { children: ReactNode }) {
   return (
     <div className="app-glow min-h-dvh pb-[calc(76px+env(safe-area-inset-bottom))] lg:pb-0">
       <header className="sticky top-0 z-40 px-3 pt-3 sm:px-5">
-        <div className="app-panel app-solid mx-auto flex h-16 max-w-[1280px] items-center gap-2 px-3 sm:px-4">
+        <div className="app-panel app-solid top-bar mx-auto flex h-16 max-w-[1280px] items-center gap-2 px-3 sm:px-4">
           <Link href="/" aria-label="FindMyDentist home" className="shrink-0">
             <Image src="/img/logo-fmd.webp" alt="FindMyDentist" width={337} height={180} priority className="h-10 w-auto" />
           </Link>
@@ -99,6 +100,7 @@ export function MainShell({ children }: { children: ReactNode }) {
             </nav>
           )}
           <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
             {SHOW_ACCOUNT && <NotificationsBell />}
             {SHOW_ACCOUNT && <AccountMenu />}
           </div>
