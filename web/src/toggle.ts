@@ -10,11 +10,8 @@ export const USE_CLOUDINARY_MODELS = true;
 /** Only used when USE_CLOUDINARY_MODELS is false: bump it after rebuilding a model in web/public, or browsers keep the old one. */
 export const LOCAL_MODELS_VERSION = 6;
 
-/**
- * Log in, the account menu and the signed-in app shell's links. On in development; the live site keeps showing only
- * the waitlist until this is set to true.
- */
-export const SHOW_ACCOUNT = process.env.NODE_ENV !== "production";
+/** Log in / sign up, the account menu and the signed-in app shell's links, beside the waitlist. Set false to hide them. */
+export const SHOW_ACCOUNT = true;
 
 /** Invite friends (plan 10.3). Off until FMD's legal and professional-ethics review approves it (PDR Annex I). */
 export const REFERRALS = false;

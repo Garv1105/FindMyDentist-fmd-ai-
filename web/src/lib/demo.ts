@@ -108,7 +108,9 @@ export function safeNext(next: string | null) {
 }
 
 /** Where a person lands after signing in. */
-export const homeOf = (user: DemoUser) => (user.clinicId ? `/clinic/${user.clinicId}` : "/");
+/** Where choosing a demo person lands: their clinic, else FMD Main (FMD AI, which needs no backend account), or Jobs for a company. */
+export const homeOf = (user: DemoUser) =>
+  user.clinicId ? `/clinic/${user.clinicId}` : user.role === "company" ? "/jobs" : "/assistant";
 
 export type MenuItem = { label: string; href?: string; note?: string };
 export type MenuGroup = { title: string; items: MenuItem[] };
@@ -141,7 +143,7 @@ export function areasFor(user: DemoUser): MenuGroup[] {
     student: "Feed, jobs and your membership",
     company: "Jobs and your company page",
   };
-  groups.push({ title: "FMD Main", items: [{ label: `FMD Main · ${main[user.role]}`, note: "coming soon" }, { label: "Jobs", href: "/jobs" }] });
+  groups.push({ title: "FMD Main", items: [{ label: `FMD Main · ${main[user.role]}`, href: "/assistant" }, { label: "Jobs", href: "/jobs" }] });
   if (user.role === "student") groups.push({ title: "FMD Scholar", items: [{ label: "FMD Scholar workspace", note: "coming soon" }] });
   return groups;
 }

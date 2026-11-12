@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, TrendingDown, TrendingUp } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, Empty, Panel, Tag, type Tone } from "@/components/app/kit";
@@ -16,6 +16,20 @@ const when = (b: Bill, today: string) =>
 type Summary = Awaited<ReturnType<typeof getBillingSummary>>;
 
 /* ---------------- one bill ---------------- */
+
+/** This month so far against the same days of last month: more (green, up) or less (red, down). */
+function VsLastMonth({ change, pct }: { change: number; pct: number | null }) {
+  if (pct === null) return <>Nothing to compare with yet</>;
+  const up = change >= 0;
+  const Icon = up ? TrendingUp : TrendingDown;
+  return (
+    <span className={`inline-flex items-center gap-1 ${up ? "text-[var(--tone-ok)]" : "text-[var(--tone-bad)]"}`}>
+      <Icon className="size-3.5 shrink-0" strokeWidth={2} aria-hidden />
+      {inr(Math.abs(change))} {up ? "more" : "less"} ({up ? "+" : "−"}
+      {Math.abs(pct)}%) vs same days
+    </span>
+  );
+}
 
 function BillDetail({ bill, today, isOwner, onVoid, onSay }: { bill: Bill; today: string; isOwner: boolean; onVoid: () => void; onSay: (t: string) => void }) {
   const [tone, label] = STATUS[bill.status];
@@ -341,9 +355,13 @@ export function Billing() {
           {(
             [
               ["Collected today", inr(summary.today.totalInr), `${summary.today.count} bills · ${Object.values(summary.today.byMode).filter((m) => m.count).length} modes`],
-              ["Collected this month", inr(summary.month.totalInr), `${summary.month.count} bills`],
-              ["Average bill", inr(summary.month.averageInr), "this month"],
-              ["Discounts this month", inr(summary.month.discountsInr), `${summary.month.voids} void${summary.month.voids === 1 ? "" : "s"} this month`],
+              ["Collected this month", inr(summary.month.totalInr), `${summary.month.count} bills · ${summary.month.voids} void${summary.month.voids === 1 ? "" : "s"}`],
+              ["Collected last month", inr(summary.lastMonth.totalInr), <VsLastMonth key="vs" change={summary.lastMonth.changeInr} pct={summary.lastMonth.changePct} />],
+              [
+                "Converted via SaveIN",
+                inr(summary.saveIn.totalInr),
+                `${summary.saveIn.patients} patient${summary.saveIn.patients === 1 ? "" : "s"} paid in EMIs · ${summary.saveIn.sharePct}% of the month`,
+              ],
             ] as const
           ).map(([label, v, sub]) => (
             <Panel key={label} className="p-4 sm:p-5">

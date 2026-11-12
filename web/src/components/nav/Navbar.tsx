@@ -104,7 +104,7 @@ export default function Navbar() {
                   <motion.span
                     layoutId="nav-hover"
                     aria-hidden
-                    className="absolute inset-0 rounded-full bg-white/[0.06]"
+                    className="absolute inset-0 rounded-full bg-[var(--accent-soft)]"
                     transition={{ duration: 0.35, ease: EASE }}
                   />
                 )}
@@ -122,8 +122,8 @@ export default function Navbar() {
           })}
         </ul>
         <div className="flex items-center gap-1.5">
-          {/* signed out on phones, Log in sits in the menu card: the bar has no room for it */}
-          {SHOW_ACCOUNT && <AccountMenu loginClassName="hidden sm:inline-flex" />}
+          {/* the way in: Log in, Create account or a demo account (signed in, the account menu) */}
+          {SHOW_ACCOUNT && <AccountMenu />}
           <Link
             href="/#coming-soon"
             onClick={() => setOpen(false)}
@@ -137,7 +137,7 @@ export default function Navbar() {
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
             onClick={() => setOpen((o) => !o)}
-            className="grid size-11 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-ink-2 transition-colors hover:text-ink xl:hidden"
+            className="grid size-11 place-items-center rounded-full border border-line bg-[var(--surface-glass)] text-ink-2 transition-colors hover:text-ink xl:hidden"
           >
             <AnimatePresence mode="wait" initial={false}>
               <motion.span
@@ -170,7 +170,7 @@ export default function Navbar() {
                   <a
                     href={l.href}
                     onClick={() => setOpen(false)}
-                    className={`flex items-center justify-between rounded-2xl px-4 py-3 text-[16px] transition-colors hover:bg-white/[0.06] ${on ? "bg-white/[0.06] text-ink" : "text-ink-2"}`}
+                    className={`flex items-center justify-between rounded-2xl px-4 py-3 text-[16px] transition-colors hover:bg-[var(--accent-soft)] ${on ? "bg-[var(--accent-soft)] text-ink" : "text-ink-2"}`}
                   >
                     {l.label}
                     {on && <span aria-hidden className="size-1.5 rounded-full bg-[rgb(var(--accent-rgb))]" />}
@@ -183,7 +183,7 @@ export default function Navbar() {
                 <Link
                   href={path === "/" ? "/login" : `/login?next=${encodeURIComponent(path)}`}
                   onClick={() => setOpen(false)}
-                  className="flex items-center justify-between rounded-2xl px-4 py-3 text-[16px] font-medium text-ink transition-colors hover:bg-white/[0.06]"
+                  className="flex items-center justify-between rounded-2xl px-4 py-3 text-[16px] font-medium text-ink transition-colors hover:bg-[var(--accent-soft)]"
                 >
                   Log in
                   <ArrowRight className="size-4" strokeWidth={1.5} />

@@ -9,12 +9,12 @@ import { DEMO_USERS, homeOf, safeNext, type DemoUser } from "@/lib/demo";
 import { useDemoUser } from "@/lib/useDemoUser";
 
 const OPENS: Record<DemoUser["role"], string> = {
-  patient: "FMD Main · coming soon",
-  dentist: "FMD Main · coming soon",
+  patient: "Opens FMD Main",
+  dentist: "Opens FMD Main",
   clinic_owner: "Opens FMD Clinic",
   clinic_front_desk: "Opens FMD Clinic",
-  student: "FMD Scholar · coming soon",
-  company: "FMD Main · coming soon",
+  student: "Opens FMD Main · FMD Scholar coming soon",
+  company: "Opens Jobs",
 };
 
 function Chooser() {

@@ -25,6 +25,9 @@ const en = {
   "menu.help": "Help",
   "menu.logout": "Log out",
   "menu.login": "Log in",
+  "menu.signup": "Create account",
+  "menu.demo": "Try a demo account",
+  "menu.profile": "Log in or create an account",
 } as const;
 export type MessageKey = keyof typeof en;
 
@@ -47,6 +50,9 @@ const hiDraft: Record<MessageKey, string> = {
   "menu.help": "मदद",
   "menu.logout": "लॉग आउट",
   "menu.login": "लॉग इन",
+  "menu.signup": "अकाउंट बनाएं",
+  "menu.demo": "डेमो अकाउंट आज़माएं",
+  "menu.profile": "लॉग इन करें या अकाउंट बनाएं",
 };
 
 export const LANGUAGES = [

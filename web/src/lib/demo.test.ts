@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { areasFor, canOpenClinic, phoneTaken, DEMO_USERS, findDemoUser, makeUser, PREVIEW_CODE, readStored, safeNext, userByPhone } from "./demo.ts";
+import { areasFor, canOpenClinic, homeOf, phoneTaken, DEMO_USERS, findDemoUser, makeUser, PREVIEW_CODE, readStored, safeNext, userByPhone } from "./demo.ts";
 
 test("six demo people, one per role", () => {
   assert.deepEqual(
@@ -89,4 +89,12 @@ test("created accounts are found by phone too, and a number can't be taken twice
   assert.equal(phoneTaken("98450 10101", []), true);
   assert.equal(phoneTaken("91234 56789", [made]), true);
   assert.equal(phoneTaken("90000 11111", [made]), false);
+});
+
+test("each demo person lands somewhere they can use", () => {
+  const home = (id: string) => homeOf(findDemoUser(id)!);
+  assert.equal(home("demo-owner"), "/clinic/smile-studio");
+  assert.equal(home("demo-patient"), "/assistant"); // FMD Main, not the homepage
+  assert.equal(home("demo-student"), "/assistant");
+  assert.equal(home("demo-company"), "/jobs");
 });

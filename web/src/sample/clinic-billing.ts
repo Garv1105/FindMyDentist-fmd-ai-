@@ -117,6 +117,16 @@ function billsOn(branchId: string, date: string, now: Date): Bill[] {
     .sort((a, b) => b.time.localeCompare(a.time) || b.id.localeCompare(a.id));
 }
 
+/** Every bill from one date to another (inclusive). */
+function billsBetween(branchId: string, from: string, to: string, now: Date): Bill[] {
+  const out: Bill[] = [];
+  for (let d = from; d <= to; d = addDays(d, 1)) out.push(...billsOn(branchId, d, now));
+  return out;
+}
+
+/** The payment mode that is SaveIN, FMD's treatment EMIs. */
+export const SAVEIN: Mode = "EMI partner";
+
 /** Every bill this month up to today, newest first. */
 function monthBills(branchId: string, now: Date): Bill[] {
   const today = istDate(now);
@@ -168,6 +178,13 @@ export async function getBillingSummary(clinicId: string, opts: { branchId: stri
     byMode[b.mode].count++;
   }
   const sum = (list: Bill[]) => list.reduce((n, b) => n + b.amountInr, 0);
+  // last month, in full and up to the same day of the month, so a part month is compared like for like
+  const lastStart = addDays(`${today.slice(0, 8)}01`, -1).slice(0, 8) + "01";
+  const lastEnd = addDays(`${today.slice(0, 8)}01`, -1);
+  const sameDay = `${lastStart.slice(0, 8)}${today.slice(8)}` > lastEnd ? lastEnd : `${lastStart.slice(0, 8)}${today.slice(8)}`;
+  const last = billsBetween(opts.branchId, lastStart, lastEnd, now).filter((b) => b.status === "paid");
+  const lastToDate = sum(last.filter((b) => b.date <= sameDay));
+  const viaSaveIn = paid.filter((b) => b.mode === SAVEIN);
   return {
     today: {
       totalInr: sum(todays),
@@ -177,6 +194,21 @@ export async function getBillingSummary(clinicId: string, opts: { branchId: stri
       discounts: todays.filter((b) => b.discount).map((b) => ({ billId: b.id, patientName: b.patientName, ...b.discount! })),
     },
     month: { totalInr: sum(paid), count: paid.length, averageInr: paid.length ? Math.round(sum(paid) / paid.length) : 0, voids: bills.filter((b) => b.status === "void").length, discountsInr: paid.reduce((n, b) => n + (b.discount?.amountInr ?? 0), 0) },
+    lastMonth: {
+      totalInr: sum(last),
+      count: last.length,
+      /** what last month had collected by this day of the month */
+      toDateInr: lastToDate,
+      /** this month so far against that: positive is ahead */
+      changeInr: sum(paid) - lastToDate,
+      changePct: lastToDate ? Math.round(((sum(paid) - lastToDate) / lastToDate) * 100) : null,
+    },
+    /** treatment paid for with SaveIN EMIs this month: what patients went ahead with because they could pay over time */
+    saveIn: {
+      totalInr: sum(viaSaveIn),
+      patients: new Set(viaSaveIn.map((b) => b.patientId)).size,
+      sharePct: paid.length ? Math.round((sum(viaSaveIn) / sum(paid)) * 100) : 0,
+    },
   };
 }
 

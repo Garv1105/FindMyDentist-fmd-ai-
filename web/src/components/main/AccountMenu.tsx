@@ -1,6 +1,6 @@
 "use client";
 
-import { Bookmark, CalendarDays, CircleHelp, LogOut, Sparkles, UserRound } from "lucide-react";
+import { Bookmark, CalendarDays, CircleHelp, LogIn, LogOut, Sparkles, UserPlus, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
@@ -11,7 +11,10 @@ import { logout, useMe } from "@/lib/me";
 
 const itemCls = "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[14px] text-ink-2 hover:bg-[var(--surface-glass)] hover:text-ink";
 
-/** "Log in" when signed out, else an avatar that opens the account menu. Used by the homepage navbar and the app shell. */
+/**
+ * A profile button: signed out, it opens Log in / Create account / Try a demo account; signed in, an avatar that opens
+ * the account menu. Used by the homepage navbar and the app shell.
+ */
 export function AccountMenu({ loginClassName = "" }: { loginClassName?: string }) {
   const me = useMe();
   const { t } = useT();
@@ -25,15 +28,40 @@ export function AccountMenu({ loginClassName = "" }: { loginClassName?: string }
   useDismiss(open, close, box, btn);
 
   if (me === undefined) return <span className="size-10 shrink-0" aria-hidden />; // holds the space while loading
-  if (me === null)
+  if (me === null) {
+    const next = path === "/" ? "" : `?next=${encodeURIComponent(path)}`;
     return (
-      <Link
-        href={path === "/" ? "/login" : `/login?next=${encodeURIComponent(path)}`}
-        className={`h-10 items-center rounded-full border border-line bg-[var(--surface-glass)] px-4 text-[13.5px] font-medium text-ink hover:border-line-strong ${loginClassName || "inline-flex"}`}
-      >
-        {t("menu.login")}
-      </Link>
+      <div className={`relative ${loginClassName}`}>
+        <button
+          ref={btn}
+          type="button"
+          aria-label={t("menu.profile")}
+          aria-expanded={open}
+          aria-haspopup="menu"
+          onClick={() => setOpen((o) => !o)}
+          className="grid size-11 shrink-0 place-items-center rounded-full border border-line bg-[var(--surface-glass)] text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
+        >
+          <UserRound className="size-5" strokeWidth={1.5} />
+        </button>
+        {open && (
+          // phones: across the screen under the bar (anchored to the button it would run off the left edge)
+          <div ref={box} role="menu" className="app-panel app-solid absolute right-0 top-[calc(100%+8px)] z-50 w-[240px] p-1.5 max-sm:fixed max-sm:inset-x-3 max-sm:top-[84px] max-sm:w-auto">
+            <Link href={`/login${next}`} onClick={close} role="menuitem" className={itemCls}>
+              <LogIn className="size-4" strokeWidth={1.5} /> {t("menu.login")}
+            </Link>
+            <Link href={`/register${next}`} onClick={close} role="menuitem" className={itemCls}>
+              <UserPlus className="size-4" strokeWidth={1.5} /> {t("menu.signup")}
+            </Link>
+            <div className="mx-3 my-1 border-t border-line" />
+            {/* the demo people work without the backend, so this is the way in on the preview site */}
+            <Link href={`/demo${next}`} onClick={close} role="menuitem" className={itemCls}>
+              <Sparkles className="size-4" strokeWidth={1.5} /> {t("menu.demo")}
+            </Link>
+          </div>
+        )}
+      </div>
     );
+  }
 
   const signOut = async () => {
     setErr(null);
